@@ -30,16 +30,16 @@ bios_lookup_newest() {
     [[ -n "${BIOS_LOOKED_UP:-}" ]] && return 0
     BIOS_LOOKED_UP=1; BIOS_NEWEST=""
     local tmp desc
-    BIOS_REPO="$(curl -fsL --max-time 10 "$VALVE_MIRROR/" | grep -oE "$BIOS_REPO_PREFIX-[0-9]+\.[0-9]+/" | tr -d / | sort -uV | tail -n 1)"
+    BIOS_REPO="$(valve_newest_repo "$BIOS_REPO_PREFIX" 10)"
     [[ -n "$BIOS_REPO" ]] || return 1
     tmp="$(mktemp -d)"
-    if curl -fsL --max-time 30 "$VALVE_MIRROR/$BIOS_REPO/os/x86_64/$BIOS_REPO.files" -o "$tmp/files" &&
-        curl -fsL --max-time 30 "$VALVE_MIRROR/$BIOS_REPO/os/x86_64/$BIOS_REPO.db" -o "$tmp/db"; then
+    if curl -fsL --max-time 30 "$(valve_repo_url "$BIOS_REPO")/$BIOS_REPO.files" -o "$tmp/files" &&
+        curl -fsL --max-time 30 "$(valve_repo_url "$BIOS_REPO")/$BIOS_REPO.db" -o "$tmp/db"; then
         desc="$(tar -tf "$tmp/files" 2>/dev/null | grep -E '^fremont-hw-support-[0-9][^/]*/files$' | head -n 1)"
         [[ -n "$desc" ]] && BIOS_CAB="$(tar -xOf "$tmp/files" "$desc" | grep -E '^usr/share/fwupd/.*\.cab$' | head -n 1)"
         desc="${desc%/files}/desc"
-        BIOS_PKG="$(tar -xOf "$tmp/db" "$desc" 2>/dev/null | awk '/^%FILENAME%$/ { getline; print }')"
-        BIOS_SHA256="$(tar -xOf "$tmp/db" "$desc" 2>/dev/null | awk '/^%SHA256SUM%$/ { getline; print }')"
+        BIOS_PKG="$(valve_desc_field "$tmp/db" "$desc" FILENAME)"
+        BIOS_SHA256="$(valve_desc_field "$tmp/db" "$desc" SHA256SUM)"
         [[ -n "${BIOS_CAB:-}" && -n "$BIOS_PKG" && -n "$BIOS_SHA256" ]] && BIOS_NEWEST="$(basename "$BIOS_CAB" .cab)"
     fi
     rm -rf "$tmp"
@@ -143,7 +143,7 @@ bios_prepare() {
         { err "Installing fwupd failed."; return 1; }
     rm -rf "$BIOS_STAGE_DIR"; mkdir -p "$BIOS_STAGE_DIR"; chmod 700 "$BIOS_STAGE_DIR"
     info "Downloading $BIOS_PKG ($BIOS_REPO)..."
-    if ! curl -fsSL "$VALVE_MIRROR/$BIOS_REPO/os/x86_64/$BIOS_PKG" -o "$BIOS_STAGE_DIR/pkg.tar.zst" ||
+    if ! curl -fsSL "$(valve_repo_url "$BIOS_REPO")/$BIOS_PKG" -o "$BIOS_STAGE_DIR/pkg.tar.zst" ||
         ! echo "$BIOS_SHA256  $BIOS_STAGE_DIR/pkg.tar.zst" | sha256sum -c --quiet - ||
         ! tar -I unzstd -xf "$BIOS_STAGE_DIR/pkg.tar.zst" -C "$BIOS_STAGE_DIR" "$BIOS_CAB"; then
         err "Downloading or verifying $BIOS_PKG failed; the BIOS was not touched."

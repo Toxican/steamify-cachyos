@@ -35,7 +35,7 @@ steamos_release() {
     # capitals: steamos-3.9). Offline (e.g. in the installer): the one set
     # before, if any.
     local v
-    v="$(curl -fsL --max-time 15 "$VALVE_MIRROR/" 2>/dev/null | grep -oE 'jupiter-[0-9]+\.[0-9]+/' | tr -d / | sort -V | tail -n 1)"
+    v="$(valve_newest_repo jupiter 15)"
     if [[ -n "$v" ]]; then echo "steamos-${v#jupiter-}"
     else sed -n 's/^VERSION_ID=\(steamos-.*\)$/\1/p' /etc/os-release 2>/dev/null; fi
 }

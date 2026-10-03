@@ -113,24 +113,8 @@ cec_repair() { cec_installed && ! cec_status; }
 
 fetch_holo_pkg() {
     # fetch_holo_pkg <dir> <package>: download the newest <package> from
-    # Valve's newest holo repository into <dir> and print its path. The
-    # SHA-256 comes from Valve's package index and is verified.
-    local dir="$1" name="$2" repo desc file_name sha256
-    repo="$(curl -fsL "$VALVE_MIRROR/" | grep -oE 'holo-[0-9]+\.[0-9]+/' | tr -d / | sort -V | tail -n 1)"
-    if [[ ! -f "$dir/holo.db" ]]; then
-        [[ -n "$repo" ]] && curl -fsL "$VALVE_MIRROR/$repo/os/x86_64/$repo.db" -o "$dir/holo.db" ||
-            { err "Couldn't read Valve's SteamOS package index ($VALVE_MIRROR)."; return 1; }
-    fi
-    desc="$(tar -tf "$dir/holo.db" 2>/dev/null | grep -E "^$name-[0-9][^/]*/desc$" | head -n 1)"
-    [[ -n "$desc" ]] || { err "No $name in Valve's $repo repository."; return 1; }
-    file_name="$(tar -xOf "$dir/holo.db" "$desc" | awk '/^%FILENAME%$/ { getline; print }')"
-    sha256="$(tar -xOf "$dir/holo.db" "$desc" | awk '/^%SHA256SUM%$/ { getline; print }')"
-    info "Downloading $file_name ($repo)..." >&2
-    curl -fsL "$VALVE_MIRROR/$repo/os/x86_64/$file_name" -o "$dir/$file_name" ||
-        { err "Downloading $file_name failed."; return 1; }
-    echo "$sha256  $dir/$file_name" | sha256sum -c --quiet - >&2 ||
-        { err "Checksum mismatch for $file_name; not using it."; return 1; }
-    echo "$dir/$file_name"
+    # Valve's newest holo repository into <dir> and print its path.
+    valve_fetch_pkg holo "$2" "$1"
 }
 
 cec_enable() {

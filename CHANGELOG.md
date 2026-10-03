@@ -7,6 +7,10 @@ one per merged pull request.
 
 ## 2.12.0 - 2026-10-03
 
+- **refactor: Valve's package mirror in one module (`lib/valve-mirror.sh`: newest repo, package database fields, checksummed download); the SteamOS extras, CEC driver, BIOS lookup and os-release version used four copies**
+- **test: the menu rules, the plan and the app's and installer's JSON are checked against a golden file (`tests/menu-test.sh` in steamify-cachyos-dev); `make check`, `.editorconfig`, `.shellcheckrc`**
+- **docs: README lists the sources and projects Steamify builds on, with licences and thanks**
+
 ## 2.11.1 - 2026-10-02
 
 - `d70aeb8` **docs: new README screenshots of the app (2.11 menu) on a Steam Machine and on an NVIDIA PC, and the README names the opt-in "Start Steam silently in desktop mode" and the icons as an option of the conversion**
