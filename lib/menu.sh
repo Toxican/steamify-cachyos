@@ -11,6 +11,20 @@ COMPONENTS=(gaming boot silent glyphs nvidia bigpicture nvsilent theme single la
 ACTIONS=(bios)
 # Sub-options, shown indented under their parent and only while it's ticked.
 declare -A PARENT=([boot]=gaming [silent]=gaming [glyphs]=gaming [bigpicture]=nvidia [nvsilent]=nvidia [steamgame]=launcher [poweroff]=machine [kpin]=machine [hdmi]=machine [bios]=machine)
+# What ticking one item does to another, for the menu's toggles (toggle_component)
+# and the app's ticks (normalize_wanted). A sub-option needs its parent: ticking it
+# ticks the parent, unticking the parent unticks it (Where to boot is chosen with
+# --boot, so the app's ticks never bring the conversion for it; HDMI refresh boost is
+# retired and never brings Steam Machine support). Single user mode only makes sense
+# on top of the SteamOS conversion (where that is offered: on NVIDIA it logs in by
+# itself, see lib/single-user.sh).
+declare -A REQUIRES=([single]=gaming)
+for _c in "${!PARENT[@]}"; do [[ "$_c" == hdmi ]] || REQUIRES[$_c]=${PARENT[$_c]}; done
+unset _c
+# Opt-out sub-options are ticked and unticked along with their parent.
+declare -A FOLLOWS=([nvidia]=bigpicture [machine]=poweroff [launcher]=steamgame)
+# Ticking one unticks the other; in normalize_wanted the first in COMPONENTS wins.
+declare -A EXCLUDES=([bigpicture]=nvsilent [nvsilent]=bigpicture)
 # Never preselected on a first run: booting into the desktop is a choice,
 # gamescope is the default; HDMI-CEC is opt-in (it can wake the machine or
 # upset other devices on the TV, even on SteamOS), except on a Steam Machine,
@@ -291,35 +305,48 @@ defaults_list() {
     printf '[%s]\n' "$items"
 }
 
+children_of() {
+    # children_of <id>: the items that need <id> (REQUIRES), one per line.
+    local c
+    for c in "${COMPONENTS[@]}"; do [[ "${REQUIRES[$c]:-}" == "$1" ]] && echo "$c"; done
+    return 0
+}
+
 toggle_component() {
-    local c="$1"
+    local c="$1" p x
     component_selectable "$c" || return 1
     WANTED[$c]=$(( 1 - WANTED[$c] ))
-    # Single user mode only makes sense on top of the SteamOS conversion.
-    # (On NVIDIA the conversion isn't offered: single user mode logs in by itself, see lib/single-user.sh.)
-    if [[ "$c" == single && "${WANTED[single]}" == 1 ]] && component_available gaming; then WANTED[gaming]=1; fi
-    if [[ "$c" == gaming && "${WANTED[gaming]}" == 0 ]]; then WANTED[single]=0; WANTED[boot]=0; fi
-    # Where to boot to is part of the conversion, too.
-    if [[ "$c" == boot && "${WANTED[boot]}" == 1 ]]; then WANTED[gaming]=1; fi
-    # Big Picture is opt-out: ticked along with "Gaming on NVIDIA".
-    if [[ "$c" == nvidia ]]; then WANTED[bigpicture]=${WANTED[nvidia]}; fi
-    if [[ "$c" == bigpicture && "${WANTED[bigpicture]}" == 1 ]]; then WANTED[nvidia]=1; WANTED[nvsilent]=0; fi
-    # Silent and Big Picture exclude each other.
-    if [[ "$c" == nvsilent && "${WANTED[nvsilent]}" == 1 ]]; then WANTED[nvidia]=1; WANTED[bigpicture]=0; fi
-    if [[ "$c" == nvidia && "${WANTED[nvidia]}" == 0 ]]; then WANTED[nvsilent]=0; fi
-    if [[ "$c" == gaming && "${WANTED[gaming]}" == 0 ]]; then WANTED[silent]=0; WANTED[glyphs]=0; fi
-    if [[ "$c" == silent && "${WANTED[silent]}" == 1 ]]; then WANTED[gaming]=1; fi
-    if [[ "$c" == glyphs && "${WANTED[glyphs]}" == 1 ]]; then WANTED[gaming]=1; fi
-    # The power-off fix is opt-out: ticked along with Steam Machine support.
-    if [[ "$c" == machine ]]; then WANTED[poweroff]=${WANTED[machine]}; fi
-    if [[ "$c" == poweroff && "${WANTED[poweroff]}" == 1 ]]; then WANTED[machine]=1; fi
-    if [[ "$c" == machine && "${WANTED[machine]}" == 0 ]]; then WANTED[kpin]=0; WANTED[bios]=0; fi
-    if [[ "$c" == kpin && "${WANTED[kpin]}" == 1 ]]; then WANTED[machine]=1; fi
-    if [[ "$c" == bios && "${WANTED[bios]}" == 1 ]]; then WANTED[machine]=1; fi
-    # Steam starts Steamify through the shortcut's start script.
-    # Opt-out, like the power-off fix: ticked along with the shortcut.
-    if [[ "$c" == launcher ]] && component_available steamgame; then WANTED[steamgame]=${WANTED[launcher]}; fi
-    if [[ "$c" == steamgame && "${WANTED[steamgame]}" == 1 ]]; then WANTED[launcher]=1; fi
+    if [[ "${WANTED[$c]}" == 1 ]]; then
+        p="${REQUIRES[$c]:-}"
+        [[ -n "$p" ]] && component_available "$p" && WANTED[$p]=1
+        x="${EXCLUDES[$c]:-}"
+        [[ -n "$x" ]] && WANTED[$x]=0
+    else
+        for x in $(children_of "$c"); do WANTED[$x]=0; done
+    fi
+    x="${FOLLOWS[$c]:-}"
+    [[ -n "$x" ]] && component_available "$x" && WANTED[$x]=${WANTED[$c]}
+}
+
+normalize_wanted() {
+    # The same rules for a whole selection (the app ticks exactly the items it
+    # sends): a ticked sub-option brings its parent, two that exclude each other
+    # keep the first, and an unticked parent takes its sub-options with it
+    # (only where the parent is offered: single user mode stays on NVIDIA PCs).
+    local c p x
+    for c in "${COMPONENTS[@]}"; do
+        p="${REQUIRES[$c]:-}"
+        [[ -n "$p" && "$c" != boot && "${WANTED[$c]:-0}" == 1 ]] && component_available "$p" && WANTED[$p]=1
+    done
+    for c in "${COMPONENTS[@]}"; do
+        x="${EXCLUDES[$c]:-}"
+        [[ -n "$x" && "${WANTED[$c]:-0}" == 1 ]] && WANTED[$x]=0
+    done
+    for c in "${COMPONENTS[@]}"; do
+        p="${REQUIRES[$c]:-}"
+        [[ -n "$p" && "${WANTED[$p]:-0}" == 0 ]] && component_available "$p" && WANTED[$c]=0
+    done
+    return 0
 }
 
 show_menu() {

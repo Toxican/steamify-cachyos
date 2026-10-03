@@ -47,7 +47,7 @@ gamescope and the Plasma desktop. Primary target: the Valve Steam Machine
   idempotent. `<id>_enable` is also used to re-apply. Optional
   `<id>_available` is checked via `component_available` (e.g. `machine`
   only on Fremont). Turn-on order is `COMPONENTS` order, turn-off reverse;
-  `gaming` must stay first. Dependencies live in `toggle_component`.
+  `gaming` must stay first. Dependencies are the `REQUIRES`, `FOLLOWS` and `EXCLUDES` tables in `lib/menu.sh`, used by `toggle_component` (the menu) and `normalize_wanted` (the app).
 - **NVIDIA** (`lib/nvidia.sh`): gamescope's session is broken on NVIDIA, so the SteamOS conversion (`gaming`, `boot`, `single`,
   `glyphs`) is hidden there (unless already on) and `nvidia` + its sub-option `bigpicture` ("Gaming on NVIDIA") replace it:
   Steam on the Plasma desktop, started at login. Never reintroduce a gamescope session for NVIDIA without re-testing on the

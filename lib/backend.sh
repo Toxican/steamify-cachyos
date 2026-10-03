@@ -146,24 +146,7 @@ backend_apply() {
         WANTED[$c]=0
         for id in "${want[@]}"; do [[ "$id" == "$c" ]] && WANTED[$c]=1; done
     done
-    # The same rules as the menu's toggles.
-    # (Single user mode only needs the conversion where it is offered: not on NVIDIA PCs.)
-    [[ "${WANTED[single]:-0}" == 1 ]] && component_available gaming && WANTED[gaming]=1
-    if component_available gaming; then
-        [[ "${WANTED[gaming]:-0}" == 0 ]] && { WANTED[single]=0; WANTED[boot]=0; }
-    else
-        WANTED[boot]=0
-    fi
-    [[ "${WANTED[bigpicture]:-0}" == 1 ]] && WANTED[nvidia]=1
-    [[ "${WANTED[nvsilent]:-0}" == 1 ]] && WANTED[nvidia]=1
-    [[ "${WANTED[bigpicture]:-0}" == 1 ]] && WANTED[nvsilent]=0
-    [[ "${WANTED[nvidia]:-0}" == 0 ]] && { WANTED[bigpicture]=0; WANTED[nvsilent]=0; }
-    [[ "${WANTED[silent]:-0}" == 1 || "${WANTED[glyphs]:-0}" == 1 ]] && component_available gaming && WANTED[gaming]=1
-    [[ "${WANTED[gaming]:-0}" == 0 ]] && { WANTED[silent]=0; WANTED[glyphs]=0; }
-    [[ "${WANTED[poweroff]:-0}" == 1 ]] && WANTED[machine]=1
-    [[ "${WANTED[machine]:-0}" == 0 ]] && WANTED[poweroff]=0
-    [[ "${WANTED[kpin]:-0}" == 1 ]] && WANTED[machine]=1
-    [[ "${WANTED[machine]:-0}" == 0 ]] && WANTED[kpin]=0
+    normalize_wanted
     # Retired: only ever removed.
     WANTED[hdmi]=0
     case "$boot" in desktop) WANTED[boot]=1; WANTED[gaming]=1 ;; gamescope) WANTED[boot]=0 ;; esac
