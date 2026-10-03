@@ -9,7 +9,7 @@ check: syntax lint test bundle
 
 syntax:
 	@for f in $(SH); do bash -n "$$f" || exit 1; done
-	python3 -m py_compile ui/steamify-ui patches/*.py
+	python3 -c 'import ast, sys; [ast.parse(open(f).read(), f) for f in sys.argv[1:]]' ui/steamify-ui patches/*.py
 
 lint:
 	@command -v shellcheck >/dev/null && shellcheck -S warning $(SH) || echo "shellcheck not installed: skipped"
