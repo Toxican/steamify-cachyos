@@ -6,7 +6,7 @@ See [TECHNICAL.md](TECHNICAL.md) for how each part works.
 
 Steps that may fail without it mattering (stopping a service that isn't
 running, removing a package that isn't installed) don't show their errors in the
-wizard. They are kept in `~/.local/state/steamify/steamify.log` (the last
+wizard. They are kept in `~/.local/state/steamify/log/steamify.log` (the last
 512 KB), with the command and its exit status: attach it when you ask for help.
 
 ## Gaming mode shows a black screen or keeps restarting

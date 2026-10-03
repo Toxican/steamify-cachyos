@@ -95,7 +95,7 @@ gamescope and the Plasma desktop. Primary target: the Valve Steam Machine
   extra (an icon cache, a service that may not exist) warns or stays silent and
   doesn't change the return value. Never `cmd 2>/dev/null` on a step that
   changes the system: use `best_effort cmd...` (same exit status, its errors go
-  to `$STATE_DIR/steamify.log`). `2>/dev/null` stays for probes (`pacman -Q`,
+  to `$STATE_DIR/log/steamify.log`). `2>/dev/null` stays for probes (`pacman -Q`,
   `grep -q`, `is-active`) whose failure is the answer.
 - **Temp dirs.** `make_tmpdir <variable>` (not `$(mktemp -d)`, whose
   subshell can't register it): the entry point's `on_exit` removes them, also

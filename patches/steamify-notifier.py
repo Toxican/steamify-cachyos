@@ -51,8 +51,9 @@ def latest():
 
 def pending(new):
     # Newer than the last Steamify that ran here, and not skipped.
-    seen = version(state("seen") or "0")
-    return seen is not None and version(new) > seen and new != state("skipped")
+    seen, found = version(state("seen") or "0"), version(new)
+    # A tag that isn't a plain version (a pre-release name) is never offered.
+    return seen is not None and found is not None and found > seen and new != state("skipped")
 
 
 def desktop():

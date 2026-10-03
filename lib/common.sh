@@ -43,9 +43,9 @@ best_effort() {
     # best_effort <command>...: for a step whose failure is fine (stopping a
     # unit that isn't running, removing what isn't installed). Same exit status
     # and output as the command, but its errors go to the log
-    # (~/.local/state/steamify/steamify.log) instead of vanishing, so a problem
+    # (~/.local/state/steamify/log/steamify.log) instead of vanishing, so a problem
     # can still be found afterwards.
-    local log="${STEAMIFY_LOG:-${STATE_DIR:-$HOME/.local/state/steamify}/steamify.log}" e rc
+    local log="${STEAMIFY_LOG:-${STATE_DIR:-$HOME/.local/state/steamify}/log/steamify.log}" e rc
     e="$(mktemp)" || { "$@" 2>/dev/null; return; }
     "$@" 2>"$e"; rc=$?
     if [[ -s "$e" ]]; then
