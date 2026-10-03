@@ -14,6 +14,7 @@ one per merged pull request.
 - **refactor: the start of every item's JSON (id, label, hint, kind, parent) is built in one place (`json_item_head`) for the app and the installer page, and `json_bool` replaces the `&& echo true || echo false` copies**
 - **ci: a Lint workflow runs shellcheck on the modules and helper scripts, ruff on the app and `patches/*.py` (`ruff.toml`) and qmllint on the QML (not blocking until it has run once on the runner); `make lint` runs the same locally**
 - **refactor: `best_effort` for the steps whose failure doesn't matter (stopping or disabling units, removing packages, `modprobe -r`, ...): same behaviour, but their errors go to `~/.local/state/steamify/steamify.log` instead of `/dev/null`; temp dirs are registered with `make_tmpdir` and removed by the one exit handler (also when a run is interrupted), which replaces the menu's own `EXIT` trap**
+- **refactor: the retired kernel pin moved out of `lib/steam-machine.sh` into `lib/kernel-pin.sh`**
 - **test: the menu rules, the plan and the app's and installer's JSON are checked against a golden file (`tests/menu-test.sh` in steamify-cachyos-dev); `make check`, `.editorconfig`, `.shellcheckrc`**
 - **docs: README lists the sources and projects Steamify builds on, with licences and thanks**
 
