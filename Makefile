@@ -2,7 +2,8 @@
 SH := steamify.sh $(wildcard lib/*.sh) ui/steamify-app.sh .github/tools/bundle.sh
 # The unit tests live in ../steamify-cachyos-dev/tests (REPO points at this checkout).
 DEV ?= ../steamify-cachyos-dev
-TESTS := $(wildcard $(DEV)/tests/*-test.sh)
+# Not the hardware test: it is for a real NVIDIA PC and writes a report in $$HOME.
+TESTS := $(filter-out %-hardware-test.sh,$(wildcard $(DEV)/tests/*-test.sh))
 
 .PHONY: check syntax lint lint-sh lint-py lint-qml test bundle fmt-check
 check: syntax lint test bundle

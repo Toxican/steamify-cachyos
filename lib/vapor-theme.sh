@@ -47,26 +47,27 @@ theme_status() {
     [[ "$(kreadconfig6 --file kdeglobals --group KDE --key LookAndFeelPackage)" == "$VAPOR_LOOKANDFEEL" ]]
 }
 
-theme_enable() {
-    if ! pacman -Q cachyos-vapor >/dev/null 2>&1; then
-        info "Installing cachyos-vapor..."
-        sudo pacman -S --needed --noconfirm cachyos-vapor || { err "Installing cachyos-vapor failed."; return 1; }
-        # Only remove it again on disable if we were the ones installing it.
-        state_set theme installed_pkg 1
-    fi
+theme_install_package() {
+    pacman -Q cachyos-vapor >/dev/null 2>&1 && return 0
+    info "Installing cachyos-vapor..."
+    sudo pacman -S --needed --noconfirm cachyos-vapor || { err "Installing cachyos-vapor failed."; return 1; }
+    # Only remove it again on disable if we were the ones installing it.
+    state_set theme installed_pkg 1
+}
+
+theme_check_offline() {
     # Without a session (the ISO's installer), for a user who has never
     # logged in: the layout still CachyOS's default from /etc/skel is
     # removed (after the backup below), and Plasma builds its first layout
     # from the look-and-feel package, as --resetLayout does below.
-    local offline=false layout=~/.config/plasma-org.kde.plasma.desktop-appletsrc
-    if [[ -z "${WAYLAND_DISPLAY:-}${DISPLAY:-}" ]]; then
-        if [[ -e "$layout" ]] && ! cmp -s "$layout" "/etc/skel/.config/${layout##*/}"; then
-            err "Run this from the Plasma desktop: applying the Vapor layout needs a running Plasma session."
-            return 1
-        fi
-        offline=true
+    local layout=~/.config/plasma-org.kde.plasma.desktop-appletsrc
+    if [[ -e "$layout" ]] && ! cmp -s "$layout" "/etc/skel/.config/${layout##*/}"; then
+        err "Run this from the Plasma desktop: applying the Vapor layout needs a running Plasma session."
+        return 1
     fi
+}
 
+theme_backup_originals() {
     # Only the first time, so a re-apply doesn't overwrite the originals.
     local backup="$STATE_DIR/theme-layout" f
     if [[ ! -d "$backup" ]]; then
@@ -84,7 +85,9 @@ theme_enable() {
         [[ -f "$f" ]] && kset theme "$f" Settings gtk-cursor-theme-name \
             "$(kreadconfig6 --file "$f" --group Settings --key gtk-cursor-theme-name)"
     done
+}
 
+theme_set_look() {
     kset theme kdeglobals KDE LookAndFeelPackage "$VAPOR_LOOKANDFEEL"
     # Vapor is a dark theme: register it as the dark one, or Plasma's Dark
     # Mode toggle shows "off" and offers to switch to Breeze Dark.
@@ -94,6 +97,17 @@ theme_enable() {
     # scheme that is already named in the config, without writing its colors.
     kset theme kdeglobals General ColorScheme --delete
     plasma-apply-colorscheme Vapor >/dev/null 2>&1 || true
+}
+
+theme_enable() {
+    theme_install_package || return 1
+    local offline=false
+    if [[ -z "${WAYLAND_DISPLAY:-}${DISPLAY:-}" ]]; then
+        theme_check_offline || return 1
+        offline=true
+    fi
+    theme_backup_originals
+    theme_set_look
 
     if [[ "$offline" == true ]]; then
         rm -f ~/.config/plasma-org.kde.plasma.desktop-appletsrc ~/.config/plasmashellrc

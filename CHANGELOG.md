@@ -17,6 +17,7 @@ one per merged pull request.
 - **refactor: the retired kernel pin moved out of `lib/steam-machine.sh` into `lib/kernel-pin.sh`**
 - **refactor: the shortcut's two start scripts are files in `patches/` (`steamify-start.sh`, `steamify-app-start.sh`) instead of heredocs in `launcher_enable`, and the 83-line LED driver install is split into steps (`led_write_dkms_override`, `led_install_package`, `led_build_all_kernels`, `led_load_module`); what gets installed is byte-identical**
 - **fix: the daily update check no longer crashes on a release tag that isn't a plain version number (`TypeError` comparing it, found by the new unit tests); it is simply never offered**
+- **refactor: `theme_enable` and `create_desktop_shortcut` split into steps; the Return to Gaming Mode shortcut is written with its mode already set (`install_executable`), like the other shortcuts, instead of chmod afterwards**
 - **test: the menu rules, the plan and the app's and installer's JSON are checked against a golden file (`tests/menu-test.sh` in steamify-cachyos-dev); `make check`, `.editorconfig`, `.shellcheckrc`**
 - **docs: README lists the sources and projects Steamify builds on, with licences and thanks**
 
