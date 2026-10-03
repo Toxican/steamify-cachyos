@@ -195,12 +195,12 @@ downloads the following, and doesn't claim any of it:
 | Project | What Steamify uses it for |
 |---|---|
 | [CachyOS](https://cachyos.org) | The distribution it targets, and its packages: `cachyos-vapor` (the Vapor theme), the gamescope session packages (`gamescope-session-cachyos` and the autologin helpers), `dmemcg-booster` and `plasma-foreground-booster` (VRAM booster), and the `xone` / `xpadneo` DKMS packages (extended controller support) |
-| [Valve / SteamOS](https://github.com/ValveSoftware/SteamOS) | The behaviour it imitates (`steam-set-session`, `steamos-manager`, the Steam Deck UI). Downloaded from Valve's package mirror at install time, never shipped here: `steamdeck-kde-presets` (the SteamOS extras, installed under `/usr/local`), the Steam Machine BIOS package and its checksums, and the SteamOS release number shown in Steam's System settings. The gear icon (`assets/steam-gaming-settings.svg`) is Valve's *Return to Gaming Mode* icon (GPL-2.0) with a gear |
-| [Steam](https://store.steampowered.com) and [gamescope](https://github.com/ValveSoftware/gamescope) | The client and the compositor the gaming session is built on |
-| [evlaV/linux-integration](https://github.com/evlaV/linux-integration) | Valve's `cros_ec_cec` kernel driver (GPL-2.0) for the Steam Machine's HDMI-CEC, downloaded at a pinned commit and checksum, then patched by `patches/cros-ec-cec-single-port.patch` |
+| [Valve / SteamOS](https://github.com/ValveSoftware/SteamOS) | The behaviour it imitates: SteamOS's session switching (`steam-set-session`, `steamos-manager`) and the Steam Deck UI. Downloaded from Valve's package mirror at install time, never shipped here: `steamdeck-kde-presets` (the SteamOS extras, installed under `/usr/local`), the Steam Machine BIOS package and its checksums, and the SteamOS release number shown in Steam's System settings. The gear icon (`assets/steam-gaming-settings.svg`) is Valve's *Return to Gaming Mode* icon (GPL-2.0) with a gear |
+| [Steam](https://store.steampowered.com), [gamescope](https://github.com/ValveSoftware/gamescope) and [MangoHud](https://github.com/flightlessmango/MangoHud) | The client, the compositor the gaming session is built on, and the overlay; installed through CachyOS's packages |
+| [evlaV/linux-integration](https://github.com/evlaV/linux-integration) | An unofficial mirror of Valve's kernel: its `cros_ec_cec` driver (GPL-2.0) for the Steam Machine's HDMI-CEC, downloaded at a pinned commit and checksum, then patched by `patches/cros-ec-cec-single-port.patch` |
 | `leds-valve-dkms-git` (AUR) | The Steam Machine's front LED bar driver |
 | [KDE Plasma](https://kde.org/plasma-desktop/), SDDM, plasma-login-manager | The desktop and the login managers whose settings it edits (`kwriteconfig6`, `lookandfeeltool`) |
-| [DKMS](https://github.com/dell/dkms), [fwupd](https://fwupd.org), [yay](https://github.com/Jguer/yay) / [paru](https://github.com/Morganamilo/paru) | Building kernel modules, flashing the BIOS, and installing AUR packages |
+| [DKMS](https://github.com/dell/dkms), [fwupd](https://fwupd.org), [yay](https://github.com/Jguer/yay) / [paru](https://github.com/Morganamilo/paru) | Building kernel modules, flashing the BIOS, and installing AUR packages (yay is built from the AUR's `yay-bin` when neither is installed) |
 | [PySide6 / Qt](https://doc.qt.io/qtforpython-6/) | The graphical app |
 
 Licences: Steamify itself is MIT. `patches/steamify-fremont-poweroff.c` is a
@@ -219,10 +219,10 @@ Thanks to:
 
 - The **CachyOS** team and packagers, for a distribution that makes this
   possible and for the gamescope session packages Steamify builds on.
-- **Valve**, for SteamOS, for publishing its package repositories and the
-  Steam Machine's kernel sources, and for Steam and gamescope.
-- **evlaV** for the public `linux-integration` mirror of Valve's kernel,
-  without which the Steam Machine's CEC driver would be out of reach.
+- **Valve**, for SteamOS, its public package repositories, Steam and
+  gamescope.
+- **evlaV** for the public `linux-integration` mirror of Valve's kernel, the
+  source of the Steam Machine's CEC driver.
 - The maintainers of **`leds-valve-dkms-git`**, **xone**, **xpadneo**,
   **dmemcg-booster** and **plasma-foreground-booster**.
 - The **KDE**, **Arch Linux** and **AUR** communities, and the authors of
