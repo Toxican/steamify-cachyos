@@ -410,14 +410,14 @@ serial_enable() {
         'z /sys/class/dmi/id/product_serial 0444 - - -' | sudo tee "$SERIAL_TMPFILES" > /dev/null ||
         { err "Making the serial number readable for Steam failed."; return 1; }
     # The file applies at every boot; now too, unless /sys is read-only (the ISO's installer runs in a chroot).
-    sudo systemd-tmpfiles --create "$SERIAL_TMPFILES" 2>/dev/null ||
+    best_effort sudo systemd-tmpfiles --create "$SERIAL_TMPFILES" ||
         info "The serial number becomes readable for Steam at the next boot."
     return 0
 }
 
 serial_disable() {
     sudo rm -f "$SERIAL_TMPFILES"
-    sudo chmod 0400 /sys/class/dmi/id/product_serial 2>/dev/null
+    best_effort sudo chmod 0400 /sys/class/dmi/id/product_serial
     return 0
 }
 
@@ -450,7 +450,7 @@ EOF
     wifi_backend_enable || return 1
     sudo systemctl enable --now inputplumber.service
     sudo systemctl enable --now steamos-manager.service
-    user_systemctl enable steamos-manager.service 2>/dev/null
+    best_effort user_systemctl enable steamos-manager.service
     # HDMI-CEC ran before this and couldn't link cecd to steamos-manager yet.
     cec_status && cec_link_steamos_manager
 
@@ -467,19 +467,19 @@ EOF
 
 machine_disable() {
     info "Removing Steam Machine support..."
-    user_systemctl disable --now steamos-manager.service 2>/dev/null
-    sudo systemctl disable --now steamos-manager.service 2>/dev/null
-    sudo systemctl disable --now inputplumber.service 2>/dev/null
-    sudo pacman -Rns --noconfirm steamos-manager inputplumber 2>/dev/null
+    best_effort user_systemctl disable --now steamos-manager.service
+    best_effort sudo systemctl disable --now steamos-manager.service
+    best_effort sudo systemctl disable --now inputplumber.service
+    best_effort sudo pacman -Rns --noconfirm steamos-manager inputplumber
     serial_disable
     wifi_backend_disable
     sudo rm -f "$LED_UDEV_RULE" /etc/modules-load.d/leds-valve.conf
     sudo udevadm control --reload
-    sudo modprobe -r leds-valve 2>/dev/null
-    sudo pacman -Rns --noconfirm leds-valve-dkms-git 2>/dev/null
+    best_effort sudo modprobe -r leds-valve
+    best_effort sudo pacman -Rns --noconfirm leds-valve-dkms-git
     krevert machine
     reload_powerdevil
-    sudo systemctl disable ensure-kernel-headers.service 2>/dev/null
+    best_effort sudo systemctl disable ensure-kernel-headers.service
     led_dkms_override_remove
     sudo rm -f "$HEADERS_UNIT" "$HEADERS_SCRIPT"
     sudo rm -rf "$(dirname "$HEADERS_SCRIPT")" "$(dirname "$HEADERS_SCRIPT_OLD")"

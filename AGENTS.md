@@ -90,6 +90,16 @@ gamescope and the Plasma desktop. Primary target: the Valve Steam Machine
 
 - Bash, `set -uo pipefail` (no `-e`): check exit codes of steps that matter
   explicitly (`|| { err ...; exit 1; }` or `|| return 1`).
+- **Failure and quiet steps.** A function returns 0 when what it was asked
+  to do is in place and 1 when it isn't (after `err`); a step that is only an
+  extra (an icon cache, a service that may not exist) warns or stays silent and
+  doesn't change the return value. Never `cmd 2>/dev/null` on a step that
+  changes the system: use `best_effort cmd...` (same exit status, its errors go
+  to `$STATE_DIR/steamify.log`). `2>/dev/null` stays for probes (`pacman -Q`,
+  `grep -q`, `is-active`) whose failure is the answer.
+- **Temp dirs.** `make_tmpdir <variable>` (not `$(mktemp -d)`, whose
+  subshell can't register it): the entry point's `on_exit` removes them, also
+  when a run stops half way. That handler is the only `EXIT` trap.
 - Use the helpers from `lib/common.sh` (`info`, `ok`, `warn`, `err`,
   `ask_yn`, `backup_file`) for all output and prompts.
 - Runs as the normal user; use `sudo` per command, never require root.

@@ -40,7 +40,7 @@ extras_enable() {
     done
 
     local tmp_dir src
-    tmp_dir="$(mktemp -d)"
+    make_tmpdir tmp_dir
     if ! fetch_valve_presets "$tmp_dir"; then
         rm -rf "$tmp_dir"
         return 1

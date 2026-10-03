@@ -32,7 +32,7 @@ bios_lookup_newest() {
     local tmp desc
     BIOS_REPO="$(valve_newest_repo "$BIOS_REPO_PREFIX" 10)"
     [[ -n "$BIOS_REPO" ]] || return 1
-    tmp="$(mktemp -d)"
+    make_tmpdir tmp
     if curl -fsL --max-time 30 "$(valve_repo_url "$BIOS_REPO")/$BIOS_REPO.files" -o "$tmp/files" &&
         curl -fsL --max-time 30 "$(valve_repo_url "$BIOS_REPO")/$BIOS_REPO.db" -o "$tmp/db"; then
         desc="$(tar -tf "$tmp/files" 2>/dev/null | grep -E '^fremont-hw-support-[0-9][^/]*/files$' | head -n 1)"

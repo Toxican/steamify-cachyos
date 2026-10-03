@@ -64,6 +64,14 @@ TARGET_USER="$(id -un)"
 migrate_layout
 notify_seen
 
+# One exit handler (a second trap would replace it): the cursor the menu hid
+# and the run's temp dirs, also when the run stops half way.
+on_exit() {
+    [[ -t 1 ]] && tput cnorm 2>/dev/null
+    cleanup_tmpdirs
+}
+trap on_exit EXIT
+
 restart_needed() { [[ -n "${BIOS_NEEDS_RESTART:-}" || "$RESTART_FOR_LOGIN" == true ]]; }
 
 restart_now() {

@@ -25,7 +25,7 @@ poweroff_fix_enable() {
         sudo pacman -S --needed --noconfirm dkms || { err "Installing dkms failed."; return 1; }
     fi
     install_kernel_headers || return 1
-    tmp="$(mktemp -d)"
+    make_tmpdir tmp
     patch_file "$POWEROFF_DKMS_NAME.c" > "$tmp/$POWEROFF_DKMS_NAME.c"
     echo "obj-m += $POWEROFF_DKMS_NAME.o" >"$tmp/Makefile"
     patch_file "$POWEROFF_DKMS_NAME.dkms.conf" | fill NAME="$POWEROFF_DKMS_NAME" VERSION="$POWEROFF_DKMS_VER" >"$tmp/dkms.conf"
@@ -43,13 +43,13 @@ poweroff_fix_enable() {
             warn "Building the power-off fix for $k failed; with that kernel it may start again after shutting down."
     done
     echo "$POWEROFF_DKMS_NAME" | sudo tee "$POWEROFF_MODULES_LOAD" >/dev/null
-    sudo modprobe "$POWEROFF_DKMS_NAME" 2>/dev/null
+    best_effort sudo modprobe "$POWEROFF_DKMS_NAME"
     return 0
 }
 
 poweroff_fix_disable() {
     sudo rm -f "$POWEROFF_MODULES_LOAD"
-    sudo modprobe -r "$POWEROFF_DKMS_NAME" 2>/dev/null
+    best_effort sudo modprobe -r "$POWEROFF_DKMS_NAME"
     [[ -d "$POWEROFF_DKMS_SRC" ]] || return 0
     sudo dkms remove "$POWEROFF_DKMS_NAME/$POWEROFF_DKMS_VER" --all >/dev/null 2>&1
     sudo rm -rf "$POWEROFF_DKMS_SRC"

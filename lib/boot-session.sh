@@ -31,7 +31,7 @@ boot_enable() {
 
 boot_disable() {
     info "Setting the PC to boot into gaming mode again..."
-    sudo systemctl disable "$BOOT_UNIT_NAME" 2>/dev/null
+    best_effort sudo systemctl disable "$BOOT_UNIT_NAME"
     sudo rm -f "$BOOT_UNIT"
     sudo systemctl daemon-reload
     # Next boot into gamescope, as the conversion sets it up.

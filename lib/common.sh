@@ -39,6 +39,39 @@ ask_yn() {
     [[ "$reply" =~ ^[Yy]$ ]]
 }
 
+best_effort() {
+    # best_effort <command>...: for a step whose failure is fine (stopping a
+    # unit that isn't running, removing what isn't installed). Same exit status
+    # and output as the command, but its errors go to the log
+    # (~/.local/state/steamify/steamify.log) instead of vanishing, so a problem
+    # can still be found afterwards.
+    local log="${STEAMIFY_LOG:-${STATE_DIR:-$HOME/.local/state/steamify}/steamify.log}" e rc
+    e="$(mktemp)" || { "$@" 2>/dev/null; return; }
+    "$@" 2>"$e"; rc=$?
+    if [[ -s "$e" ]]; then
+        mkdir -p "${log%/*}" 2>/dev/null
+        # Kept small: a run that fails the same way every time shouldn't fill the disk.
+        [[ "$(stat -c %s "$log" 2>/dev/null || echo 0)" -gt 524288 ]] && : > "$log"
+        { echo "$(date -Is) exit $rc: $*"; sed 's/^/    /' "$e"; } >> "$log" 2>/dev/null
+    fi
+    rm -f "$e"
+    return $rc
+}
+
+# Temp dirs of this run, removed at exit (on_exit in steamify.sh), also when it
+# stops half way: make_tmpdir <variable>.
+TMP_DIRS=()
+make_tmpdir() {
+    local d
+    d="$(mktemp -d)" || return 1
+    TMP_DIRS+=("$d")
+    printf -v "$1" '%s' "$d"
+}
+
+cleanup_tmpdirs() {
+    [[ ${#TMP_DIRS[@]} -eq 0 ]] || rm -rf "${TMP_DIRS[@]}"
+}
+
 require_root_helper() {
     # Re-exec any privileged step through sudo rather than requiring the
     # whole script to run as root, so $HOME/whoami stay correct for the
@@ -102,7 +135,7 @@ stop_plasmashell_for_edit() {
     PLASMASHELL_WAS_RUNNING=false
     if pgrep -u "$USER" -x plasmashell >/dev/null; then
         PLASMASHELL_WAS_RUNNING=true
-        systemctl --user stop plasma-plasmashell.service 2>/dev/null
+        best_effort systemctl --user stop plasma-plasmashell.service
         pkill -u "$USER" -x plasmashell && sleep 2
     fi
 }
@@ -110,7 +143,7 @@ stop_plasmashell_for_edit() {
 restart_plasmashell_if_stopped() {
     if [[ "${PLASMASHELL_WAS_RUNNING:-false}" == true ]]; then
         rm -rf ~/.cache/plasmashell* ~/.cache/org.kde.dirmodel-qml.kcache
-        systemctl --user start plasma-plasmashell.service 2>/dev/null ||
+        best_effort systemctl --user start plasma-plasmashell.service ||
             { setsid plasmashell >/dev/null 2>&1 & }
     fi
 }

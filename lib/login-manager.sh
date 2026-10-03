@@ -210,7 +210,7 @@ remove_session_sync() {
     # The plasmalogin sync bridge from an earlier run isn't needed on SDDM.
     if [[ -f /etc/systemd/system/sync-steamos-session.path ]]; then
         info "Removing the plasma-login-manager sync bridge (not needed with SDDM)..."
-        sudo systemctl disable --now sync-steamos-session.path 2>/dev/null
+        best_effort sudo systemctl disable --now sync-steamos-session.path
         sudo rm -f /etc/systemd/system/sync-steamos-session.path \
             /etc/systemd/system/sync-steamos-session.service \
             /usr/local/bin/sync-steamos-session.sh

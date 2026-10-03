@@ -39,10 +39,10 @@ cec_link_steamos_manager() {
     # this item ran.
     pacman -Q steamos-manager >/dev/null 2>&1 || return 0
     user_systemctl daemon-reload
-    user_systemctl enable steamos-manager-configure-cecd.service 2>/dev/null
-    user_systemctl start steamos-manager-configure-cecd.service 2>/dev/null
-    user_systemctl restart cecd.service 2>/dev/null
-    user_systemctl restart steamos-manager.service 2>/dev/null
+    best_effort user_systemctl enable steamos-manager-configure-cecd.service
+    best_effort user_systemctl start steamos-manager-configure-cecd.service
+    best_effort user_systemctl restart cecd.service
+    best_effort user_systemctl restart steamos-manager.service
     return 0
 }
 
@@ -55,10 +55,10 @@ cec_status() { cec_installed && [[ -f "$CEC_STEAM_DROPIN" ]] && cec_driver_ok; }
 
 cec_reload_driver() {
     # cecd keeps /dev/cec0 open, so the old module can't be unloaded under it.
-    user_systemctl stop cecd.service 2>/dev/null
-    sudo modprobe -r cros_ec_cec 2>/dev/null
-    sudo modprobe cros_ec_cec 2>/dev/null
-    user_systemctl start cecd.service 2>/dev/null
+    best_effort user_systemctl stop cecd.service
+    best_effort sudo modprobe -r cros_ec_cec
+    best_effort sudo modprobe cros_ec_cec
+    best_effort user_systemctl start cecd.service
 }
 
 cec_driver_enable() {
@@ -68,7 +68,7 @@ cec_driver_enable() {
         sudo pacman -S --needed --noconfirm dkms patch || { err "Installing dkms failed."; return 1; }
     fi
     install_kernel_headers || return 1
-    tmp="$(mktemp -d)"
+    make_tmpdir tmp
     if [[ -f "$CEC_DRIVER_CACHE" ]] && echo "$CEC_DRIVER_SHA256  $CEC_DRIVER_CACHE" | sha256sum -c --quiet - 2>/dev/null; then
         cp "$CEC_DRIVER_CACHE" "$tmp/cros-ec-cec.c"
     else
@@ -80,7 +80,7 @@ cec_driver_enable() {
             return 1
         fi
         # The name carries the checksum: a newer pin gets its own file, the old one goes.
-        sudo find "${CEC_DRIVER_CACHE%/*}" -maxdepth 1 -name 'cros-ec-cec-*.c' ! -name "${CEC_DRIVER_CACHE##*/}" -delete 2>/dev/null
+        best_effort sudo find "${CEC_DRIVER_CACHE%/*}" -maxdepth 1 -name 'cros-ec-cec-*.c' ! -name "${CEC_DRIVER_CACHE##*/}" -delete
         sudo install -Dm644 "$tmp/cros-ec-cec.c" "$CEC_DRIVER_CACHE"
     fi
     # So it finds amdgpu's HDMI port (see the patch for why).
@@ -124,7 +124,7 @@ cec_enable() {
         sudo pacman -S --needed --noconfirm linuxconsole || { err "Installing linuxconsole failed."; return 1; }
         state_set cec installed_linuxconsole 1
     fi
-    tmp="$(mktemp -d)"
+    make_tmpdir tmp
     for p in "${CEC_PKGS[@]}"; do
         f="$(fetch_holo_pkg "$tmp" "$p")" || { rm -rf "$tmp"; return 1; }
         files+=("$f")
@@ -152,10 +152,10 @@ cec_enable() {
     user_systemctl daemon-reload
     # The TV remote's volume keys: SteamOS enables this socket through its
     # preset, which pacman doesn't apply, so nothing else does on CachyOS.
-    user_systemctl enable --now cec-audio-control.socket 2>/dev/null
+    best_effort user_systemctl enable --now cec-audio-control.socket
     cec_link_steamos_manager
     if compgen -G "/dev/cec*" >/dev/null; then
-        user_systemctl restart cecd.service 2>/dev/null
+        best_effort user_systemctl restart cecd.service
         ok "HDMI-CEC on ($(cd /dev && echo cec*)); Steam shows its settings from the next gaming mode start."
         info "Turn on CEC on your TV too (e.g. Sony: BRAVIA Sync, Samsung: Anynet+, LG: SimpLink)."
     else
@@ -166,15 +166,15 @@ cec_enable() {
 
 cec_disable() {
     info "Removing HDMI-CEC..."
-    user_systemctl disable --now cecd.service cec-audio-control.socket cec-audio-control.service 2>/dev/null
-    user_systemctl disable steamos-manager-configure-cecd.service 2>/dev/null
-    sudo pacman -Rns --noconfirm "${CEC_PKGS[@]}" 2>/dev/null
+    best_effort user_systemctl disable --now cecd.service cec-audio-control.socket cec-audio-control.service
+    best_effort user_systemctl disable steamos-manager-configure-cecd.service
+    best_effort sudo pacman -Rns --noconfirm "${CEC_PKGS[@]}"
     cec_driver_disable
     sudo rm -f "$CEC_ORDER_DROPIN" "$CEC_STEAM_DROPIN" "$CEC_STEAM_ENV"
-    sudo rmdir "$(dirname "$CEC_ORDER_DROPIN")" "$(dirname "$CEC_STEAM_DROPIN")" "$(dirname "$CEC_STEAM_ENV")" 2>/dev/null
+    best_effort sudo rmdir "$(dirname "$CEC_ORDER_DROPIN")" "$(dirname "$CEC_STEAM_DROPIN")" "$(dirname "$CEC_STEAM_ENV")"
     user_systemctl daemon-reload
     if [[ -n "$(state_get cec installed_linuxconsole)" ]]; then
-        sudo pacman -Rns --noconfirm linuxconsole 2>/dev/null
+        best_effort sudo pacman -Rns --noconfirm linuxconsole
         state_clear cec
     fi
     sudo udevadm control --reload

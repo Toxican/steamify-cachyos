@@ -446,7 +446,6 @@ draw_menu_tui() {
 run_menu_tui() {
     local cursor=0 key rest count
     tput civis 2>/dev/null
-    trap 'tput cnorm 2>/dev/null' EXIT
     while true; do
         draw_menu_tui "$cursor"
         count=${#MENU_ITEMS[@]}
