@@ -9,6 +9,7 @@ one per merged pull request.
 
 - **refactor: Valve's package mirror in one module (`lib/valve-mirror.sh`: newest repo, package database fields, checksummed download); the SteamOS extras, CEC driver, BIOS lookup and os-release version used four copies**
 - **refactor: the rules between menu items are three tables (`REQUIRES`, `FOLLOWS`, `EXCLUDES` in `lib/menu.sh`) used by the menu's toggles and, as `normalize_wanted`, by the app's selection (it had its own copy of the rules). The app now also ticks the Steamify shortcut for "Add as non-Steam game" and unticks the game entry with it, like the menu**
+- **refactor: the entry point picks its mode once (`MODE`) and `--defaults` and `--boot` are functions with one failure report, instead of four booleans and two copies of the apply-and-report code; `NO_COLOR` gives plain output**
 - **test: the menu rules, the plan and the app's and installer's JSON are checked against a golden file (`tests/menu-test.sh` in steamify-cachyos-dev); `make check`, `.editorconfig`, `.shellcheckrc`**
 - **docs: README lists the sources and projects Steamify builds on, with licences and thanks**
 

@@ -26,23 +26,28 @@ done
 
 require_root_helper
 
-BACKEND=false
-[[ "${1:-}" == --backend ]] && BACKEND=true
-# --defaults [--options <id>,...] [--boot gamescope|desktop]: apply what the
-# menu would preselect (or exactly the listed items), without the menu or any
-# prompt (the Steam Machine ISO's first login runs this; sudo must not ask).
-DEFAULTS=false
-[[ "${1:-}" == --defaults ]] && DEFAULTS=true
-# --defaults --list: what --defaults can set up here, as JSON (an installer
-# page is built from it); nothing else on stdout.
-LIST=false
-[[ "$DEFAULTS" == true && "${2:-}" == --list ]] && LIST=true
-# --boot gamescope|desktop: only change where an installed conversion
-# starts, everything else stays as it is (for scripts; no menu).
-BOOT_ONLY=false
-[[ "${1:-}" == --boot ]] && BOOT_ONLY=true
+# What this run does, from the first argument:
+#   --backend ...                       the graphical app's machine-readable mode
+#   --defaults [--options <id>,...] [--boot gamescope|desktop]: apply what the
+#       menu would preselect (or exactly the listed items), without the menu or
+#       any prompt (the Steam Machine ISO's first login runs this; sudo must not
+#       ask)
+#   --defaults --list                   what --defaults can set up here, as JSON
+#       (an installer page is built from it); nothing else on stdout
+#   --boot gamescope|desktop            only change where an installed conversion
+#       starts, everything else stays as it is (for scripts; no menu)
+#   --first-login                       the installer's one-time follow-up
+#   (none)                              the menu
+MODE=menu
+case "${1:-}" in
+    --backend) MODE=backend ;;
+    --defaults) MODE=defaults; [[ "${2:-}" == --list ]] && MODE=list ;;
+    --boot) MODE=boot ;;
+    --first-login) MODE=first-login ;;
+esac
+BACKEND=false; [[ "$MODE" == backend ]] && BACKEND=true
 
-if [[ "$BACKEND" == false && "$LIST" == false ]]; then
+if [[ "$MODE" != backend && "$MODE" != list ]]; then
     echo -e "${c_bold}Steamify CachyOS${c_reset} v$VERSION"
     echo "Turn the SteamOS-style parts on or off. The menu shows what is on now;"
     echo "anything you turn off is put back the way it was."
@@ -118,63 +123,62 @@ quit_prompt() {
     return 0
 }
 
-# The graphical app (steamify-ui) drives the same components through
-# lib/backend.sh instead of the menu.
-if [[ "$BACKEND" == true ]]; then
-    RESTART_FOR_LOGIN=false
-    shift
-    backend_main "$@"
-    exit $?
-fi
+report_failed() {
+    # Exit status for the scripted modes: 1 when a component had problems.
+    [[ ${#FAILED[@]} -eq 0 ]] || { warn "These had problems (see above): ${FAILED[*]}"; return 1; }
+}
 
-if [[ "${1:-}" == --first-login ]]; then
-    first_login_run
-    exit 0
-fi
-
-if [[ "$LIST" == true ]]; then
-    defaults_list
-    exit 0
-fi
-
-if [[ "$DEFAULTS" == true ]]; then
+run_defaults() {
     RESTART_FOR_LOGIN=false
     REAPPLY=false
-    sudo -n true 2>/dev/null || { err "--defaults needs sudo without a password."; exit 1; }
+    sudo -n true 2>/dev/null || { err "--defaults needs sudo without a password."; return 1; }
     detect_components
-    defaults_options "${@:2}" || exit 1
+    defaults_options "${@:2}" || return 1
     plan_changes
     apply_changes
     # Run by the installer: the rest waits for the first desktop login.
     user_session || first_login_schedule
-    [[ ${#FAILED[@]} -eq 0 ]] || { warn "These had problems (see above): ${FAILED[*]}"; exit 1; }
+    report_failed || return 1
     ok "Done; the changes take effect after a restart."
-    exit 0
-fi
+}
 
-if [[ "$BOOT_ONLY" == true ]]; then
+run_boot_only() {
+    local mode="${2:-}" c
     RESTART_FOR_LOGIN=false
     REAPPLY=false
-    case "${2:-}" in
+    case "$mode" in
         gamescope|desktop) ;;
-        *) err "--boot takes gamescope or desktop"; exit 1 ;;
+        *) err "--boot takes gamescope or desktop"; return 1 ;;
     esac
     detect_components
-    [[ "${CURRENT[gaming]}" == 1 ]] || { err "--boot needs the SteamOS conversion; turn it on first."; exit 1; }
+    [[ "${CURRENT[gaming]}" == 1 ]] || { err "--boot needs the SteamOS conversion; turn it on first."; return 1; }
     # What is on stays on, and nothing else changes: not the updates or
     # removals a normal run would pick.
     for c in "${COMPONENTS[@]}"; do WANTED[$c]=${CURRENT[$c]:-0}; done
-    WANTED[boot]=0; [[ "$2" == desktop ]] && WANTED[boot]=1
+    WANTED[boot]=0; [[ "$mode" == desktop ]] && WANTED[boot]=1
     plan_changes
     if [[ ${#TO_DISABLE[@]} -eq 0 && ${#TO_ENABLE[@]} -eq 0 ]]; then
-        ok "Already starting in $2."
-        exit 0
+        ok "Already starting in $mode."
+        return 0
     fi
     apply_changes
-    [[ ${#FAILED[@]} -eq 0 ]] || { warn "These had problems (see above): ${FAILED[*]}"; exit 1; }
-    ok "Starts in $2 from the next boot on."
-    exit 0
-fi
+    report_failed || return 1
+    ok "Starts in $mode from the next boot on."
+}
+
+case "$MODE" in
+    backend)
+        # The graphical app (steamify-ui) drives the same components through
+        # lib/backend.sh instead of the menu.
+        RESTART_FOR_LOGIN=false
+        shift
+        backend_main "$@"
+        exit $? ;;
+    first-login) first_login_run; exit 0 ;;
+    list) defaults_list; exit 0 ;;
+    defaults) run_defaults "$@"; exit $? ;;
+    boot) run_boot_only "$@"; exit $? ;;
+esac
 
 # Menu loop: after each run the menu comes back with the new state, until
 # the user quits; the restart question comes then, once, for everything.

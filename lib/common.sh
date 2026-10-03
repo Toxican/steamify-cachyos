@@ -2,7 +2,12 @@
 # Output helpers, prompts and small shared utilities.
 # Sourced by steamify.sh; not meant to be run on its own.
 
-c_reset="\033[0m"; c_bold="\033[1m"; c_green="\033[32m"; c_yellow="\033[33m"; c_red="\033[31m"; c_cyan="\033[36m"; c_dim="\033[2m"
+# NO_COLOR (https://no-color.org): plain output, e.g. for a log file.
+if [[ -n "${NO_COLOR:-}" ]]; then
+    c_reset=""; c_bold=""; c_green=""; c_yellow=""; c_red=""; c_cyan=""; c_dim=""
+else
+    c_reset="\033[0m"; c_bold="\033[1m"; c_green="\033[32m"; c_yellow="\033[33m"; c_red="\033[31m"; c_cyan="\033[36m"; c_dim="\033[2m"
+fi
 
 info()  { echo -e "${c_cyan}[INFO]${c_reset} $*"; }
 ok()    { echo -e "${c_green}[OK]${c_reset} $*"; }
