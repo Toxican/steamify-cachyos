@@ -12,6 +12,7 @@ one per merged pull request.
 - **refactor: the entry point picks its mode once (`MODE`) and `--defaults` and `--boot` are functions with one failure report, instead of four booleans and two copies of the apply-and-report code; `NO_COLOR` gives plain output**
 - **refactor: `is_wanted` and `is_current` instead of repeated `[[ "${WANTED[x]}" == 1 ]]` checks in the menu, the app's backend and the entry point**
 - **refactor: the start of every item's JSON (id, label, hint, kind, parent) is built in one place (`json_item_head`) for the app and the installer page, and `json_bool` replaces the `&& echo true || echo false` copies**
+- **ci: a Lint workflow runs shellcheck on the modules and helper scripts, ruff on the app and `patches/*.py` (`ruff.toml`) and qmllint on the QML (not blocking until it has run once on the runner); `make lint` runs the same locally**
 - **test: the menu rules, the plan and the app's and installer's JSON are checked against a golden file (`tests/menu-test.sh` in steamify-cachyos-dev); `make check`, `.editorconfig`, `.shellcheckrc`**
 - **docs: README lists the sources and projects Steamify builds on, with licences and thanks**
 

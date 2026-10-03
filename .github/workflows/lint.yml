@@ -1,0 +1,60 @@
+# Lint: shell, Python and QML. Separate from bundle.yml (which builds and
+# releases) so a style problem shows up as its own check. Runs on GitHub and on
+# the Gitea mirror; the same checks locally: make check.
+name: Lint
+
+on:
+  push:
+    branches: [main, 'release/**']
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  shell:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      # The sources, not only the bundle (bundle.yml checks that): .shellcheckrc
+      # lists the exceptions (variables shared across modules).
+      - name: shellcheck the modules
+        uses: ludeeus/action-shellcheck@2.0.0
+        with:
+          severity: warning
+          scandir: lib
+          additional_files: steamify.sh ui/steamify-app.sh .github/tools/bundle.sh
+      # steamify-os-release.sh is a template (@STEAMOS@ is filled in at install time).
+      - name: shellcheck the helper scripts
+        uses: ludeeus/action-shellcheck@2.0.0
+        with:
+          severity: warning
+          scandir: patches
+          ignore_names: steamify-os-release.sh
+
+  python:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: ruff (ruff.toml)
+        uses: astral-sh/ruff-action@v4.1.0
+        with:
+          args: check ui/steamify-ui patches
+
+  qml:
+    runs-on: ubuntu-latest
+    # Not blocking until it has run once on the runner image (Qt packages).
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install qmllint and the QML modules the app imports
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq qt6-declarative-dev-tools qml6-module-qtquick qml6-module-qtquick-controls qml6-module-qtquick-window
+      # "unqualified" (a screen reading `app` from its parent) is how the screens get their
+      # AppState, so it is off; everything else must be clean.
+      - name: qmllint
+        run: |
+          lint="$(command -v qmllint6 || echo /usr/lib/qt6/bin/qmllint)"
+          "$lint" --unqualified disable --max-warnings 0 ui/qml/*.qml

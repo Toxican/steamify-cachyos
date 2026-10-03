@@ -1,0 +1,6 @@
+# Python: the app (ui/steamify-ui, no .py extension) and patches/*.py.
+line-length = 130
+target-version = "py312"
+
+[lint]
+select = ["E", "F", "W", "B"]
