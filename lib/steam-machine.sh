@@ -42,24 +42,7 @@ install_kernel_headers() {
     sudo pacman -S --needed --noconfirm "${headers[@]}"
 }
 
-install_valve_led_driver() {
-    # Installs the leds-valve DKMS driver from the AUR so the front LED
-    # bar is exposed under /sys/class/leds/valve-leds[N].
-    local aur_helper
-    aur_helper="$(find_aur_helper)"
-    if [[ -z "$aur_helper" ]]; then
-        warn "No AUR helper available - can't install leds-valve-dkms-git."
-        warn "Install one yourself, then run: yay -S leds-valve-dkms-git"
-        return 1
-    fi
-
-    local -a flags
-    read -ra flags <<< "$(aur_noninteractive_flags "$aur_helper")"
-
-    # Headers first: without them the package installs fine but DKMS
-    # silently builds nothing, so modprobe later finds no module.
-    install_kernel_headers || return 1
-
+led_write_dkms_override() {
     # The upstream Makefile builds against `uname -r` instead of the kernel
     # DKMS targets, so every other installed kernel (e.g. linux-cachyos-lts)
     # got the running kernel's tree and failed (wrong kernel, and gcc against
@@ -74,17 +57,22 @@ install_valve_led_driver() {
         err "Couldn't write $LED_DKMS_OVERRIDE; without it the LED driver only builds for the running kernel."
         return 1
     fi
+}
 
-    if ! pacman -Qi leds-valve-dkms-git >/dev/null 2>&1; then
-        info "Installing leds-valve-dkms-git from the AUR via $aur_helper (non-interactive)..."
-        if ! "$aur_helper" -S "${flags[@]}" leds-valve-dkms-git; then
-            err "Installing leds-valve-dkms-git failed."
-            return 1
-        fi
-    else
+led_install_package() {
+    # led_install_package <aur helper>
+    local aur_helper="$1"
+    local -a flags
+    read -ra flags <<< "$(aur_noninteractive_flags "$aur_helper")"
+    if pacman -Qi leds-valve-dkms-git >/dev/null 2>&1; then
         ok "leds-valve-dkms-git already installed."
+        return 0
     fi
+    info "Installing leds-valve-dkms-git from the AUR via $aur_helper (non-interactive)..."
+    "$aur_helper" -S "${flags[@]}" leds-valve-dkms-git || { err "Installing leds-valve-dkms-git failed."; return 1; }
+}
 
+led_build_all_kernels() {
     # Build for every installed kernel that has headers, so booting another
     # one (e.g. the LTS kernel) still has the driver.
     local kdir kver
@@ -99,7 +87,9 @@ install_valve_led_driver() {
             return 1
         fi
     done
+}
 
+led_load_module() {
     # Load now, and on every boot.
     echo leds-valve | sudo tee /etc/modules-load.d/leds-valve.conf >/dev/null
 
@@ -124,7 +114,26 @@ install_valve_led_driver() {
         warn "No valve-leds nodes under /sys/class/leds/ yet. Reboot, then check with:"
         warn "  ls /sys/class/leds/ | grep valve ; sudo dmesg | grep -i valve"
     fi
+}
 
+install_valve_led_driver() {
+    # Installs the leds-valve DKMS driver from the AUR so the front LED
+    # bar is exposed under /sys/class/leds/valve-leds[N].
+    local aur_helper
+    aur_helper="$(find_aur_helper)"
+    if [[ -z "$aur_helper" ]]; then
+        warn "No AUR helper available - can't install leds-valve-dkms-git."
+        warn "Install one yourself, then run: yay -S leds-valve-dkms-git"
+        return 1
+    fi
+
+    # Headers first: without them the package installs fine but DKMS
+    # silently builds nothing, so modprobe later finds no module.
+    install_kernel_headers || return 1
+    led_write_dkms_override || return 1
+    led_install_package "$aur_helper" || return 1
+    led_build_all_kernels || return 1
+    led_load_module
 }
 
 LED_UDEV_RULE="/etc/udev/rules.d/70-valve-leds-user.rules"
