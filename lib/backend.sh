@@ -40,7 +40,7 @@ backend_status() {
     local c first_run=true items="" kind parent now
     detect_components
     for c in "${COMPONENTS[@]}"; do
-        component_available "$c" && ! is_action "$c" && [[ "${CURRENT[$c]}" == 1 ]] && first_run=false
+        component_available "$c" && ! is_action "$c" && is_current "$c" && first_run=false
     done
     for c in "${COMPONENTS[@]}"; do
         component_available "$c" || continue
@@ -52,7 +52,7 @@ backend_status() {
         items+=",\"kind\":\"$kind\",\"parent\":$(json_str "$parent")"
         items+=",\"needs\":\"\""
         items+=",\"on\":$( [[ "$now" == 1 ]] && echo true || echo false)"
-        items+=",\"wanted\":$( [[ "${WANTED[$c]:-0}" == 1 ]] && echo true || echo false)"
+        items+=",\"wanted\":$( is_wanted "$c" && echo true || echo false)"
         items+=",\"update\":$(feature_outdated "$c" && echo true || echo false)"
         items+=",\"new\":$({ feature_new "$c" || feature_new_optin "$c"; } && echo true || echo false)"
         items+=",\"selectable\":$(component_selectable "$c" && echo true || echo false)"
@@ -163,7 +163,7 @@ backend_apply() {
     backend_sudo || return 1
 
     LOGIN_MANAGER=plasmalogin
-    [[ "${WANTED[single]}" == 1 ]] && LOGIN_MANAGER=sddm
+    is_wanted single && LOGIN_MANAGER=sddm
     local -a failed=()
     for c in "${TO_DISABLE[@]}"; do
         if backend_run_component "$c" disable; then feature_record "$c" disable; else failed+=("$c"); fi

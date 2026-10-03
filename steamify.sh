@@ -151,7 +151,7 @@ run_boot_only() {
         *) err "--boot takes gamescope or desktop"; return 1 ;;
     esac
     detect_components
-    [[ "${CURRENT[gaming]}" == 1 ]] || { err "--boot needs the SteamOS conversion; turn it on first."; return 1; }
+    is_current gaming || { err "--boot needs the SteamOS conversion; turn it on first."; return 1; }
     # What is on stays on, and nothing else changes: not the updates or
     # removals a normal run would pick.
     for c in "${COMPONENTS[@]}"; do WANTED[$c]=${CURRENT[$c]:-0}; done
@@ -209,7 +209,7 @@ while true; do
         if [[ "$c" == boot ]]; then echo "  - boot into: desktop (from the next boot)"
         elif is_action "$c"; then echo "  - run:      ${LABEL[$c]%%:*} at your own risk (checks, then asks twice more)"
         elif feature_outdated "$c"; then echo "  - update:   ${LABEL[$c]} (changed in this version)"
-        elif [[ "${CURRENT[$c]}" == 1 ]]; then echo "  - re-apply: ${LABEL[$c]}"
+        elif is_current "$c"; then echo "  - re-apply: ${LABEL[$c]}"
         elif feature_new "$c"; then echo "  - turn on:  ${LABEL[$c]} (new in this version)"
         else echo "  - turn on:  ${LABEL[$c]}"; fi
     done
@@ -234,11 +234,11 @@ while true; do
     for c in "${COMPONENTS[@]}"; do
         component_available "$c" && ! is_action "$c" || continue
         if [[ "$c" == boot ]]; then
-            [[ "${CURRENT[gaming]}" == 1 ]] && echo "       └ boots into: $(boot_mode "${CURRENT[boot]}")"
+            is_current gaming && echo "       └ boots into: $(boot_mode "${CURRENT[boot]}")"
         elif [[ -n "${PARENT[$c]:-}" ]]; then
             [[ "${CURRENT[${PARENT[$c]}]}" == 1 ]] || continue
-            if [[ "${CURRENT[$c]}" == 1 ]]; then echo -e "       └ ${c_green}on ${c_reset} ${LABEL[$c]}"; else echo "       └ off  ${LABEL[$c]}"; fi
-        elif [[ "${CURRENT[$c]}" == 1 ]]; then echo -e "  ${c_green}on ${c_reset} ${LABEL[$c]}"; else echo "  off  ${LABEL[$c]}"; fi
+            if is_current "$c"; then echo -e "       └ ${c_green}on ${c_reset} ${LABEL[$c]}"; else echo "       └ off  ${LABEL[$c]}"; fi
+        elif is_current "$c"; then echo -e "  ${c_green}on ${c_reset} ${LABEL[$c]}"; else echo "  off  ${LABEL[$c]}"; fi
     done
     if [[ ${#FAILED[@]} -gt 0 ]]; then
         warn "These had problems (see above): ${FAILED[*]}"

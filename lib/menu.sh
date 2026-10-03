@@ -87,6 +87,8 @@ component_available() {
     esac
 }
 
+is_wanted() { [[ "${WANTED[$1]:-0}" == 1 ]]; }
+is_current() { [[ "${CURRENT[$1]:-0}" == 1 ]]; }
 is_action() { [[ " ${ACTIONS[*]} " == *" $1 "* ]]; }
 
 boot_mode() {
@@ -129,7 +131,7 @@ feature_outdated() {
     # On, but set up by an older version of that feature (compared as
     # versions: 2.10.0 is newer than 2.9.0).
     local have want
-    [[ "${CURRENT[$1]:-0}" == 1 ]] || return 1
+    is_current "$1" || return 1
     have="$(state_get features "$1" "$FEATURE_BASELINE")"
     [[ "$have" == off ]] && have="$FEATURE_BASELINE"
     want="${FEATURE_VERSION[$1]:-$FEATURE_BASELINE}"
@@ -266,14 +268,14 @@ defaults_options() {
                 warn "Leaving out ${LABEL[$c]%%:*}: not available on this PC."
             fi
         done
-        [[ "${WANTED[single]}" == 1 ]] && component_available gaming && WANTED[gaming]=1
+        is_wanted single && component_available gaming && WANTED[gaming]=1
         for c in "${COMPONENTS[@]}"; do
             [[ "${WANTED[$c]}" == 1 && -n "${PARENT[$c]:-}" ]] && WANTED[${PARENT[$c]}]=1
         done
     fi
     case "$boot" in
         desktop)
-            [[ "${WANTED[gaming]}" == 1 ]] || { err "--boot desktop needs the SteamOS conversion (gaming)."; return 1; }
+            is_wanted gaming || { err "--boot desktop needs the SteamOS conversion (gaming)."; return 1; }
             WANTED[boot]=1 ;;
         gamescope) WANTED[boot]=0 ;;
     esac
@@ -316,7 +318,7 @@ toggle_component() {
     local c="$1" p x
     component_selectable "$c" || return 1
     WANTED[$c]=$(( 1 - WANTED[$c] ))
-    if [[ "${WANTED[$c]}" == 1 ]]; then
+    if is_wanted "$c"; then
         p="${REQUIRES[$c]:-}"
         [[ -n "$p" ]] && component_available "$p" && WANTED[$p]=1
         x="${EXCLUDES[$c]:-}"
@@ -358,16 +360,16 @@ show_menu() {
         menu_visible "$c" || continue
         i=$((i + 1)); MENU_ITEMS[$i]=$c
         # Pad the plain word, then colour it: colour codes would count as width.
-        now="off"; [[ "${CURRENT[$c]}" == 1 ]] && now="on"
+        now="off"; is_current "$c" && now="on"
         is_action "$c" && now="-"
         now="$(printf '%-6s' "$now")"
-        [[ "${CURRENT[$c]}" == 1 ]] && now="${now/on/${c_green}on${c_reset}}"
-        want="[ ]"; [[ "${WANTED[$c]}" == 1 ]] && want="[x]"
+        is_current "$c" && now="${now/on/${c_green}on${c_reset}}"
+        want="[ ]"; is_wanted "$c" && want="[x]"
         if [[ "$c" == boot ]]; then
             # A choice rather than a checkbox: Now/Want show the mode.
-            now="gaming"; [[ "${CURRENT[boot]}" == 1 ]] && now="desk"
-            [[ "${CURRENT[gaming]}" == 1 ]] || now="-"
-            want="gaming"; [[ "${WANTED[boot]}" == 1 ]] && want="desk"
+            now="gaming"; is_current boot && now="desk"
+            is_current gaming || now="-"
+            want="gaming"; is_wanted boot && want="desk"
             printf "  %-3s %-6s %-6s   └ %s\n" "$i" "$now" "$want" "$(boot_choice "${WANTED[boot]}")"
         elif ! component_selectable "$c"; then
             local tree=""; [[ -n "${PARENT[$c]:-}" ]] && tree="  └ "
@@ -406,8 +408,8 @@ draw_menu_tui() {
     for c in "${COMPONENTS[@]}"; do
         menu_visible "$c" || continue
         MENU_ITEMS[$i]=$c
-        box="[ ]"; [[ "${WANTED[$c]}" == 1 ]] && box="[${c_green}x${c_reset}]"
-        state="  (now: off)"; [[ "${CURRENT[$c]}" == 1 ]] && state="  (now: ${c_green}on${c_reset})"
+        box="[ ]"; is_wanted "$c" && box="[${c_green}x${c_reset}]"
+        state="  (now: off)"; is_current "$c" && state="  (now: ${c_green}on${c_reset})"
         is_action "$c" && state="  (opt-in, runs once)"
         line="$box ${LABEL[$c]}"
         if [[ "$c" == boot ]]; then
@@ -415,9 +417,9 @@ draw_menu_tui() {
             # Indented under the conversion, whose sub-option it is.
             line="$(boot_choice "${WANTED[boot]}")"
             line="    └ ${line/\[/[${c_green}}"; line="${line/\]/${c_reset}]}"
-            local mode=gamescope; [[ "${CURRENT[boot]}" == 1 ]] && mode=desktop
+            local mode=gamescope; is_current boot && mode=desktop
             state="  (${c_bold}←/→${c_reset} choose)"
-            [[ "${CURRENT[gaming]}" == 1 ]] && state="  (now: $mode; ${c_bold}←/→${c_reset} choose)"
+            is_current gaming && state="  (now: $mode; ${c_bold}←/→${c_reset} choose)"
         elif [[ -n "${PARENT[$c]:-}" ]]; then
             line="    └ $line"
         fi
@@ -506,7 +508,7 @@ plan_changes() {
     done
     for c in "${COMPONENTS[@]}"; do
         component_available "$c" || continue
-        [[ "${WANTED[$c]}" == 1 ]] || continue
+        is_wanted "$c" || continue
         if is_action "$c"; then TO_ENABLE+=("$c"); continue; fi
         if [[ "${CURRENT[$c]}" == 0 || "$REAPPLY" == true ]] || feature_outdated "$c" ||
             [[ "$c" == gaming && "${CURRENT[single]}" != "${WANTED[single]}" ]]; then
@@ -518,7 +520,7 @@ plan_changes() {
 apply_changes() {
     local c failed=()
     LOGIN_MANAGER=plasmalogin
-    [[ "${WANTED[single]}" == 1 ]] && LOGIN_MANAGER=sddm
+    is_wanted single && LOGIN_MANAGER=sddm
 
     for c in "${TO_DISABLE[@]}"; do
         if [[ "$c" == boot ]]; then echo; echo -e "${c_bold}Boot into: gamescope${c_reset}"
