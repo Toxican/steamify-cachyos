@@ -11,6 +11,7 @@ one per merged pull request.
 - **refactor: the rules between menu items are three tables (`REQUIRES`, `FOLLOWS`, `EXCLUDES` in `lib/menu.sh`) used by the menu's toggles and, as `normalize_wanted`, by the app's selection (it had its own copy of the rules). The app now also ticks the Steamify shortcut for "Add as non-Steam game" and unticks the game entry with it, like the menu**
 - **refactor: the entry point picks its mode once (`MODE`) and `--defaults` and `--boot` are functions with one failure report, instead of four booleans and two copies of the apply-and-report code; `NO_COLOR` gives plain output**
 - **refactor: `is_wanted` and `is_current` instead of repeated `[[ "${WANTED[x]}" == 1 ]]` checks in the menu, the app's backend and the entry point**
+- **refactor: the start of every item's JSON (id, label, hint, kind, parent) is built in one place (`json_item_head`) for the app and the installer page, and `json_bool` replaces the `&& echo true || echo false` copies**
 - **test: the menu rules, the plan and the app's and installer's JSON are checked against a golden file (`tests/menu-test.sh` in steamify-cachyos-dev); `make check`, `.editorconfig`, `.shellcheckrc`**
 - **docs: README lists the sources and projects Steamify builds on, with licences and thanks**
 

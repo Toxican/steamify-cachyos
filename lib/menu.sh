@@ -170,6 +170,8 @@ feature_new() {
     feature_added "$1" && [[ " ${NO_PRESELECT[*]} " != *" $1 "* ]]
 }
 
+feature_any_new() { feature_new "$1" || feature_new_optin "$1"; }
+
 feature_new_optin() {
     # A new opt-in option (unticked by default): the "new" badge only, it stays
     # unticked. Boot into is a choice row of the conversion, not an item.
@@ -300,9 +302,7 @@ defaults_list() {
         on=false
         [[ "$sel" == true && " ${NO_PRESELECT[*]} " != *" $c "* ]] && on=true
         [[ "$c" == cec ]] && machine_available && on=true
-        items+="${items:+,}{\"id\":$(json_str "$c"),\"label\":$(json_str "${LABEL[$c]%%:*}")"
-        items+=",\"hint\":$(json_str "$( [[ "${LABEL[$c]}" == *:* ]] && echo "${LABEL[$c]#*: }")")"
-        items+=",\"kind\":\"$kind\",\"parent\":$(json_str "${PARENT[$c]:-}"),\"needs\":\"\",\"hideWhen\":$(json_str "$([[ "$c" == nvsilent ]] && echo bigpicture)"),\"on\":$on,\"selectable\":$sel}"
+        items+="${items:+,}$(json_item_head "$c" "$kind"),\"hideWhen\":$(json_str "$([[ "$c" == nvsilent ]] && echo bigpicture)"),\"on\":$on,\"selectable\":$sel}"
     done
     printf '[%s]\n' "$items"
 }

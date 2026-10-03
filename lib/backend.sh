@@ -31,13 +31,28 @@ json_list() {
     printf '[%s]' "$out"
 }
 
+json_bool() {
+    # json_bool <command>...: true or false by the command's exit status.
+    if "$@"; then printf true; else printf false; fi
+}
+
+json_item_head() {
+    # json_item_head <id> <kind>: the start of an item's object (no closing
+    # brace) with what the app and the installer page both read: id, label,
+    # hint (the part of the label after the colon), kind, parent.
+    local c="$1" hint=""
+    [[ "${LABEL[$c]}" == *:* ]] && hint="${LABEL[$c]#*: }"
+    printf '{"id":%s,"label":%s,"hint":%s,"kind":"%s","parent":%s,"needs":""' \
+        "$(json_str "$c")" "$(json_str "${LABEL[$c]%%:*}")" "$(json_str "$hint")" "$2" "$(json_str "${PARENT[$c]:-}")"
+}
+
 backend_event() {
     # backend_event <event> [<json fields without braces>]
     printf '{"event":%s%s}\n' "$(json_str "$1")" "${2:+,$2}"
 }
 
 backend_status() {
-    local c first_run=true items="" kind parent now
+    local c first_run=true items="" kind
     detect_components
     for c in "${COMPONENTS[@]}"; do
         component_available "$c" && ! is_action "$c" && is_current "$c" && first_run=false
@@ -45,17 +60,12 @@ backend_status() {
     for c in "${COMPONENTS[@]}"; do
         component_available "$c" || continue
         kind=toggle; is_action "$c" && kind=action; [[ "$c" == boot ]] && kind=choice
-        parent="${PARENT[$c]:-}"
-        now="${CURRENT[$c]:-0}"
-        items+="${items:+,}{\"id\":$(json_str "$c"),\"label\":$(json_str "${LABEL[$c]%%:*}")"
-        items+=",\"hint\":$(json_str "$( [[ "${LABEL[$c]}" == *:* ]] && echo "${LABEL[$c]#*: }")")"
-        items+=",\"kind\":\"$kind\",\"parent\":$(json_str "$parent")"
-        items+=",\"needs\":\"\""
-        items+=",\"on\":$( [[ "$now" == 1 ]] && echo true || echo false)"
-        items+=",\"wanted\":$( is_wanted "$c" && echo true || echo false)"
-        items+=",\"update\":$(feature_outdated "$c" && echo true || echo false)"
-        items+=",\"new\":$({ feature_new "$c" || feature_new_optin "$c"; } && echo true || echo false)"
-        items+=",\"selectable\":$(component_selectable "$c" && echo true || echo false)"
+        items+="${items:+,}$(json_item_head "$c" "$kind")"
+        items+=",\"on\":$(json_bool is_current "$c")"
+        items+=",\"wanted\":$(json_bool is_wanted "$c")"
+        items+=",\"update\":$(json_bool feature_outdated "$c")"
+        items+=",\"new\":$(json_bool feature_any_new "$c")"
+        items+=",\"selectable\":$(json_bool component_selectable "$c")"
         # Why it can't be turned on, for the app's explanation.
         [[ "$c" == vram && -n "${VRAM_NVIDIA_CASE:-}" ]] &&
             items+=",\"note\":$(json_str "$(vram_nvidia_note "$VRAM_NVIDIA_CASE")")"
@@ -65,11 +75,11 @@ backend_status() {
     for f in /dev/cec*; do [[ -e "$f" ]] && cec+="${cec:+ }$(basename "$f")"; done
     local bios='null'
     if bios_available; then
-        bios="{\"current\":$(json_str "$(bios_current)"),\"newest\":$(json_str "${BIOS_NEWEST:-}"),\"selectable\":$(bios_selectable && echo true || echo false),\"dryRun\":$([[ -n "$BIOS_DRY_RUN" ]] && echo true || echo false)}"
+        bios="{\"current\":$(json_str "$(bios_current)"),\"newest\":$(json_str "${BIOS_NEWEST:-}"),\"selectable\":$(json_bool bios_selectable),\"dryRun\":$([[ -n "$BIOS_DRY_RUN" ]] && echo true || echo false)}"
     fi
     printf '{"version":%s,"firstRun":%s,"steamMachine":%s,"kernel":%s,"pinnedKernel":%s,"cecDevices":%s,"leds":%s,"bios":%s,"items":[%s]}\n' \
         "$(json_str "$VERSION")" "$first_run" \
-        "$(detect_valve_fremont && echo true || echo false)" \
+        "$(json_bool detect_valve_fremont)" \
         "$(json_str "$(uname -r)")" "$(json_str "${PINNED_KERNEL_VER:-}")" \
         "$(json_str "$cec")" \
         "$(compgen -G '/sys/class/leds/valve-leds*' | wc -l)" \
