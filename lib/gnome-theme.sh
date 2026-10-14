@@ -54,6 +54,13 @@ gnometheme_extensions_install() {
         fi
         rm -f "$file"
     fi
+    # GNOME Settings' Desktop panel finds the settings of the dock and of tiling in the default schema folders.
+    local schemas="${XDG_DATA_HOME:-$HOME/.local/share}/glib-2.0/schemas" ext
+    mkdir -p "$schemas"
+    for ext in ubuntu-dock@ubuntu.com tiling-assistant@ubuntu.com; do
+        cp "$GNOME_USER_EXTENSIONS/$ext"/schemas/*.gschema.xml "$schemas/" 2>/dev/null
+    done
+    glib-compile-schemas "$schemas" 2>/dev/null
     dir="$GNOME_USER_EXTENSIONS/steamify-vapor@steamify.github.io"
     mkdir -p "$dir"
     patch_file steamify-vapor.js > "$dir/extension.js"
