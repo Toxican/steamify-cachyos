@@ -1,0 +1,47 @@
+/* Steamify Vapor: the SteamOS look for GNOME Shell.
+ * Starts from the stock GNOME Shell theme and recolors it with the
+ * palette of the Vapor theme (KDE Plasma's SteamOS look, cachyos-vapor). */
+@import url("resource:///org/gnome/shell/theme/gnome-shell.css");
+
+/* Top bar: Vapor's panel color. */
+#panel,
+#panel.lock-screen,
+#panel.unlock-screen {
+  background-color: #24272c;
+}
+#panel .panel-button { color: #eff0f1; }
+#panel .panel-button:hover,
+#panel .panel-button:focus,
+#panel .panel-button:active,
+#panel .panel-button:checked,
+#panel .panel-button:overview {
+  background-color: rgba(86, 159, 204, 0.35);
+  color: #eff0f1;
+}
+
+/* Dash in the overview, popups and the calendar. */
+#dash .dash-background { background-color: #24272c; }
+.popup-menu-content,
+.candidate-popup-content,
+.message-list-clear-button {
+  background-color: #24272c;
+}
+.popup-menu-item:hover,
+.popup-menu-item:focus,
+.popup-menu-item:active {
+  background-color: rgba(86, 159, 204, 0.35);
+}
+
+/* Selection and focus in Vapor's blue. */
+.app-well-app:focus .overview-icon,
+.app-well-app:selected .overview-icon,
+.overview-tile:focus,
+.overview-tile:selected,
+.search-entry:focus {
+  background-color: rgba(86, 159, 204, 0.3);
+  border-color: #3daee9;
+}
+.button:focus,
+.check-box:focus StBin { border-color: #3daee9; }
+.slider { color: #3daee9; }
+.workspace-thumbnail-indicator { border-color: #3daee9; }

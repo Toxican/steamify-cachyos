@@ -19,7 +19,9 @@ desktop_session_file() {
     # whichever GNOME one is installed (gnome.desktop, gnome-xorg.desktop).
     local f
     if [[ "$(desktop_kind)" == gnome ]]; then
-        for f in /usr/share/wayland-sessions/gnome*.desktop /usr/share/xsessions/gnome*.desktop; do
+        # The plain session, not GNOME Classic (gnome-classic.desktop, from gnome-shell-extensions) or Xorg's.
+        for f in /usr/share/wayland-sessions/gnome.desktop /usr/share/xsessions/gnome.desktop \
+            /usr/share/wayland-sessions/gnome-wayland.desktop; do
             [[ -f "$f" ]] && { basename "$f"; return; }
         done
         echo gnome.desktop
@@ -34,4 +36,15 @@ choose_login_manager() {
     if [[ "$(desktop_kind)" == gnome ]]; then LOGIN_MANAGER=gdm
     elif [[ "${WANTED[single]:-0}" == 1 ]]; then LOGIN_MANAGER=sddm
     else LOGIN_MANAGER=plasmalogin; fi
+}
+
+desktop_installed() {
+    # desktop_installed kde|gnome: its session is installed (both can be: the
+    # menu then offers the theme of each).
+    local name=plasma f
+    [[ "$1" == gnome ]] && name=gnome
+    for f in /usr/share/wayland-sessions/$name*.desktop /usr/share/xsessions/$name*.desktop; do
+        [[ -f "$f" ]] && return 0
+    done
+    return 1
 }

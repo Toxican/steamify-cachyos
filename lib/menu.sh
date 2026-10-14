@@ -5,7 +5,7 @@
 
 # Menu order. Components are turned on in this order and off in reverse;
 # gaming must come first (single user builds on it).
-COMPONENTS=(gaming boot silent glyphs nvidia bigpicture nvsilent theme single launcher steamgame notify extended_controller_support vram cec machine poweroff kpin hdmi bios)
+COMPONENTS=(gaming boot silent glyphs nvidia bigpicture nvsilent theme gnometheme single launcher steamgame notify extended_controller_support vram cec machine poweroff kpin hdmi bios)
 # One-off actions rather than on/off components: never preselected, never
 # re-applied, not listed as on or off.
 ACTIONS=(bios)
@@ -26,7 +26,7 @@ NO_PRESELECT=(boot silent nvsilent cec kpin hdmi extended_controller_support)
 # FEATURE_BASELINE.
 FEATURE_BASELINE=2.1.0
 declare -A FEATURE_VERSION=(
-    [gaming]=2.9.0 [boot]=2.1.0 [silent]=2.11.0 [nvidia]=2.12.0 [bigpicture]=2.10.0 [nvsilent]=2.11.0 [theme]=2.1.0 [glyphs]=2.1.0 [single]=2.1.0
+    [gaming]=2.9.0 [boot]=2.1.0 [silent]=2.11.0 [nvidia]=2.12.0 [bigpicture]=2.10.0 [nvsilent]=2.11.0 [theme]=2.1.0 [gnometheme]=2.12.0 [glyphs]=2.1.0 [single]=2.1.0
     [launcher]=2.1.0 [cec]=2.7.0 [machine]=2.9.0 [poweroff]=2.2.0 [vram]=2.3.0 [notify]=2.5.0 [steamgame]=2.5.1 [extended_controller_support]=2.10.0
     [kpin]=2.1.0 [hdmi]=2.1.0
 )
@@ -39,6 +39,7 @@ declare -A LABEL=(
     [nvsilent]="Start Steam silently: in the tray at login, no window (untick: Steam's normal window)"
     [bigpicture]="Steam starts in Big Picture: the controller-friendly Steam (untick: Steam's normal window)"
     [theme]="Install SteamOS theme: Vapor look (cachyos-vapor)"
+    [gnometheme]="Install SteamOS theme for GNOME: Vapor look (dark, blue accent, Steam Deck wallpaper)"
     [glyphs]="Install Steam Deck/Machine icons: Deck button icons in gaming mode"
     [single]="Single user mode: no password, lock screen or log out (SDDM)"
     [launcher]="Steamify shortcut: the app on the desktop, Steamify Terminal in the launcher"
@@ -60,8 +61,10 @@ component_available() {
         # The SteamOS conversion is offered on NVIDIA PCs too: it installs the patched gamescope there (lib/gamescope-nvidia.sh)
         # and turns off "Gaming on NVIDIA" (lib/nvidia.sh), which is not offered any more (nvidia_available).
         nvidia|bigpicture|nvsilent) nvidia_available ;;
-        # Plasma only: the Vapor theme and single user mode (KDE Wallet, screen locker, Plasma's menu). Not on GNOME.
-        theme|single) [[ "$(desktop_kind)" == kde ]] ;;
+        # Plasma's Vapor theme and single user mode (KDE Wallet, screen locker, Plasma's menu): when Plasma is installed.
+        # The GNOME theme: when GNOME is. With both installed, each shows.
+        theme|single) desktop_installed kde ;;
+        gnometheme) desktop_installed gnome ;;
         machine|poweroff) machine_available ;;
         vram) vram_available ;;
         # Steamify in the Steam library is for gaming mode's controller: not needed for Big Picture on the desktop (NVIDIA PCs;

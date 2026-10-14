@@ -157,7 +157,7 @@ theme_disable() {
     restart_plasmashell_if_stopped
     qdbus6 org.kde.KWin /KWin org.kde.KWin.reconfigure >/dev/null 2>&1 || true
 
-    if [[ -n "$(state_get theme installed_pkg)" ]]; then
+    if [[ -n "$(state_get theme installed_pkg)" ]] && ! gnometheme_status; then
         # Fails, and stays installed, when another package (e.g.
         # cachyos-handheld) depends on it.
         sudo pacman -R --noconfirm cachyos-vapor >/dev/null 2>&1 ||
