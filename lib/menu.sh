@@ -60,6 +60,8 @@ component_available() {
         # The SteamOS conversion is offered on NVIDIA PCs too: it installs the patched gamescope there (lib/gamescope-nvidia.sh)
         # and turns off "Gaming on NVIDIA" (lib/nvidia.sh), which is not offered any more (nvidia_available).
         nvidia|bigpicture|nvsilent) nvidia_available ;;
+        # Plasma only: the Vapor theme and single user mode (KDE Wallet, screen locker, Plasma's menu). Not on GNOME.
+        theme|single) [[ "$(desktop_kind)" == kde ]] ;;
         machine|poweroff) machine_available ;;
         vram) vram_available ;;
         # Steamify in the Steam library is for gaming mode's controller: not needed for Big Picture on the desktop (NVIDIA PCs;
@@ -503,8 +505,7 @@ plan_changes() {
 
 apply_changes() {
     local c failed=()
-    LOGIN_MANAGER=plasmalogin
-    [[ "${WANTED[single]}" == 1 ]] && LOGIN_MANAGER=sddm
+    choose_login_manager
 
     for c in "${TO_DISABLE[@]}"; do
         if [[ "$c" == boot ]]; then echo; echo -e "${c_bold}Boot into: gamescope${c_reset}"

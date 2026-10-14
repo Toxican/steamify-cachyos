@@ -1,0 +1,10 @@
+[Trigger]
+Operation = Install
+Operation = Upgrade
+Type = Package
+Target = gamescope-session-cachyos
+
+[Action]
+Description = Steamify: GDM support for gamescope-session-cachyos...
+When = PostTransaction
+Exec = /bin/sh -c 'install -m755 @DIR@/steam-set-session /usr/lib/steamos/steam-set-session && install -m755 @DIR@/steamos-session-select /usr/bin/steamos-session-select'

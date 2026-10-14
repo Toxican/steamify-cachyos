@@ -23,7 +23,7 @@ boot_enable() {
     # the session into the base config; run it right away rather than rely
     # on its path unit, which could still be pending when the login manager
     # starts.
-    service_file "$BOOT_UNIT_NAME" SESSION_SYNC="$SESSION_SYNC" | sudo tee "$BOOT_UNIT" > /dev/null
+    service_file "$BOOT_UNIT_NAME" SESSION_SYNC="$SESSION_SYNC" DESKTOP_SESSION="$(desktop_session_file)" | sudo tee "$BOOT_UNIT" > /dev/null
     sudo systemctl daemon-reload
     sudo systemctl enable "$BOOT_UNIT_NAME" || { err "Enabling $BOOT_UNIT_NAME failed."; return 1; }
     ok "Boots into the desktop from the next boot on (Return to Gaming Mode still works)."

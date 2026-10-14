@@ -84,9 +84,11 @@ python_hid_shim_ensure() {
 
 install_required_packages() {
     # Step 2: gamescope/Steam and the desktop helpers the rest of the setup uses.
-    local -a MISSING
-    info "Checking required packages: gamescope-session-cachyos, steam, mangohud, xterm, ttf-liberation, wqy-zenhei, plasma-keyboard"
-    mapfile -t MISSING < <(pacman -T gamescope-session-cachyos steam mangohud xterm ttf-liberation wqy-zenhei plasma-keyboard)
+    local -a MISSING required=(gamescope-session-cachyos steam mangohud xterm ttf-liberation wqy-zenhei)
+    # Plasma's on-screen keyboard; on GNOME kconfig instead, for the kreadconfig6/kwriteconfig6 Steamify's undo journal uses.
+    if [[ "$(desktop_kind)" == gnome ]]; then required+=(kconfig accountsservice); else required+=(plasma-keyboard); fi
+    info "Checking required packages: ${required[*]}"
+    mapfile -t MISSING < <(pacman -T "${required[@]}")
 
     if [[ ${#MISSING[@]} -gt 0 ]]; then
         python_hid_shim_ensure || return 1

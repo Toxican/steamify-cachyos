@@ -23,7 +23,10 @@ create_desktop_shortcut() {
     # the shortcut can't sudo for interactively (Terminal=false), so it gets
     # a password-less rule scoped to exactly those two commands.
     local exec_line="steamos-session-select gamescope"
-    if [[ "$LOGIN_MANAGER" == "plasmalogin" ]]; then
+    if [[ "$LOGIN_MANAGER" == "gdm" ]]; then
+        # Its own steamos-session-select (lib/login-manager.sh) restarts GDM, through the helper and rule gdm_fix_install adds.
+        :
+    elif [[ "$LOGIN_MANAGER" == "plasmalogin" ]]; then
         exec_line="sh -c 'steamos-session-select gamescope && sudo -n /usr/bin/systemctl start sync-steamos-session.service && sudo -n /usr/bin/systemctl restart plasmalogin'"
         local sudoers_tmp
         sudoers_tmp="$(mktemp)"
@@ -40,6 +43,9 @@ EOF
     else
         sudo rm -f /etc/sudoers.d/gamescope-session-switch
     fi
+    # GNOME shows no icons on the desktop: the application grid gets the shortcut too.
+    gnome_app_shortcut=false
+    [[ "$(desktop_kind)" == gnome ]] && gnome_app_shortcut=true
 
     # SteamOS itself uses Valve's "gaming-return" icon (Steam logo with a
     # return arrow; the Deck-style arrow is only used on Steam Deck
@@ -66,6 +72,12 @@ EOF
 
     # Fix permissions for the target user and KDE Plasma desktop ecosystem
     chmod +x "$shortcut_path"
+    if [[ "$gnome_app_shortcut" == true ]]; then
+        mkdir -p "$user_home/.local/share/applications"
+        cp "$shortcut_path" "$user_home/.local/share/applications/steamify-return-to-gaming-mode.desktop"
+        # GNOME only starts launchers it trusts.
+        gio set "$shortcut_path" metadata::trusted true 2>/dev/null || true
+    fi
 
     ok "Desktop shortcut created successfully."
 }
@@ -81,6 +93,6 @@ set_shortcut_icon() {
 remove_desktop_shortcut() {
     local desktop_dir
     desktop_dir="$(xdg-user-dir DESKTOP 2>/dev/null || echo "$HOME/Desktop")"
-    rm -f "$desktop_dir/Return to Gaming Mode.desktop"
+    rm -f "$desktop_dir/Return to Gaming Mode.desktop" "$HOME/.local/share/applications/steamify-return-to-gaming-mode.desktop"
     sudo rm -f /etc/sudoers.d/gamescope-session-switch
 }

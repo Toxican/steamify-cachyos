@@ -4,6 +4,11 @@
 # Sourced by steamify.sh; not meant to be run on its own.
 
 BASE_CONF="/etc/plasmalogin.conf"
+GDM_CONF="/etc/gdm/custom.conf"
+GDM_FIX_DIR=/usr/local/share/steamify-gdm
+GDM_HOOK=/etc/pacman.d/hooks/95-steamify-gdm.hook
+GDM_SUDOERS=/etc/sudoers.d/steamify-gdm-relogin
+GDM_RELOGIN=/usr/local/libexec/steamify-gdm-relogin
 
 # The "SteamOS conversion" menu item: gaming mode boot, the Return to
 # Gaming Mode shortcut and Steam on the desktop (lib/steam-desktop.sh).
@@ -14,6 +19,9 @@ gaming_status() {
         plasmalogin)
             sed -n '/^\[Autologin\]/,/^\[/p' "$BASE_CONF" 2>/dev/null | grep -qx "User=$USER" &&
                 [[ -f /etc/systemd/system/sync-steamos-session.path ]] ;;
+        gdm)
+            sed -n '/^\[daemon\]/,/^\[/p' /etc/gdm/custom.conf 2>/dev/null | grep -qx "AutomaticLogin=$USER" &&
+                [[ -f "$GDM_FIX_DIR/steam-set-session" ]] ;;
         *) return 1 ;;
     esac
 }
@@ -108,6 +116,14 @@ gaming_enable() {
             configure_autologin
             install_session_sync
             ;;
+        gdm)
+            # GNOME (prototype): GDM autologin, plus CachyOS's session tools made GDM-aware.
+            remove_sddm_autologin
+            remove_session_sync
+            switch_to_gdm || return 1
+            configure_gdm_autologin || return 1
+            gdm_fix_install || return 1
+            ;;
     esac
     # (NVIDIA with single user mode from before the conversion: its desktop autologin would pin the Plasma session.)
     single_login_release
@@ -122,8 +138,13 @@ gaming_disable() {
     info "Turning off booting into gaming mode..."
     remove_sddm_autologin
     remove_session_sync
-    restore_plasmalogin_config
-    switch_to_plasmalogin
+    if [[ "$(current_display_manager)" == gdm ]]; then
+        gdm_fix_remove
+        restore_gdm_config
+    else
+        restore_plasmalogin_config
+        switch_to_plasmalogin
+    fi
     remove_desktop_shortcut
     steam_disable
     gsn_disable
@@ -296,4 +317,76 @@ install_session_sync() {
     ok "Done. Current base config:"
     sudo cat "$BASE_CONF"
     echo
+}
+
+switch_to_gdm() {
+    # Already the login manager on a GNOME install; this only makes sure it is installed and enabled.
+    [[ "$(current_display_manager)" == gdm ]] && return 0
+    info "Installing and enabling GDM..."
+    sudo pacman -S --needed --noconfirm gdm || { err "Installing gdm failed."; return 1; }
+    local current
+    current="$(systemctl show -p Id --value display-manager 2>/dev/null)"
+    [[ -n "$current" && "$current" != gdm.service ]] && sudo systemctl disable "$current"
+    sudo systemctl enable -f gdm.service || { err "Enabling gdm failed."; return 1; }
+    ok "GDM is the login manager from the next boot on."
+}
+
+configure_gdm_autologin() {
+    # [daemon] AutomaticLogin: GDM reads it when it starts, which is why the
+    # session tools restart GDM to log in again (see patches/steamify-gdm-session-select.sh).
+    info "Configuring GDM autologin for $TARGET_USER"
+    sudo mkdir -p /etc/gdm
+    sudo touch "$GDM_CONF"
+    [[ -f "$GDM_CONF.bak-steamify" ]] || sudo cp -a "$GDM_CONF" "$GDM_CONF.bak-steamify"
+    sudo awk '
+        /^\[daemon\]/ { print; indaemon=1; next }
+        /^\[/ { indaemon=0 }
+        indaemon && /^(AutomaticLoginEnable|AutomaticLogin)=/ { next }
+        { print }
+    ' "$GDM_CONF" | sudo tee "$GDM_CONF.tmp" > /dev/null
+    grep -q '^\[daemon\]' "$GDM_CONF.tmp" || printf '[daemon]\n' | sudo tee -a "$GDM_CONF.tmp" > /dev/null
+    sudo sed -i "/^\[daemon\]/a AutomaticLoginEnable=True\nAutomaticLogin=$TARGET_USER" "$GDM_CONF.tmp"
+    sudo mv "$GDM_CONF.tmp" "$GDM_CONF"
+    ok "GDM autologin configured."
+}
+
+restore_gdm_config() {
+    if [[ -f "$GDM_CONF.bak-steamify" ]]; then
+        sudo cp -a "$GDM_CONF.bak-steamify" "$GDM_CONF" && sudo rm -f "$GDM_CONF.bak-steamify"
+    else
+        sudo sed -i '/^AutomaticLoginEnable=/d;/^AutomaticLogin=/d' "$GDM_CONF" 2>/dev/null
+    fi
+}
+
+gdm_fix_install() {
+    # CachyOS's steam-set-session and steamos-session-select only know
+    # plasma-login-manager/SDDM and KDE. Ours replace them at the same paths
+    # (Steam's Switch to Desktop calls them by path); a pacman hook puts them
+    # back after every update of gamescope-session-cachyos.
+    info "Making the session switching GDM-aware..."
+    sudo mkdir -p "$GDM_FIX_DIR"
+    patch_file steamify-gdm-steam-set-session.sh | sudo install -Dm755 /dev/stdin "$GDM_FIX_DIR/steam-set-session" &&
+        patch_file steamify-gdm-session-select.sh | fill DESKTOP_SESSION="$(desktop_session_file)" |
+            sudo install -Dm755 /dev/stdin "$GDM_FIX_DIR/steamos-session-select" || { err "Installing the GDM session tools failed."; return 1; }
+    patch_file steamify-gdm.hook | fill DIR="$GDM_FIX_DIR" | sudo install -Dm644 /dev/stdin "$GDM_HOOK"
+    # steamos-session-select logs in again through this helper (no password: it runs from the gaming session and from a shortcut).
+    patch_file steamify-gdm-relogin.sh | sudo install -Dm755 /dev/stdin "$GDM_RELOGIN"
+    echo "$TARGET_USER ALL=(root) NOPASSWD: $GDM_RELOGIN" | sudo install -Dm440 /dev/stdin "$GDM_SUDOERS"
+    sudo visudo -cf "$GDM_SUDOERS" > /dev/null || { sudo rm -f "$GDM_SUDOERS"; err "The sudoers rule for GDM is invalid."; return 1; }
+    for f in /usr/lib/steamos/steam-set-session /usr/bin/steamos-session-select; do
+        [[ -f "$f" && ! -f "$f.bak-steamify" ]] && sudo cp -a "$f" "$f.bak-steamify"
+    done
+    sudo install -m755 "$GDM_FIX_DIR/steam-set-session" /usr/lib/steamos/steam-set-session &&
+        sudo install -m755 "$GDM_FIX_DIR/steamos-session-select" /usr/bin/steamos-session-select || return 1
+    # Start in gamescope, as with the other login managers.
+    sudo /usr/lib/steamos/steam-set-session gamescope-session.desktop
+    ok "GDM autologin into gamescope is set up."
+}
+
+gdm_fix_remove() {
+    sudo rm -f "$GDM_HOOK" "$GDM_SUDOERS" "$GDM_RELOGIN"
+    for f in /usr/lib/steamos/steam-set-session /usr/bin/steamos-session-select; do
+        [[ -f "$f.bak-steamify" ]] && sudo mv "$f.bak-steamify" "$f"
+    done
+    sudo rm -rf "$GDM_FIX_DIR"
 }

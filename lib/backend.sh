@@ -178,8 +178,7 @@ backend_apply() {
 
     backend_sudo || return 1
 
-    LOGIN_MANAGER=plasmalogin
-    [[ "${WANTED[single]}" == 1 ]] && LOGIN_MANAGER=sddm
+    choose_login_manager
     local -a failed=()
     for c in "${TO_DISABLE[@]}"; do
         if backend_run_component "$c" disable; then feature_record "$c" disable; else failed+=("$c"); fi
