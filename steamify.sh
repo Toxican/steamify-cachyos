@@ -137,6 +137,16 @@ if [[ "$LIST" == true ]]; then
     exit 0
 fi
 
+# --desktop kde|gnome|last: which desktop "Switch to Desktop" goes to (when both are installed).
+if [[ "${1:-}" == --desktop ]]; then
+    case "${2:-}" in
+        kde|gnome|last) ;;
+        *) err "--desktop takes kde, gnome or last (the one you used last)"; exit 1 ;;
+    esac
+    desktop_pref_set "$2" || exit 1
+    ok "Switch to Desktop goes to: $2."
+    exit 0
+fi
 if [[ "$DEFAULTS" == true ]]; then
     RESTART_FOR_LOGIN=false
     REAPPLY=false

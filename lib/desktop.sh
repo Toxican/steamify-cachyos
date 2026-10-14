@@ -31,11 +31,29 @@ desktop_session_file() {
 }
 
 choose_login_manager() {
-    # LOGIN_MANAGER for gaming_enable: gdm on GNOME, else sddm with single
-    # user mode and plasmalogin without.
+    # LOGIN_MANAGER for gaming_enable. With KDE and GNOME both installed the active login
+    # manager stays (switching it would be a surprise); otherwise gdm on GNOME, sddm with
+    # single user mode and plasmalogin without.
+    local current
+    current="$(current_display_manager)"
+    if desktop_installed gnome && desktop_installed kde; then
+        case "$current" in gdm|sddm|plasmalogin) LOGIN_MANAGER="$current"; return ;; esac
+    fi
     if [[ "$(desktop_kind)" == gnome ]]; then LOGIN_MANAGER=gdm
     elif [[ "${WANTED[single]:-0}" == 1 ]]; then LOGIN_MANAGER=sddm
     else LOGIN_MANAGER=plasmalogin; fi
+}
+
+# Which desktop "Switch to Desktop" (and booting into the desktop) goes to when both are
+# installed: kde, gnome, or last (the one you left for gamescope). Read by the session tool.
+DESKTOP_PREF_FILE=/etc/steamify/desktop
+
+desktop_pref_get() {
+    cat "$DESKTOP_PREF_FILE" 2>/dev/null || echo last
+}
+
+desktop_pref_set() {
+    printf '%s\n' "$1" | sudo install -Dm644 /dev/stdin "$DESKTOP_PREF_FILE"
 }
 
 desktop_installed() {

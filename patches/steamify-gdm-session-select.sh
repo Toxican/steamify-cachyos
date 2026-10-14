@@ -1,26 +1,28 @@
 #!/bin/bash
-# steamos-session-select for GDM (Steamify prototype): CachyOS's own ends the
-# session with a KDE-only D-Bus call. GDM logs in by itself only when it
+# steamos-session-select for GNOME (Steamify prototype): CachyOS's own ends the
+# session with a KDE-only D-Bus call and goes to Plasma only. GDM logs in by itself only when it
 # starts, so after the new session is set the user is ended and GDM restarted
 # (patches/steamify-gdm-relogin.sh): it then logs the autologin user straight into it.
 set -e
 
 DM_ID="$(systemctl show -p Id --value display-manager)"
 DM_ID="${DM_ID%.service}"
-DESKTOP_SESSION=@DESKTOP_SESSION@
 
 relogin() {
     # Out of the running session into the one that was set.
     case "$DM_ID" in
         gdm) sudo -n /usr/local/libexec/steamify-gdm-relogin ;;
-        *) qdbus6 org.kde.Shutdown /Shutdown org.kde.Shutdown.logout ;;
+        *)
+            # sddm and plasma-login-manager log in again by themselves (Relogin=true): just end the session.
+            if [[ "${XDG_CURRENT_DESKTOP:-}" == *GNOME* ]]; then gnome-session-quit --no-prompt --logout
+            else qdbus6 org.kde.Shutdown /Shutdown org.kde.Shutdown.logout; fi ;;
     esac
 }
 
 case "$1" in
     persistent)
         systemctl --user mask cachyos-gamescope-autologin.service
-        pkexec /usr/lib/steamos/steam-set-session "$DESKTOP_SESSION" ;;
+        pkexec /usr/lib/steamos/steam-set-session desktop ;;
     oneshot)
         systemctl --user unmask cachyos-gamescope-autologin.service
         pkexec /usr/lib/steamos/steam-set-session gamescope-session.desktop ;;
@@ -28,7 +30,9 @@ case "$1" in
         pkexec /usr/lib/steamos/steam-set-session gamescope-session.desktop
         relogin ;;
     desktop|plasma|gnome)
-        pkexec /usr/lib/steamos/steam-set-session "$DESKTOP_SESSION"
+        # desktop: the preferred one; plasma or gnome: that one.
+        case "$1" in plasma) target=plasma.desktop ;; gnome) target=gnome.desktop ;; *) target=desktop ;; esac
+        pkexec /usr/lib/steamos/steam-set-session "$target"
         steam -shutdown || true
         systemctl --user stop gamescope-session.target || true
         # Under GDM nothing logs in again by itself after the session ends.

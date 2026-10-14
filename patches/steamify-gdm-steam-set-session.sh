@@ -9,6 +9,38 @@ DM_ID="$(systemctl show -p Id --value display-manager)"
 DM_ID="${DM_ID%.service}"
 SESSION="${1:-gamescope-session.desktop}"
 
+# "desktop" is the desktop to go back to: the one chosen in Steamify (/etc/steamify/desktop: kde, gnome or last),
+# else the one used last (recorded below when leaving it for gamescope), else whichever is installed.
+have_session() { [[ -f "/usr/share/wayland-sessions/$1" || -f "/usr/share/xsessions/$1" ]]; }
+resolve_desktop() {
+    local pref last
+    pref="$(cat /etc/steamify/desktop 2>/dev/null || true)"
+    last="$(cat /var/lib/steamify/last-desktop 2>/dev/null || true)"
+    [[ -z "$pref" || "$pref" == last ]] && pref="$last"
+    case "$pref" in
+        gnome) have_session gnome.desktop && { echo gnome.desktop; return; } ;;
+        kde) have_session plasma.desktop && { echo plasma.desktop; return; } ;;
+    esac
+    have_session plasma.desktop && { echo plasma.desktop; return; }
+    echo gnome.desktop
+}
+remember_desktop() {
+    # Leaving a desktop for gamescope: which desktop it was (from the user's own session).
+    local uid="${PKEXEC_UID:-}" id desktop
+    [[ -n "$uid" ]] || return 0
+    id="$(loginctl show-user "$uid" -p Display --value 2>/dev/null)"
+    [[ -n "$id" ]] || return 0
+    desktop="$(loginctl show-session "$id" -p Desktop --value 2>/dev/null | tr 'A-Z' 'a-z')"
+    case "$desktop" in
+        *gnome*) kind=gnome ;;
+        *kde*|*plasma*) kind=kde ;;
+        *) return 0 ;;
+    esac
+    mkdir -p /var/lib/steamify && echo "$kind" > /var/lib/steamify/last-desktop
+}
+[[ "$SESSION" == desktop ]] && SESSION="$(resolve_desktop)"
+[[ "$SESSION" == gamescope-session* ]] && remember_desktop
+
 case "$DM_ID" in
     plasmalogin) CONF_FILE="/etc/plasmalogin.conf.d/zz-steamos-autologin.conf" ;;
     sddm) CONF_FILE="/etc/sddm.conf.d/zz-steamos-autologin.conf" ;;
