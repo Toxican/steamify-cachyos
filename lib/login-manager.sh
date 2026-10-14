@@ -122,9 +122,10 @@ gaming_enable() {
             remove_session_sync
             switch_to_gdm || return 1
             configure_gdm_autologin || return 1
-            gdm_fix_install || return 1
             ;;
     esac
+    # CachyOS's own session tools only go to Plasma and only know SDDM and plasma-login-manager: with GNOME installed ours replace them.
+    if [[ "$LOGIN_MANAGER" == gdm ]] || desktop_installed gnome; then session_tools_install || return 1; fi
     # (NVIDIA with single user mode from before the conversion: its desktop autologin would pin the Plasma session.)
     single_login_release
     create_desktop_shortcut
@@ -138,8 +139,8 @@ gaming_disable() {
     info "Turning off booting into gaming mode..."
     remove_sddm_autologin
     remove_session_sync
+    session_tools_remove
     if [[ "$(current_display_manager)" == gdm ]]; then
-        gdm_fix_remove
         restore_gdm_config
     else
         restore_plasmalogin_config
@@ -358,7 +359,7 @@ restore_gdm_config() {
     fi
 }
 
-gdm_fix_install() {
+session_tools_install() {
     # CachyOS's steam-set-session and steamos-session-select only know
     # plasma-login-manager/SDDM and KDE. Ours replace them at the same paths
     # (Steam's Switch to Desktop calls them by path); a pacman hook puts them
@@ -366,13 +367,15 @@ gdm_fix_install() {
     info "Making the session switching GDM-aware..."
     sudo mkdir -p "$GDM_FIX_DIR"
     patch_file steamify-gdm-steam-set-session.sh | sudo install -Dm755 /dev/stdin "$GDM_FIX_DIR/steam-set-session" &&
-        patch_file steamify-gdm-session-select.sh | fill DESKTOP_SESSION="$(desktop_session_file)" |
+        patch_file steamify-gdm-session-select.sh |
             sudo install -Dm755 /dev/stdin "$GDM_FIX_DIR/steamos-session-select" || { err "Installing the GDM session tools failed."; return 1; }
     patch_file steamify-gdm.hook | fill DIR="$GDM_FIX_DIR" | sudo install -Dm644 /dev/stdin "$GDM_HOOK"
-    # steamos-session-select logs in again through this helper (no password: it runs from the gaming session and from a shortcut).
-    patch_file steamify-gdm-relogin.sh | sudo install -Dm755 /dev/stdin "$GDM_RELOGIN"
-    echo "$TARGET_USER ALL=(root) NOPASSWD: $GDM_RELOGIN" | sudo install -Dm440 /dev/stdin "$GDM_SUDOERS"
-    sudo visudo -cf "$GDM_SUDOERS" > /dev/null || { sudo rm -f "$GDM_SUDOERS"; err "The sudoers rule for GDM is invalid."; return 1; }
+    if [[ "$(current_display_manager)" == gdm || "$LOGIN_MANAGER" == gdm ]]; then
+        # steamos-session-select logs in again through this helper (no password: it runs from the gaming session and from a shortcut).
+        patch_file steamify-gdm-relogin.sh | sudo install -Dm755 /dev/stdin "$GDM_RELOGIN"
+        echo "$TARGET_USER ALL=(root) NOPASSWD: $GDM_RELOGIN" | sudo install -Dm440 /dev/stdin "$GDM_SUDOERS"
+        sudo visudo -cf "$GDM_SUDOERS" > /dev/null || { sudo rm -f "$GDM_SUDOERS"; err "The sudoers rule for GDM is invalid."; return 1; }
+    fi
     for f in /usr/lib/steamos/steam-set-session /usr/bin/steamos-session-select; do
         [[ -f "$f" && ! -f "$f.bak-steamify" ]] && sudo cp -a "$f" "$f.bak-steamify"
     done
@@ -383,7 +386,7 @@ gdm_fix_install() {
     ok "GDM autologin into gamescope is set up."
 }
 
-gdm_fix_remove() {
+session_tools_remove() {
     sudo rm -f "$GDM_HOOK" "$GDM_SUDOERS" "$GDM_RELOGIN"
     for f in /usr/lib/steamos/steam-set-session /usr/bin/steamos-session-select; do
         [[ -f "$f.bak-steamify" ]] && sudo mv "$f.bak-steamify" "$f"

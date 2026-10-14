@@ -25,17 +25,12 @@ resolve_desktop() {
     echo gnome.desktop
 }
 remember_desktop() {
-    # Leaving a desktop for gamescope: which desktop it was (from the user's own session).
-    local uid="${PKEXEC_UID:-}" id desktop
+    # Leaving a desktop for gamescope: which desktop it was, from the shell the user is running.
+    local uid="${PKEXEC_UID:-}" kind
     [[ -n "$uid" ]] || return 0
-    id="$(loginctl show-user "$uid" -p Display --value 2>/dev/null)"
-    [[ -n "$id" ]] || return 0
-    desktop="$(loginctl show-session "$id" -p Desktop --value 2>/dev/null | tr 'A-Z' 'a-z')"
-    case "$desktop" in
-        *gnome*) kind=gnome ;;
-        *kde*|*plasma*) kind=kde ;;
-        *) return 0 ;;
-    esac
+    if pgrep -u "$uid" -x gnome-shell >/dev/null; then kind=gnome
+    elif pgrep -u "$uid" -x plasmashell >/dev/null; then kind=kde
+    else return 0; fi
     mkdir -p /var/lib/steamify && echo "$kind" > /var/lib/steamify/last-desktop
 }
 [[ "$SESSION" == desktop ]] && SESSION="$(resolve_desktop)"

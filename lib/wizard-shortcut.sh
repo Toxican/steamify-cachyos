@@ -121,6 +121,7 @@ Exec=$WIZARD_APP_LAUNCHER
 Icon=$icon
 Terminal=false
 Categories=Game;System;Settings;
+StartupWMClass=steamify-ui
 X-Steamify-Shortcut=true"
     printf '%s\n' "$entry" | install_executable "$WIZARD_APP_ENTRY" 644
     printf '%s\n' "$entry" | install_executable "$(wizard_desktop_dir)/$WIZARD_DESKTOP_NAME" 755
