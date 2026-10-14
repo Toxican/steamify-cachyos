@@ -86,7 +86,7 @@ install_required_packages() {
     # Step 2: gamescope/Steam and the desktop helpers the rest of the setup uses.
     local -a MISSING required=(gamescope-session-cachyos steam mangohud xterm ttf-liberation wqy-zenhei)
     # Plasma's on-screen keyboard; on GNOME kconfig instead, for the kreadconfig6/kwriteconfig6 Steamify's undo journal uses.
-    if [[ "$(desktop_kind)" == gnome ]]; then required+=(kconfig accountsservice gnome-shell-extension-desktop-icons-ng gnome-shell-extension-appindicator); else required+=(plasma-keyboard); fi
+    if [[ "$(desktop_kind)" == gnome ]]; then required+=(kconfig accountsservice gnome-shell-extension-desktop-icons-ng gnome-shell-extension-appindicator extension-manager); else required+=(plasma-keyboard); fi
     info "Checking required packages: ${required[*]}"
     mapfile -t MISSING < <(pacman -T "${required[@]}")
 
