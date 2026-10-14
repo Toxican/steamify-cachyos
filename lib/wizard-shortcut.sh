@@ -22,6 +22,18 @@ WIZARD_TERMINAL_ENTRY="$WIZARD_APPS/steamify-terminal.desktop"
 # Before 2.0.1 the shortcut opened the terminal menu under this name.
 WIZARD_OLD_NAME="cachyos-gamescope-boot-wizard.desktop"
 
+wizard_terminal() {
+    # The command prefix that runs a program in a terminal window: Konsole on
+    # Plasma, on GNOME whichever of Ptyxis, Console or GNOME Terminal is there.
+    if [[ "$(desktop_kind)" == gnome ]]; then
+        if command -v ptyxis >/dev/null; then echo "ptyxis --"
+        elif command -v kgx >/dev/null; then echo "kgx -e"
+        else echo "gnome-terminal --"; fi
+    else
+        echo "konsole -e"
+    fi
+}
+
 wizard_desktop_dir() {
     xdg-user-dir DESKTOP 2>/dev/null || echo "$HOME/Desktop"
 }
@@ -47,6 +59,8 @@ launcher_status() {
 launcher_repair() { [[ -f "$WIZARD_APPS/$WIZARD_OLD_NAME" ]] && ! launcher_status; }
 
 launcher_enable() {
+    local terminal
+    terminal="$(wizard_terminal)"
     info "Adding the Steamify shortcut (the app on the desktop and in the launcher, Steamify Terminal in the launcher)..."
     install_executable "$WIZARD_LAUNCHER" 755 << EOF
 #!/bin/bash
@@ -70,18 +84,18 @@ echo
 EOF
 
     # The app, without a terminal. Only the first time, when PySide6 still
-    # has to be installed, it runs in Konsole: sudo asks for the password there.
+    # has to be installed, it runs in a terminal: sudo asks for the password there.
     install_executable "$WIZARD_APP_LAUNCHER" 755 << EOF
 #!/bin/bash
 # Installed by Steamify CachyOS: start the newest release of its app.
 set -o pipefail
 if [[ "\${1:-}" != --in-terminal ]] && ! python3 -c 'import PySide6.QtQml' 2>/dev/null; then
-    exec konsole -e "\$0" --in-terminal
+    exec $terminal "\$0" --in-terminal
 fi
 if ! curl -fsSL --max-time 30 "$WIZARD_APP_URL" | bash; then
     msg="Couldn't download or start Steamify. Are you connected to the internet?"
     if [[ "\${1:-}" == --in-terminal ]]; then echo; echo "\$msg"; read -rp "Press Enter to close this window... " _
-    else kdialog --title Steamify --sorry "\$msg" 2>/dev/null; fi
+    else kdialog --title Steamify --sorry "\$msg" 2>/dev/null || zenity --error --title Steamify --text "\$msg" 2>/dev/null; fi
     exit 1
 fi
 EOF
@@ -110,11 +124,13 @@ Categories=Game;System;Settings;
 X-Steamify-Shortcut=true"
     printf '%s\n' "$entry" | install_executable "$WIZARD_APP_ENTRY" 644
     printf '%s\n' "$entry" | install_executable "$(wizard_desktop_dir)/$WIZARD_DESKTOP_NAME" 755
+    # GNOME only starts desktop launchers it trusts.
+    gio set "$(wizard_desktop_dir)/$WIZARD_DESKTOP_NAME" metadata::trusted true 2>/dev/null || true
     printf '%s\n' "[Desktop Entry]
 Type=Application
 Name=Steamify Terminal
 Comment=Steamify CachyOS's menu in a terminal
-Exec=konsole -e $WIZARD_LAUNCHER
+Exec=$terminal $WIZARD_LAUNCHER
 Icon=$icon
 Terminal=false
 Categories=Game;System;Settings;" | install_executable "$WIZARD_TERMINAL_ENTRY" 644

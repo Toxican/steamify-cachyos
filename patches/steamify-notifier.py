@@ -8,6 +8,7 @@
 import configparser
 import json
 import os
+import shutil
 import subprocess
 import sys
 import threading
@@ -56,10 +57,20 @@ def pending(new):
 
 
 def desktop():
-    # Only on the Plasma desktop: gamescope doesn't show notifications or a
-    # tray, so an update found in gaming mode waits for the next desktop login.
-    return subprocess.run(["pgrep", "-u", str(os.getuid()), "-x", "plasmashell"],
-                          stdout=subprocess.DEVNULL).returncode == 0
+    # Only on the Plasma or GNOME desktop: gamescope doesn't show notifications
+    # or a tray, so an update found in gaming mode waits for the next desktop login.
+    return any(subprocess.run(["pgrep", "-u", str(os.getuid()), "-x", shell],
+                              stdout=subprocess.DEVNULL).returncode == 0
+               for shell in ("plasmashell", "gnome-shell"))
+
+
+def terminal():
+    # The command prefix that runs a program in a terminal window.
+    for program, prefix in (("konsole", ["konsole", "-e"]), ("ptyxis", ["ptyxis", "--"]),
+                            ("kgx", ["kgx", "-e"]), ("gnome-terminal", ["gnome-terminal", "--"])):
+        if shutil.which(program):
+            return prefix
+    return ["xterm", "-e"]
 
 
 def main():
@@ -91,8 +102,8 @@ def main():
         # ends the reminder. In its own unit: this one's processes are
         # stopped when the check exits.
         if state("frontend") == "terminal":
-            cmd = ["konsole", "-e", RUN_TERMINAL] if os.access(RUN_TERMINAL, os.X_OK) else \
-                  ["konsole", "-e", "bash", "-c",
+            cmd = [*terminal(), RUN_TERMINAL] if os.access(RUN_TERMINAL, os.X_OK) else \
+                  [*terminal(), "bash", "-c",
                    f"set -o pipefail; curl -fsSL --max-time 30 {RELEASE}/steamify.sh | bash; read -rp 'Press Enter to close. ' _"]
         else:
             cmd = [RUN_APP] if os.access(RUN_APP, os.X_OK) else \
