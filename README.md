@@ -30,16 +30,8 @@ Steam Machine.
      as OS Version (e.g. `steamos-3.9`), `steam-machine` as OS Codename and
      Steamify's version as OS Variant. The OS name stays CachyOS
      ([details](TECHNICAL.md#what-steams-system-settings-show)).
-   - **NVIDIA graphics cards** (GTX 16 / RTX 20 series or newer): stock gamescope shows a corrupted
-     picture on them (an open NVIDIA driver bug), so on an NVIDIA PC Steamify installs a **patched gamescope**
-     (GBM scan-out, from [steamify-gamescope-nvidia](https://github.com/theupriser/steamify-gamescope-nvidia))
-     and sets up the rest: the gaming session starts on the monitor's own resolution and refresh rate, with
-     Steam's interface at that size. It is the same conversion as everywhere else, with one extra step.
-     The newest patched build for your CPU is downloaded from GitHub (checked, with a built-in fallback if GitHub
-     can't be reached), and a newer one shows up as an **Update** in the menu. Tested on an RTX 5080 only
-     ([details](TECHNICAL.md#nvidia-graphics-cards)).
-     The old **Gaming on NVIDIA** option (Steam on the desktop) is gone: a PC that had it on is moved to the
-     conversion, and keeps starting Steam in Big Picture if that was on.
+   - **NVIDIA support**: GeForce GTX 16 series and RTX 20, 30, 40 and 50 series
+     (Turing and newer) ([details](TECHNICAL.md#nvidia-graphics-cards)).
 2. **SteamOS theme** - the Vapor look of SteamOS for the desktop, with
    **Add to Steam** in right-click menus
    ([details](TECHNICAL.md#steamos-desktop-look)).

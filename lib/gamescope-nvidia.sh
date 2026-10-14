@@ -23,10 +23,10 @@ GSN_RELEASES="${GSN_RELEASES:-https://github.com/theupriser/steamify-gamescope-n
 GSN_VERSION=3.16.31-3
 # One build per CPU level, like CachyOS's repositories: generic is the one every x86-64 PC can run.
 declare -A GSN_SHA256=(
-    [generic]=4c7995694d2726c356785d9aec12a11c98419b4d2e139617f03bb46c758ced56
-    [v3]=43c6928ca9fa67c063c4e1b993b686145e94e68de1bd46645782d3186779fa2d
-    [v4]=b6d4621e4b98d9aa5c600fe9a5a1cae164fef6bbf93d259fb8a6af666b098f9f
-    [znver4]=60f45da74a0b96d776219f6e6aa22c5d23e48b08233b3fa12b6c4d7aa6812dd9
+    [generic]=e9c7e4d8e1f2a909c25c7e090a86e610234103c6014e65882e84bffe088bafb2
+    [v3]=0a2e9408d8faea3b7c8dda8a4f8d01f7c7e77eea2374590a311856ee3feb559e
+    [v4]=550c08910617d6e770dfa8ebe742f11d04fa65e51dea8773ce419e1e0244572e
+    [znver4]=ec05ba1ba7e7cbde7c2dbee6959b30f89a96659cd4b7f675837ac425ea028d5f
 )
 # Where the ISO leaves a copy of the pinned package, for installs without GitHub.
 GSN_BACKUP_DIR="${GSN_BACKUP_DIR:-/usr/local/share/steamify/gamescope}"
