@@ -35,6 +35,9 @@ notify_enable() {
         sudo pacman -S --needed --noconfirm "${missing[@]}" ||
             { err "Installing ${missing[*]} failed."; return 1; }
     fi
+    # The single-color icon for GNOME's top bar tray.
+    patch_file steamify-symbolic.svg | install -D -m 644 /dev/stdin \
+        "${XDG_DATA_HOME:-$HOME/.local/share}/icons/hicolor/symbolic/apps/steamify-symbolic.svg"
     patch_file steamify-notifier.py | install_executable "$NOTIFY_SCRIPT" 755 ||
         { err "Couldn't write $NOTIFY_SCRIPT."; return 1; }
     mkdir -p "$NOTIFY_UNITS"
@@ -51,6 +54,7 @@ notify_enable() {
 notify_disable() {
     user_systemctl disable --now "$NOTIFY_NAME.timer" "$NOTIFY_NAME.service" >/dev/null 2>&1
     rm -f "$NOTIFY_UNITS/$NOTIFY_NAME.service" "$NOTIFY_UNITS/$NOTIFY_NAME.timer" "$NOTIFY_SCRIPT"
+    rm -f "${XDG_DATA_HOME:-$HOME/.local/share}/icons/hicolor/symbolic/apps/steamify-symbolic.svg"
     rmdir "$STEAMIFY_BIN" 2>/dev/null || true
     user_systemctl daemon-reload
     state_clear notify

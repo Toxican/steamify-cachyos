@@ -73,6 +73,21 @@ def terminal():
     return ["xterm", "-e"]
 
 
+def tray_icon():
+    # Steamify's icon: the single-color one in GNOME's top bar (it draws its tray icons that way),
+    # the colored one elsewhere; Steam's own only when neither is installed.
+    from PySide6.QtGui import QIcon
+    icons = os.path.join(DATA, "icons", "hicolor")
+    names = ["symbolic/apps/steamify-symbolic.svg", "scalable/apps/steamify.svg"]
+    if "GNOME" not in os.environ.get("XDG_CURRENT_DESKTOP", ""):
+        names.reverse()
+    for name in names:
+        path = os.path.join(icons, name)
+        if os.path.exists(path):
+            return QIcon(path)
+    return QIcon.fromTheme("steamify", QIcon.fromTheme("steam"))
+
+
 def main():
     if "--delay" in sys.argv:
         time.sleep(int(sys.argv[sys.argv.index("--delay") + 1]))
@@ -94,7 +109,7 @@ def main():
     app.setApplicationName("Steamify")
     app.setDesktopFileName("steamify-ui")
     app.setQuitOnLastWindowClosed(False)
-    icon = QIcon.fromTheme("steamify", QIcon.fromTheme("steam"))
+    icon = tray_icon()
 
     def open_app():
         # The way Steamify was last used (the app or the terminal menu), the
