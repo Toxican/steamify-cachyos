@@ -117,7 +117,8 @@ gnometheme_enable() {
     info "Applying the SteamOS look to GNOME..."
     gset gnometheme org.gnome.desktop.interface color-scheme "'prefer-dark'"
     gset gnometheme org.gnome.desktop.interface accent-color "'blue'" || true
-    gset gnometheme org.gnome.desktop.interface gtk-theme "'Vapor'" || true
+    # adw-gtk3 follows the light/dark style of Settings > Appearance (CachyOS's adw-gtk3-dark would pin it dark).
+    [[ -d /usr/share/themes/adw-gtk3 ]] && gset gnometheme org.gnome.desktop.interface gtk-theme "'adw-gtk3'"
     # Windows with minimize and maximize buttons, like Ubuntu (GNOME shows only close by default).
     gset gnometheme org.gnome.desktop.wm.preferences button-layout "'appmenu:minimize,maximize,close'" || true
     if [[ -f "$GNOME_THEME_WALLPAPER" ]]; then

@@ -1,14 +1,20 @@
-/* Steamify Vapor: libadwaita/GTK4 colors, from Vapor's palette (cachyos-vapor, Vapor.colors). */
-@define-color accent_bg_color #569fcc;
-@define-color accent_fg_color #1f1f26;
-@define-color accent_color #3daee9;
-@define-color window_bg_color #24272c;
-@define-color window_fg_color #eff0f1;
-@define-color view_bg_color #151c23;
-@define-color view_fg_color #eff0f1;
-@define-color headerbar_bg_color #24272c;
-@define-color headerbar_fg_color #eff0f1;
-@define-color card_bg_color #2a2e32;
-@define-color popover_bg_color #2a2e32;
-@define-color sidebar_bg_color #1f2328;
-@define-color dialog_bg_color #2a2e32;
+/* Steamify Vapor: libadwaita/GTK4 colors. In the dark style: Vapor's palette (cachyos-vapor, Vapor.colors);
+ * in the light style (Settings > Appearance): libadwaita's own light colors, with Vapor's blue accent. */
+@define-color accent_bg_color #2a8fd0;
+@define-color accent_fg_color #ffffff;
+@define-color accent_color #1b6ea7;
+@media (prefers-color-scheme: dark) {
+  @define-color accent_bg_color #569fcc;
+  @define-color accent_fg_color #1f1f26;
+  @define-color accent_color #3daee9;
+  @define-color window_bg_color #24272c;
+  @define-color window_fg_color #eff0f1;
+  @define-color view_bg_color #151c23;
+  @define-color view_fg_color #eff0f1;
+  @define-color headerbar_bg_color #24272c;
+  @define-color headerbar_fg_color #eff0f1;
+  @define-color card_bg_color #2a2e32;
+  @define-color popover_bg_color #2a2e32;
+  @define-color sidebar_bg_color #1f2328;
+  @define-color dialog_bg_color #2a2e32;
+}
