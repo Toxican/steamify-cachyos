@@ -18,3 +18,12 @@
   @define-color sidebar_bg_color #1f2328;
   @define-color dialog_bg_color #2a2e32;
 }
+
+/* Menus without the arrow pointing at the cursor (like Ubuntu's). */
+popover.menu > arrow {
+  min-width: 0;
+  min-height: 0;
+  background: none;
+  border: none;
+  box-shadow: none;
+}
