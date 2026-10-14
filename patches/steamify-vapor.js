@@ -1,6 +1,7 @@
-// GNOME opens the overview after login; Ubuntu starts on the desktop. So does
-// this (Steamify GNOME theme): the overview stays closed while the shell
-// starts up, and is available again right after.
+// Steamify Vapor (Steamify GNOME theme). Its stylesheet.css, which GNOME Shell loads
+// by itself, is the SteamOS look. This code: GNOME opens the overview after login;
+// Ubuntu starts on the desktop. So does this: the overview stays closed while the
+// shell starts up, and is available again right after.
 import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 import {Extension} from 'resource:///org/gnome/shell/extensions/extension.js';
 

@@ -1,6 +1,0 @@
-{
-  "uuid": "steamify-desktop-start@steamify.github.io",
-  "name": "Steamify: start on the desktop",
-  "description": "Log in to the desktop, not the overview (like Ubuntu).",
-  "shell-version": ["45", "46", "47", "48", "49", "50", "51"]
-}

@@ -7,13 +7,10 @@
 
 GNOME_THEME_MARK="/* Steamify GNOME theme */"
 GNOME_THEME_CSS="${XDG_CONFIG_HOME:-$HOME/.config}/gtk-4.0/gtk.css"
-GNOME_THEME_SHELL_DIR="${XDG_DATA_HOME:-$HOME/.local/share}/themes/SteamifyVapor/gnome-shell"
-# The Ubuntu-style look: the dock (Ubuntu Dock is Dash to Dock) and the User
-# Themes extension, which loads the shell theme. (Desktop Icons NG and
-# AppIndicator come with the conversion, lib/desktop-shortcut.sh.)
-GNOME_THEME_PACKAGES=(gnome-shell-extensions)
-GNOME_THEME_EXTENSIONS=(user-theme@gnome-shell-extensions.gcampax.github.com dash-to-dock@micxgx.gmail.com
-    steamify-desktop-start@steamify.github.io)
+# The Ubuntu-style look: the dock (Ubuntu Dock is Dash to Dock) and our own extension,
+# Steamify Vapor, which carries the shell colors (its stylesheet.css) and starts GNOME on
+# the desktop. (Desktop Icons NG and AppIndicator come with the conversion, lib/desktop-shortcut.sh.)
+GNOME_THEME_EXTENSIONS=(dash-to-dock@micxgx.gmail.com steamify-vapor@steamify.github.io)
 # CachyOS's dash-to-dock package (106) doesn't load on GNOME 51: upstream's release, from extensions.gnome.org's tag.
 DOCK_URL="https://github.com/micheleg/dash-to-dock/releases/download/extensions.gnome.org-v110/dash-to-dock@micxgx.gmail.com.zip"
 DOCK_SHA256=3e60680fe7217b905aac4f10deb042e39fcf49168c9b8fdcc5a711bdd49bd3d2
@@ -38,10 +35,11 @@ gnometheme_extensions_install() {
         fi
         rm -f "$zip"
     fi
-    dir="$GNOME_USER_EXTENSIONS/steamify-desktop-start@steamify.github.io"
+    dir="$GNOME_USER_EXTENSIONS/steamify-vapor@steamify.github.io"
     mkdir -p "$dir"
-    patch_file steamify-desktop-start.js > "$dir/extension.js"
-    patch_file steamify-desktop-start.json > "$dir/metadata.json"
+    patch_file steamify-vapor.js > "$dir/extension.js"
+    patch_file steamify-vapor.json > "$dir/metadata.json"
+    patch_file steamify-gnome-shell.css > "$dir/stylesheet.css"
 }
 
 gnometheme_settings_launchers() {
@@ -58,18 +56,13 @@ gnometheme_settings_launchers() {
 }
 
 gnometheme_shell() {
-    # The top bar and dash colors: a shell theme, loaded by User Themes, and the dock beside it.
-    sudo pacman -S --needed --noconfirm "${GNOME_THEME_PACKAGES[@]}" >/dev/null 2>&1 ||
-        { warn "Couldn't install the dock and the shell theme extension; the colors of apps are set."; return 0; }
+    # The top bar and dash colors (the Steamify Vapor extension), and the dock beside it.
     gnometheme_extensions_install
     gnometheme_settings_launchers
-    mkdir -p "$GNOME_THEME_SHELL_DIR"
-    patch_file steamify-gnome-shell.css > "$GNOME_THEME_SHELL_DIR/gnome-shell.css"
-    gset gnometheme org.gnome.shell.extensions.user-theme name "'SteamifyVapor'" || true
-    # Like Ubuntu's dock: on the left, full height, always there, in Vapor's panel color.
+    # Like Ubuntu's dock: on the left, always there, in Vapor's panel color. Its shape (a
+    # panel to the screen edge or floating) is left to the user: Dock Settings.
     local d=org.gnome.shell.extensions.dash-to-dock
     gset gnometheme $d dock-position "'LEFT'" || true
-    gset gnometheme $d extend-height true || true
     gset gnometheme $d dock-fixed true || true
     gset gnometheme $d transparency-mode "'FIXED'" || true
     gset gnometheme $d custom-background-color true || true
@@ -118,8 +111,7 @@ gnometheme_disable() {
     info "Restoring GNOME's previous look..."
     grevert gnometheme
     rm -f "${XDG_DATA_HOME:-$HOME/.local/share}"/applications/steamify-{dock,icons}-settings.desktop
-    rm -rf "${GNOME_THEME_SHELL_DIR%/gnome-shell}" "$GNOME_USER_EXTENSIONS/steamify-desktop-start@steamify.github.io" \
-        "$GNOME_USER_EXTENSIONS/dash-to-dock@micxgx.gmail.com"
+    rm -rf "$GNOME_USER_EXTENSIONS/steamify-vapor@steamify.github.io" "$GNOME_USER_EXTENSIONS/dash-to-dock@micxgx.gmail.com"
     if [[ -f "$STATE_DIR/gnometheme-gtk4.css" ]]; then
         mv -f "$STATE_DIR/gnometheme-gtk4.css" "$GNOME_THEME_CSS"
     else

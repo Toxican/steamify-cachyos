@@ -1,7 +1,5 @@
-/* Steamify Vapor: the SteamOS look for GNOME Shell.
- * Starts from the stock GNOME Shell theme and recolors it with the
- * palette of the Vapor theme (KDE Plasma's SteamOS look, cachyos-vapor). */
-@import url("resource:///org/gnome/shell/theme/gnome-shell.css");
+/* Steamify Vapor: the SteamOS look for GNOME Shell, loaded by the Steamify Vapor
+ * extension on top of the stock theme: the palette of the Vapor theme (KDE Plasma's SteamOS look, cachyos-vapor). */
 
 /* Top bar: Vapor's panel color. */
 #panel,
