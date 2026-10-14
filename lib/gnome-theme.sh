@@ -87,6 +87,8 @@ gnometheme_shell() {
     gset gnometheme $d dock-fixed true || true
     gset gnometheme $d running-indicator-style "'DOTS'" || true
     gset gnometheme $d click-action "'minimize-or-previews'" || true
+    # Trash is in the dock, not on the desktop (Ubuntu does the same).
+    gset gnometheme org.gnome.shell.extensions.ding show-trash false || true
     gset gnometheme $d show-trash true || true
     local uuid enabled
     for uuid in "${GNOME_THEME_EXTENSIONS[@]}"; do
