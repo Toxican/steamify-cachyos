@@ -14,7 +14,9 @@ case "$DM_ID" in
     sddm) CONF_FILE="/etc/sddm.conf.d/zz-steamos-autologin.conf" ;;
     gdm)
         if [[ -n "${PKEXEC_UID:-}" ]]; then TARGET_USER="$(id -un "$PKEXEC_UID")"
-        else TARGET_USER="${SUDO_USER:-$(logname 2>/dev/null)}"; fi
+        else TARGET_USER="${SUDO_USER:-}"; fi
+        # (|| true: logname fails without a login, and set -e would end the script before the fallback.)
+        [[ -n "$TARGET_USER" ]] || TARGET_USER="$(logname 2>/dev/null || true)"
         # At boot (steamify-boot-desktop.service) nobody is logged in: the autologin user.
         [[ -n "$TARGET_USER" ]] || TARGET_USER="$(sed -n 's/^AutomaticLogin=//p' /etc/gdm/custom.conf 2>/dev/null)"
         [[ -n "$TARGET_USER" ]] || exit 0
