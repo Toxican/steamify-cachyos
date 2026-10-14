@@ -44,11 +44,25 @@ gnometheme_extensions_install() {
     patch_file steamify-desktop-start.json > "$dir/metadata.json"
 }
 
+gnometheme_settings_launchers() {
+    # GNOME Settings has no "Ubuntu Desktop" panel (that is Ubuntu's own patch): launchers
+    # for the preferences of the dock and of the desktop icons stand in for it.
+    local apps="${XDG_DATA_HOME:-$HOME/.local/share}/applications" id name uuid
+    mkdir -p "$apps"
+    for id in dock:"Dock Settings":dash-to-dock@micxgx.gmail.com icons:"Desktop Icons Settings":ding@rastersoft.com; do
+        IFS=: read -r id name uuid <<< "$id"
+        printf '%s\n' '[Desktop Entry]' 'Type=Application' "Name=$name" "Comment=Steamify GNOME theme: $name" \
+            "Exec=gnome-extensions prefs $uuid" 'Icon=preferences-desktop' 'Categories=Settings;DesktopSettings;GTK;' \
+            'X-Steamify-Theme=true' > "$apps/steamify-$id-settings.desktop"
+    done
+}
+
 gnometheme_shell() {
     # The top bar and dash colors: a shell theme, loaded by User Themes, and the dock beside it.
     sudo pacman -S --needed --noconfirm "${GNOME_THEME_PACKAGES[@]}" >/dev/null 2>&1 ||
         { warn "Couldn't install the dock and the shell theme extension; the colors of apps are set."; return 0; }
     gnometheme_extensions_install
+    gnometheme_settings_launchers
     mkdir -p "$GNOME_THEME_SHELL_DIR"
     patch_file steamify-gnome-shell.css > "$GNOME_THEME_SHELL_DIR/gnome-shell.css"
     gset gnometheme org.gnome.shell.extensions.user-theme name "'SteamifyVapor'" || true
@@ -103,6 +117,7 @@ gnometheme_enable() {
 gnometheme_disable() {
     info "Restoring GNOME's previous look..."
     grevert gnometheme
+    rm -f "${XDG_DATA_HOME:-$HOME/.local/share}"/applications/steamify-{dock,icons}-settings.desktop
     rm -rf "${GNOME_THEME_SHELL_DIR%/gnome-shell}" "$GNOME_USER_EXTENSIONS/steamify-desktop-start@steamify.github.io" \
         "$GNOME_USER_EXTENSIONS/dash-to-dock@micxgx.gmail.com"
     if [[ -f "$STATE_DIR/gnometheme-gtk4.css" ]]; then
