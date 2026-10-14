@@ -57,8 +57,9 @@ fi
 # Steamify shortcut's entry has the same id and always starts the newest
 # release: left alone.
 mkdir -p "$APPS"
-grep -q '^X-Steamify-Shortcut=true' "$APPS/steamify-ui.desktop" 2>/dev/null ||
-cat > "$APPS/steamify-ui.desktop" << EOF
+rm -f "$APPS/steamify-ui.desktop"   # its name until 2.12.0
+grep -q '^X-Steamify-Shortcut=true' "$APPS/io.github.theupriser.Steamify.desktop" 2>/dev/null ||
+cat > "$APPS/io.github.theupriser.Steamify.desktop" << EOF
 [Desktop Entry]
 Type=Application
 Name=Steamify CachyOS
@@ -67,6 +68,7 @@ Exec=$DEST/ui/steamify-ui
 Icon=$DEST/assets/steam-gaming-settings.svg
 Terminal=false
 Categories=Game;Settings;
+StartupWMClass=io.github.theupriser.Steamify
 EOF
 command -v update-desktop-database >/dev/null && update-desktop-database "$APPS" 2>/dev/null || true
 

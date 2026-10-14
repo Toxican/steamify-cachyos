@@ -362,8 +362,13 @@ def main():
     fullscreen = "--fullscreen" in sys.argv or (in_gamescope and "--windowed" not in sys.argv)
 
     app = QGuiApplication(sys.argv)
+    # GNOME draws no frame around a Qt window (Qt's own is light grey, whatever the style): the app draws
+    # its own, in its colors. Other desktops keep theirs (KWin's follows the Plasma colors).
+    custom_frame = (not fullscreen and app.platformName() == "wayland"
+                    and "GNOME" in os.environ.get("XDG_CURRENT_DESKTOP", "").upper())
     app.setApplicationName("Steamify")
-    app.setDesktopFileName("steamify-ui")
+    # A reverse-DNS id: GNOME on Wayland only matches a window to its launcher (icon in the dock) by such an id.
+    app.setDesktopFileName("io.github.theupriser.Steamify")
     icon = os.path.join(HERE, "..", "assets", "steam-gaming-settings.svg")
     if os.path.isfile(icon):
         app.setWindowIcon(QIcon(icon))
@@ -373,6 +378,7 @@ def main():
     engine = QQmlApplicationEngine()
     engine.setInitialProperties({"backend": backend, "gamepad": pad,
                                  "fullscreen": fullscreen,
+                                 "customFrame": custom_frame,
                                  # Started from Steam: its keys are a Steam
                                  # Controller's buttons (desktop layout).
                                  "fromSteam": bool(os.environ.get("SteamGameId")),

@@ -107,7 +107,7 @@ def main():
 
     app = QApplication(sys.argv[:1])
     app.setApplicationName("Steamify")
-    app.setDesktopFileName("steamify-ui")
+    app.setDesktopFileName("io.github.theupriser.Steamify")
     app.setQuitOnLastWindowClosed(False)
     icon = tray_icon()
 

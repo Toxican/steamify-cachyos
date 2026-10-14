@@ -14,9 +14,11 @@ WIZARD_ICON="${XDG_DATA_HOME:-$HOME/.local/share}/icons/hicolor/scalable/apps/st
 WIZARD_LAUNCHER="$STEAMIFY_BIN/run-wizard"
 WIZARD_APP_LAUNCHER="$STEAMIFY_BIN/run-app"
 WIZARD_APPS="${XDG_DATA_HOME:-$HOME/.local/share}/applications"
-# steamify-ui: the id the app gives itself, so its window belongs to this
+# io.github.theupriser.Steamify: the id the app gives itself (reverse-DNS: GNOME matches windows only by such ids), so its window belongs to this
 # entry. steamify-app.sh leaves an entry with X-Steamify-Shortcut alone.
-WIZARD_DESKTOP_NAME="steamify-ui.desktop"
+WIZARD_DESKTOP_NAME="io.github.theupriser.Steamify.desktop"
+# Until 2.12.0 the id was steamify-ui.
+WIZARD_ID_BEFORE_ENTRY="steamify-ui.desktop"
 WIZARD_APP_ENTRY="$WIZARD_APPS/$WIZARD_DESKTOP_NAME"
 WIZARD_TERMINAL_ENTRY="$WIZARD_APPS/steamify-terminal.desktop"
 # Before 2.0.1 the shortcut opened the terminal menu under this name.
@@ -56,7 +58,12 @@ launcher_status() {
 
 # A shortcut from before 2.0.1 (terminal only): the menu ticks the item, so a
 # normal run replaces it.
-launcher_repair() { [[ -f "$WIZARD_APPS/$WIZARD_OLD_NAME" ]] && ! launcher_status; }
+launcher_repair() {
+    # Also the shortcut from before the reverse-DNS app id (its entry carries the marker): the menu ticks it, a normal run replaces it.
+    ! launcher_status || return 1
+    [[ -f "$WIZARD_APPS/$WIZARD_OLD_NAME" ]] ||
+        grep -q '^X-Steamify-Shortcut=true' "$WIZARD_APPS/$WIZARD_ID_BEFORE_ENTRY" 2>/dev/null
+}
 
 launcher_enable() {
     local terminal
@@ -105,7 +112,8 @@ EOF
     tmp="$(mktemp)"
     if curl -fsSL --max-time 20 "$WIZARD_RELEASE/steam-gaming-settings.svg" -o "$tmp" && grep -q '<svg' "$tmp"; then
         install -D -m 644 "$tmp" "$WIZARD_ICON"
-        icon=steamify
+        # The full path: GNOME Shell's dock doesn't find a name in the user's icon folder (blank icon), and every desktop takes a path.
+        icon="$WIZARD_ICON"
         gtk-update-icon-cache -q -f -t "${XDG_DATA_HOME:-$HOME/.local/share}/icons/hicolor" 2>/dev/null || true
     else
         warn "Couldn't download the shortcut's icon; using Steam's icon instead."
@@ -121,7 +129,7 @@ Exec=$WIZARD_APP_LAUNCHER
 Icon=$icon
 Terminal=false
 Categories=Game;System;Settings;
-StartupWMClass=steamify-ui
+StartupWMClass=io.github.theupriser.Steamify
 X-Steamify-Shortcut=true"
     printf '%s\n' "$entry" | install_executable "$WIZARD_APP_ENTRY" 644
     printf '%s\n' "$entry" | install_executable "$(wizard_desktop_dir)/$WIZARD_DESKTOP_NAME" 755
@@ -135,8 +143,9 @@ Exec=$terminal $WIZARD_LAUNCHER
 Icon=$icon
 Terminal=false
 Categories=Game;System;Settings;" | install_executable "$WIZARD_TERMINAL_ENTRY" 644
-    # The terminal-only shortcut from before 2.0.1.
-    rm -f "$(wizard_desktop_dir)/$WIZARD_OLD_NAME" "$WIZARD_APPS/$WIZARD_OLD_NAME"
+    # The terminal-only shortcut from before 2.0.1, and the app's entry under its id before the reverse-DNS one.
+    rm -f "$(wizard_desktop_dir)/$WIZARD_OLD_NAME" "$WIZARD_APPS/$WIZARD_OLD_NAME" \
+        "$(wizard_desktop_dir)/$WIZARD_ID_BEFORE_ENTRY" "$WIZARD_APPS/$WIZARD_ID_BEFORE_ENTRY"
     kbuildsycoca6 >/dev/null 2>&1 || true
     ok "Steamify shortcut added: \"Steamify CachyOS\" (the app) on the desktop and in the launcher, \"Steamify Terminal\" in the launcher."
 }
@@ -147,6 +156,7 @@ launcher_disable() {
     grep -q '^X-Steamify-Shortcut=true' "$WIZARD_APP_ENTRY" 2>/dev/null && rm -f "$WIZARD_APP_ENTRY"
     rm -f "$(wizard_desktop_dir)/$WIZARD_DESKTOP_NAME" "$WIZARD_TERMINAL_ENTRY" \
         "$(wizard_desktop_dir)/$WIZARD_OLD_NAME" "$WIZARD_APPS/$WIZARD_OLD_NAME" \
+        "$(wizard_desktop_dir)/$WIZARD_ID_BEFORE_ENTRY" "$WIZARD_APPS/$WIZARD_ID_BEFORE_ENTRY" \
         "$WIZARD_LAUNCHER" "$WIZARD_APP_LAUNCHER" "$WIZARD_ICON"
     rmdir "$(dirname "$WIZARD_LAUNCHER")" 2>/dev/null || true
     kbuildsycoca6 >/dev/null 2>&1 || true

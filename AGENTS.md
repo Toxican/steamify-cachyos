@@ -162,7 +162,7 @@ gamescope and the Plasma desktop. Primary target: the Valve Steam Machine
   - A release that adds, removes or renames a menu row also retakes the
     README screenshot (`assets/screenshot-menu-steam-machine.png`; NVIDIA PCs get the same menu, so there is no separate
     one): the app from the branch on a Steam Machine, every row visible and the window only as tall as its options need, the header showing the new
-    `VERSION`, 1600 px wide. Size the window with a KWin script (match the `steamify-ui` class exactly: a title match also hits
+    `VERSION`, 1600 px wide. Size the window with a KWin script (match the `io.github.theupriser.Steamify` class exactly (`steamify-ui` until the GNOME work): a title match also hits
     Konsole and editor windows) and crop the full-screen capture to the client rectangle; mind the display scale (the Steam
     Machine runs at 1.75).
   - Users install through `releases/latest/download/steamify.sh`
@@ -259,7 +259,7 @@ gamescope and the Plasma desktop. Primary target: the Valve Steam Machine
   again. Scripted input that runs out quits without restarting (never
   restart on EOF: `ask_yn` would take its default).
 - Steamify shortcut (`launcher`): "Steamify CachyOS" (desktop and launcher,
-  id `steamify-ui.desktop`, the app's own id) runs `curl | bash` of
+  id `io.github.theupriser.Steamify.desktop`, the app's own id; `steamify-ui.desktop` until the GNOME work) runs `curl | bash` of
   `releases/latest/download/steamify-app.sh` without a terminal (in Konsole
   only while PySide6 is missing, for sudo); "Steamify Terminal" (launcher)
   runs `steamify.sh` in Konsole. Both always the newest release. The entry

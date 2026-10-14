@@ -11,12 +11,15 @@ ApplicationWindow {
     required property var backend
     required property var gamepad
     required property bool fullscreen
+    // The app draws the window frame (GNOME): the header carries the buttons, the edges resize.
+    required property bool customFrame
     required property string iconUrl
     required property bool fromSteam
     Component.onCompleted: Input.fromSteam = fromSteam
 
     width: 1280; height: 720
     minimumWidth: 960; minimumHeight: 540
+    flags: customFrame ? (Qt.Window | Qt.FramelessWindowHint) : Qt.Window
     visibility: fullscreen ? Window.FullScreen : Window.Windowed
     title: "Steamify"
     color: Theme.bg
@@ -41,7 +44,7 @@ ApplicationWindow {
         Keys.onPressed: function (e) { steamify.keyPressed(e); }
         Keys.onReleased: function (e) { steamify.keyReleased(e); }
 
-        Header { id: header; app: steamify; iconUrl: win.iconUrl }
+        Header { id: header; app: steamify; iconUrl: win.iconUrl; customFrame: win.customFrame }
 
         Item {
             id: content
@@ -55,4 +58,19 @@ ApplicationWindow {
             DoneScreen { anchors.fill: parent; app: steamify; visible: steamify.screen === "done" }
         }
     }
+
+    // Resize handles around a window with our own frame.
+    component Edge: MouseArea {
+        required property int edges
+        hoverEnabled: true
+        onPressed: win.startSystemResize(edges)
+    }
+    Edge { visible: win.customFrame; edges: Qt.LeftEdge; width: 6; anchors { left: parent.left; top: parent.top; bottom: parent.bottom; topMargin: 8; bottomMargin: 8 } cursorShape: Qt.SizeHorCursor }
+    Edge { visible: win.customFrame; edges: Qt.RightEdge; width: 6; anchors { right: parent.right; top: parent.top; bottom: parent.bottom; topMargin: 8; bottomMargin: 8 } cursorShape: Qt.SizeHorCursor }
+    Edge { visible: win.customFrame; edges: Qt.TopEdge; height: 6; anchors { top: parent.top; left: parent.left; right: parent.right; leftMargin: 8; rightMargin: 8 } cursorShape: Qt.SizeVerCursor }
+    Edge { visible: win.customFrame; edges: Qt.BottomEdge; height: 6; anchors { bottom: parent.bottom; left: parent.left; right: parent.right; leftMargin: 8; rightMargin: 8 } cursorShape: Qt.SizeVerCursor }
+    Edge { visible: win.customFrame; edges: Qt.LeftEdge | Qt.TopEdge; width: 8; height: 8; anchors { left: parent.left; top: parent.top } cursorShape: Qt.SizeFDiagCursor }
+    Edge { visible: win.customFrame; edges: Qt.RightEdge | Qt.TopEdge; width: 8; height: 8; anchors { right: parent.right; top: parent.top } cursorShape: Qt.SizeBDiagCursor }
+    Edge { visible: win.customFrame; edges: Qt.LeftEdge | Qt.BottomEdge; width: 8; height: 8; anchors { left: parent.left; bottom: parent.bottom } cursorShape: Qt.SizeBDiagCursor }
+    Edge { visible: win.customFrame; edges: Qt.RightEdge | Qt.BottomEdge; width: 8; height: 8; anchors { right: parent.right; bottom: parent.bottom } cursorShape: Qt.SizeFDiagCursor }
 }
