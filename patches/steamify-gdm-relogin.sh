@@ -11,7 +11,10 @@ if [[ "$1" != --work ]]; then
     exec systemd-run --no-block --collect --unit=steamify-gdm-relogin "$0" --work "$SUDO_USER"
 fi
 USER_NAME="$2"
-# No waiting for the old user manager to go: systemd starts the new login
-# after it, and waiting only keeps GDM's login screen up in the meantime.
+# GDM is stopped first, so its login screen doesn't show while the old user
+# manager shuts down; a new login right away fails ("A graphical session is
+# already running!", or the session dies at once), so wait until it is gone.
+systemctl stop gdm.service
 loginctl terminate-user "$USER_NAME"
-systemctl restart gdm.service
+for _ in $(seq 120); do loginctl show-user "$USER_NAME" >/dev/null 2>&1 || break; sleep 0.25; done
+systemctl start gdm.service
