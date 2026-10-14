@@ -17,8 +17,7 @@
   color: #eff0f1;
 }
 
-/* Dash in the overview, popups and the calendar. */
-#dash .dash-background { background-color: #24272c; }
+/* Popups and the calendar (the dock keeps Ubuntu's own look). */
 .popup-menu-content,
 .candidate-popup-content,
 .message-list-clear-button {
