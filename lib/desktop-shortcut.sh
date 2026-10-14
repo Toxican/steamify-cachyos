@@ -77,6 +77,7 @@ EOF
         cp "$shortcut_path" "$user_home/.local/share/applications/steamify-return-to-gaming-mode.desktop"
         # GNOME only starts launchers it trusts.
         gio set "$shortcut_path" metadata::trusted true 2>/dev/null || true
+        gnome_dash_pin
     fi
 
     ok "Desktop shortcut created successfully."
@@ -94,5 +95,29 @@ remove_desktop_shortcut() {
     local desktop_dir
     desktop_dir="$(xdg-user-dir DESKTOP 2>/dev/null || echo "$HOME/Desktop")"
     rm -f "$desktop_dir/Return to Gaming Mode.desktop" "$HOME/.local/share/applications/steamify-return-to-gaming-mode.desktop"
+    gnome_dash_unpin
     sudo rm -f /etc/sudoers.d/gamescope-session-switch
+}
+
+# GNOME draws no icons on the desktop: the shortcut is pinned to the dash
+# (the favorites bar) as well. Only in a running session (gsettings needs its dconf).
+GNOME_SHORTCUT_ID=steamify-return-to-gaming-mode.desktop
+
+gnome_dash_pin() {
+    user_session && command -v gsettings >/dev/null || return 0
+    local favorites
+    favorites="$(gsettings get org.gnome.shell favorite-apps 2>/dev/null)" || return 0
+    [[ "$favorites" == *"$GNOME_SHORTCUT_ID"* ]] && return 0
+    favorites="$(sed "s/\]\$/, '$GNOME_SHORTCUT_ID']/; s/^\[, /[/; s/\[\], /[/" <<< "$favorites")"
+    [[ "$favorites" == "[ '$GNOME_SHORTCUT_ID']" ]] && favorites="['$GNOME_SHORTCUT_ID']"
+    gsettings set org.gnome.shell favorite-apps "$favorites"
+}
+
+gnome_dash_unpin() {
+    user_session && command -v gsettings >/dev/null || return 0
+    local favorites
+    favorites="$(gsettings get org.gnome.shell favorite-apps 2>/dev/null)" || return 0
+    [[ "$favorites" == *"$GNOME_SHORTCUT_ID"* ]] || return 0
+    favorites="$(sed -e "s/, '$GNOME_SHORTCUT_ID'//; s/'$GNOME_SHORTCUT_ID', //; s/'$GNOME_SHORTCUT_ID'//" <<< "$favorites")"
+    gsettings set org.gnome.shell favorite-apps "$favorites"
 }

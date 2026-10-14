@@ -16,5 +16,7 @@ USER_NAME="$2"
 # already running!", or the session dies at once), so wait until it is gone.
 systemctl stop gdm.service
 loginctl terminate-user "$USER_NAME"
-for _ in $(seq 120); do loginctl show-user "$USER_NAME" >/dev/null 2>&1 || break; sleep 0.25; done
+# (not `loginctl show-user`: it still lists the user about 10 s after it is gone)
+USER_RUNTIME="/run/user/$(id -u "$USER_NAME")"
+for _ in $(seq 120); do [[ -d "$USER_RUNTIME" ]] || break; sleep 0.25; done
 systemctl start gdm.service
