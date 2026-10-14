@@ -33,8 +33,8 @@ Steam Machine.
    - **NVIDIA graphics cards** (GTX 16 / RTX 20 series or newer) get the same
      conversion: Steamify installs a patched gamescope for them and starts
      gaming mode at your monitor's own resolution and refresh rate. A newer
-     patched gamescope shows up as an **Update** in the menu. Tested on an RTX
-     5080 only ([details](TECHNICAL.md#nvidia-graphics-cards)).
+     patched gamescope shows up as an **Update** in the menu
+     ([details](TECHNICAL.md#nvidia-graphics-cards)).
 2. **SteamOS theme** - the Vapor look of SteamOS for the desktop, with
    **Add to Steam** in right-click menus
    ([details](TECHNICAL.md#steamos-desktop-look)).
