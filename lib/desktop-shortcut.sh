@@ -78,7 +78,7 @@ EOF
         # GNOME only starts launchers it trusts.
         gio set "$shortcut_path" metadata::trusted true 2>/dev/null || true
         gnome_dash_pin
-        gnome_desktop_icons_enable
+        gnome_extensions_enable
     fi
 
     ok "Desktop shortcut created successfully."
@@ -123,18 +123,21 @@ gnome_dash_unpin() {
     gsettings set org.gnome.shell favorite-apps "$favorites"
 }
 
-# Desktop icons on GNOME (it draws none itself): the Desktop Icons NG extension,
-# installed with the other GNOME packages (lib/packages.sh). Enabled in the
-# user's settings; GNOME loads a new extension at the next login.
-DING_UUID=ding@rastersoft.com
+# GNOME draws no desktop icons and no tray icons (Steam's, for one) itself:
+# the Desktop Icons NG and AppIndicator extensions, installed with the other
+# GNOME packages (lib/packages.sh). Enabled in the user's settings; GNOME
+# loads a new extension at the next login.
+GNOME_EXTENSIONS=(ding@rastersoft.com appindicatorsupport@rgcjonas.gmail.com)
 
-gnome_desktop_icons_enable() {
+gnome_extensions_enable() {
     user_session && command -v gsettings >/dev/null || return 0
-    [[ -d "/usr/share/gnome-shell/extensions/$DING_UUID" ]] || return 0
-    local enabled
-    enabled="$(gsettings get org.gnome.shell enabled-extensions 2>/dev/null)" || return 0
-    [[ "$enabled" == *"$DING_UUID"* ]] && return 0
-    if [[ "$enabled" == "@as []" || "$enabled" == "[]" ]]; then enabled="['$DING_UUID']"
-    else enabled="${enabled%]}, '$DING_UUID']"; fi
-    gsettings set org.gnome.shell enabled-extensions "$enabled"
+    local uuid enabled
+    for uuid in "${GNOME_EXTENSIONS[@]}"; do
+        [[ -d "/usr/share/gnome-shell/extensions/$uuid" ]] || continue
+        enabled="$(gsettings get org.gnome.shell enabled-extensions 2>/dev/null)" || return 0
+        [[ "$enabled" == *"$uuid"* ]] && continue
+        if [[ "$enabled" == "@as []" || "$enabled" == "[]" ]]; then enabled="['$uuid']"
+        else enabled="${enabled%]}, '$uuid']"; fi
+        gsettings set org.gnome.shell enabled-extensions "$enabled"
+    done
 }
