@@ -34,7 +34,7 @@ jobs:
           .github/tools/bundle.sh dist/steamify.sh
           # The app: sources, not the single-file build (its backend mode runs
           # steamify.sh from its own folder).
-          tar -czf dist/steamify-app.tar.gz steamify.sh lib patches services ui assets/steam-gaming-settings.svg LICENSE.md
+          tar -czf dist/steamify-app.tar.gz steamify.sh lib patches services ui assets/steam-gaming-settings.svg assets/steam-gaming-settings.png LICENSE.md
           cp ui/steamify-app.sh dist/steamify-app.sh
 
       - name: Check
@@ -119,7 +119,7 @@ jobs:
 
           ## Changes in v$VERSION
           $changes"
-          gh release create "v$VERSION" dist/steamify.sh dist/steamify-app.sh dist/steamify-app.tar.gz assets/steam-gaming-settings.svg \
+          gh release create "v$VERSION" dist/steamify.sh dist/steamify-app.sh dist/steamify-app.tar.gz assets/steam-gaming-settings.svg assets/steam-gaming-settings.png \
               --target "$GITHUB_SHA" --title "Steamify CachyOS v$VERSION" --notes "$notes" --latest
 
           # "latest" follows the newest version tag, for the older install URL
@@ -132,7 +132,7 @@ jobs:
           else
             gh release create latest --title "Steamify CachyOS - latest (v$VERSION)" --notes "$latest_notes" --latest=false
           fi
-          gh release upload latest dist/steamify.sh dist/steamify-app.sh dist/steamify-app.tar.gz assets/steam-gaming-settings.svg --clobber
+          gh release upload latest dist/steamify.sh dist/steamify-app.sh dist/steamify-app.tar.gz assets/steam-gaming-settings.svg assets/steam-gaming-settings.png --clobber
 
       # The mirror (Gitea) publishes its own release per version too, the same way: never overwrites one,
       # notes from the changelog. gh can't talk to Gitea: its API for the check, a Gitea release action to
@@ -191,6 +191,7 @@ jobs:
             dist/steamify-app.sh
             dist/steamify-app.tar.gz
             assets/steam-gaming-settings.svg
+            assets/steam-gaming-settings.png
 
       # A new version starts the Steamify ISO's release of the ISO repo: its iso-1-github-tag.yml (always run from
       # master) names the ISO after the newest Steamify release, tags it, and the Gitea mirror builds and attaches the ISO.

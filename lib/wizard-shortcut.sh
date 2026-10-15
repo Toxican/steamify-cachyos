@@ -110,7 +110,14 @@ EOF
     # The icon comes with the release; without it, Steam's own icon.
     local icon=steam tmp
     tmp="$(mktemp)"
-    if curl -fsSL --max-time 20 "$WIZARD_RELEASE/steam-gaming-settings.svg" -o "$tmp" && grep -q '<svg' "$tmp"; then
+    local theme="${XDG_DATA_HOME:-$HOME/.local/share}/icons/hicolor"
+    # A PNG, by name, first: GNOME's dock can't always draw an SVG (blank icon, "Could not load a pixbuf from icon theme").
+    # (Releases before 2.13.0 only have the SVG.)
+    if curl -fsSL --max-time 20 "$WIZARD_RELEASE/steam-gaming-settings.png" -o "$tmp" && head -c 8 "$tmp" | grep -q PNG; then
+        install -D -m 644 "$tmp" "$theme/256x256/apps/io.github.theupriser.Steamify.png"
+        icon=io.github.theupriser.Steamify
+        gtk-update-icon-cache -q -f -t "$theme" 2>/dev/null || true
+    elif curl -fsSL --max-time 20 "$WIZARD_RELEASE/steam-gaming-settings.svg" -o "$tmp" && grep -q '<svg' "$tmp"; then
         install -D -m 644 "$tmp" "$WIZARD_ICON"
         # The full path: GNOME Shell's dock doesn't find a name in the user's icon folder (blank icon), and every desktop takes a path.
         icon="$WIZARD_ICON"
