@@ -58,6 +58,17 @@ fi
 # release: left alone.
 mkdir -p "$APPS"
 rm -f "$APPS/steamify-ui.desktop"   # its name until 2.12.0
+# The icon by name, from the user's icon theme, as a PNG: GNOME's dock can't always draw an SVG (blank icon: "Could not load a
+# pixbuf from icon theme"), and a file path to one fails the same way.
+ICON_NAME=io.github.theupriser.Steamify
+ICON_DIR="${XDG_DATA_HOME:-$HOME/.local/share}/icons/hicolor"
+if [[ -f "$DEST/assets/steam-gaming-settings.png" ]]; then
+    install -D -m 644 "$DEST/assets/steam-gaming-settings.png" "$ICON_DIR/256x256/apps/$ICON_NAME.png"
+    gtk-update-icon-cache -q -f -t "$ICON_DIR" 2>/dev/null || true
+    ICON="$ICON_NAME"
+else
+    ICON="$DEST/assets/steam-gaming-settings.svg"
+fi
 grep -q '^X-Steamify-Shortcut=true' "$APPS/io.github.theupriser.Steamify.desktop" 2>/dev/null ||
 cat > "$APPS/io.github.theupriser.Steamify.desktop" << EOF
 [Desktop Entry]
@@ -65,7 +76,7 @@ Type=Application
 Name=Steamify CachyOS
 Comment=Turn this PC into a SteamOS-style console
 Exec=$DEST/ui/steamify-ui
-Icon=$DEST/assets/steam-gaming-settings.svg
+Icon=$ICON
 Terminal=false
 Categories=Game;Settings;
 StartupWMClass=io.github.theupriser.Steamify
