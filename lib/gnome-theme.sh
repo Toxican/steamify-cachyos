@@ -111,6 +111,22 @@ gnometheme_shell() {
     done
 }
 
+gnometheme_relogin_needed() {
+    # A GNOME session is running and this run changed the theme: GNOME Shell on Wayland can't be restarted in place, so
+    # the new extensions, the dock and the Settings panel show after the user logs in again.
+    [[ " $* " == *" gnometheme "* ]] && pgrep -u "$(id -u)" -x gnome-shell >/dev/null 2>&1
+}
+
+gnometheme_relogin() {
+    # End the GNOME session. With GDM autologin set up by the conversion, steamify-gdm-relogin logs the user straight back
+    # into the session they were in (GDM takes it from AccountsService; the session is not changed here, unlike
+    # steamos-session-select, which would make GNOME the one gaming mode's boot goes back to). Without that helper there
+    # is no autologin: a plain logout, and the user logs in again.
+    local helper=/usr/local/libexec/steamify-gdm-relogin
+    if [[ -x "$helper" ]] && sudo -n "$helper"; then return 0; fi
+    gnome-session-quit --logout --no-prompt
+}
+
 gnometheme_settings_install() {
     # The prebuilt GNOME Settings with the Desktop panel, replacing the stock one. Never fatal: the theme works without the
     # panel, so a failed download or install keeps the stock Settings and says so.
@@ -172,6 +188,8 @@ gnometheme_enable() {
     gnometheme_shell
     gnometheme_settings_install
     ok "SteamOS theme for GNOME on (apps pick up the colors when they start again)."
+    # (GNOME Shell on Wayland can't restart in place: the app offers "Restart GNOME", which is this.)
+    gnometheme_relogin_needed gnometheme && info "Log out and back in for the dock, the extensions and the Settings panel to show."
 }
 
 gnometheme_disable() {

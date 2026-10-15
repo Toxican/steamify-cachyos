@@ -9,7 +9,8 @@ Item {
     readonly property bool problem: app.failed.length > 0 || app.runError !== ""
     readonly property string message: {
         if (app.runError) return app.runError;
-        if (!app.biosRun) return app.plan.length + (app.plan.length === 1 ? " change" : " changes") + " applied." + (app.restartNeeded ? " Some take effect after a restart." : "");
+        if (!app.biosRun) return app.plan.length + (app.plan.length === 1 ? " change" : " changes") + " applied." + (app.restartNeeded ? " Some take effect after a restart." : "")
+             + (app.reloginNeeded && !app.restartNeeded ? " GNOME shows the dock, extensions and Settings panel after you log in again: Restart GNOME does that." : "");
         if (app.failed.length) return "The BIOS was not changed.";
         return (app.bios && app.bios.dryRun ? "Dry run: nothing was flashed. " : "BIOS " + (app.biosInfo.newest || "") + " is staged and is written during the restart. ")
              + "Keep the power on and don't touch the machine until it has fully started again, even if the screen stays black.";
@@ -33,6 +34,7 @@ Item {
                 delegate: Text { required property string line; width: details.width - 12; text: line; color: "#aab5c4"; font.family: Theme.mono; font.pixelSize: 13; wrapMode: Text.WrapAnywhere } } }
         Row { anchors.horizontalCenter: parent.horizontalCenter; spacing: 14; topPadding: 8
             Btn { k: Input.g.back; text: "Back to the menu"; height: 52; onClicked: app.act("back") }
-            Btn { visible: app.restartNeeded; k: Input.g.ok; text: "Restart now"; primary: true; height: 52; onClicked: app.backend.restart() } }
+            Btn { visible: app.restartNeeded; k: Input.g.ok; text: "Restart now"; primary: true; height: 52; onClicked: app.backend.restart() }
+            Btn { visible: app.reloginNeeded && !app.restartNeeded; k: Input.g.ok; text: "Restart GNOME"; primary: true; height: 52; onClicked: app.backend.restartGnome() } }
     }
 }

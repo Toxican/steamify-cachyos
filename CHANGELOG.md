@@ -12,6 +12,10 @@ one per merged pull request.
 - `645b331` **feat: the GNOME theme installs GNOME Settings with the "GNOME Desktop" panel (dock, desktop icons, tiling) as a prebuilt package, downloaded from the `settings` release of steamify-gnome-theme (built by GitHub Actions on current Arch, rebuilt weekly) and checked against its `.sha256`; a failure keeps the stock Settings. Turning the theme off puts the stock `gnome-control-center` back. Installs with the GNOME theme on re-apply it (feature version 2.13.0)**
 - **fix: the app's logo (an SVG) shows on a fresh install: `pyside6` doesn't depend on `qt6-svg`, Qt's SVG plugin, so without it the header logo was empty and the window had no icon of its own; it is installed with PySide6 (the app's installer, the launcher, the update notifier)**
 
+- **feat: after the GNOME theme is applied in a GNOME session, the app's done screen has "Restart GNOME" (GNOME Shell on Wayland can't restart in place, and the dock, extensions and Settings panel only show after a new login): with GDM autologin (the SteamOS conversion) Steamify's relogin helper logs the user straight back into the session they were in (without changing the session gaming mode's boot goes back to), else it is a plain logout (`gnome-session-quit`)**
+- **fix: the app on a desktop (a window, however large, also fullscreen) keeps the desktop's own scale instead of blowing its 1280x720 layout up to the screen's height (twice as big on a 1440p or ultrawide monitor): the layout fills the window at the scale of GNOME or KDE, and only a window smaller than 1280x720 shrinks it. The TV mode (`--fullscreen`, gamescope) still scales to the screen**
+- **fix: in the app a click on a row only selects it (a second click on the selected row used to flip it, so a click on a switch needed two); a click on the switch itself, or on the BIOS update button, acts at once and selects the row too**
+
 ## 2.12.0 - 2026-10-13
 
 - **feat: setting up the SteamOS conversion on NVIDIA first checks that nothing blocks it (a pacman lock, less than 1.5 GB free), and a failed setup is remembered: a desktop notification now and a reminder in the menu until a setup works**

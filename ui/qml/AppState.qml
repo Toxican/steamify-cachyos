@@ -18,6 +18,7 @@ Item {
     property var steps: ({})                 // id -> "wait"|"run"|"ok"|"fail"
     property var failed: []
     property bool restartNeeded: false
+    property bool reloginNeeded: false      // GNOME loads the new theme's extensions at the next login
     // Review & apply only when something would change; "Re-apply what's on"
     // is for when nothing did.
     readonly property bool canApply: computePlan().length > 0
@@ -123,7 +124,7 @@ Item {
     }
 
     // --- Password and apply ---
-    function resetRun() { steps = {}; failed = []; restartNeeded = false; runError = ""; doneCount = 0; logModel.clear(); }
+    function resetRun() { steps = {}; failed = []; restartNeeded = false; reloginNeeded = false; runError = ""; doneCount = 0; logModel.clear(); }
     function startApply(password) {
         resetRun();
         var s = {};
@@ -203,7 +204,7 @@ Item {
                 // A successful BIOS check ends with bios-ready instead, keeping
                 // the password for the flash.
                 app.sessionPassword = "";
-                app.failed = ev.failed || []; app.restartNeeded = !!ev.restart;
+                app.failed = ev.failed || []; app.restartNeeded = !!ev.restart; app.reloginNeeded = !!ev.relogin;
                 app.runError = app.errorText(ev.error);
                 app.screen = "done";
             }
@@ -249,6 +250,7 @@ Item {
             else if (a === "release") { holding = false; if (holdProgress < 1) holdProgress = 0; }
         } else if (screen === "done") {
             if (a === "accept" && restartNeeded) backend.restart();
+            else if (a === "accept" && reloginNeeded) backend.restartGnome();
             else if (a === "back" || a === "accept") backToMenu();
         }
     }

@@ -345,6 +345,16 @@ class Backend(QObject):
     def restart(self):
         QProcess.startDetached("systemctl", ["reboot"])
 
+    @Slot()
+    def restartGnome(self):
+        # GNOME Shell on Wayland can't restart in place: end the session. With GDM autologin (the SteamOS conversion)
+        # Steamify's helper logs the user straight back in; else a plain logout.
+        import subprocess
+        helper = "/usr/local/libexec/steamify-gdm-relogin"
+        if os.access(helper, os.X_OK) and subprocess.run(["sudo", "-n", helper], capture_output=True).returncode == 0:
+            return
+        QProcess.startDetached("gnome-session-quit", ["--logout", "--no-prompt"])
+
     def shutdown(self):
         if self._proc and self._proc.state() != QProcess.NotRunning:
             self._proc.kill()
