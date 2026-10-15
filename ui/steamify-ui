@@ -351,7 +351,9 @@ class Backend(QObject):
         # Steamify's helper logs the user straight back in; else a plain logout.
         import subprocess
         helper = "/usr/local/libexec/steamify-gdm-relogin"
-        if os.access(helper, os.X_OK) and subprocess.run(["sudo", "-n", helper], capture_output=True).returncode == 0:
+        # The session this one is, for this login only: the default (gaming mode, after the conversion) would log in there.
+        session = os.environ.get("XDG_SESSION_DESKTOP") or "gnome"
+        if os.access(helper, os.X_OK) and subprocess.run(["sudo", "-n", helper, session], capture_output=True).returncode == 0:
             return
         QProcess.startDetached("gnome-session-quit", ["--logout", "--no-prompt"])
 

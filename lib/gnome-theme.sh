@@ -123,7 +123,7 @@ gnometheme_relogin() {
     # steamos-session-select, which would make GNOME the one gaming mode's boot goes back to). Without that helper there
     # is no autologin: a plain logout, and the user logs in again.
     local helper=/usr/local/libexec/steamify-gdm-relogin
-    if [[ -x "$helper" ]] && sudo -n "$helper"; then return 0; fi
+    if [[ -x "$helper" ]] && sudo -n "$helper" "${XDG_SESSION_DESKTOP:-gnome}"; then return 0; fi
     gnome-session-quit --logout --no-prompt
 }
 

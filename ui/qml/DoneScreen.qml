@@ -7,10 +7,24 @@ import QtQuick.Controls.Basic
 Item {
     required property AppState app
     readonly property bool problem: app.failed.length > 0 || app.runError !== ""
+    // GNOME Shell on Wayland can't restart in place (it is the compositor too), so what a KDE run does for plasmashell is a
+    // new login here: started by itself after a countdown, unless the run needs a reboot anyway (which does the same).
+    readonly property bool relogin: app.reloginNeeded && !app.restartNeeded && !problem
+    property int countdown: 10
+    property bool cancelled: false
+    property bool fired: false
+    readonly property bool counting: relogin && !cancelled && !fired
+    onVisibleChanged: if (visible) { countdown = 10; cancelled = false; fired = false; }
+    function reloginNow() { fired = true; app.backend.restartGnome(); }
+    Timer {
+        interval: 1000; repeat: true; running: parent.visible && parent.counting
+        onTriggered: { parent.countdown -= 1; if (parent.countdown <= 0) parent.reloginNow(); }
+    }
     readonly property string message: {
         if (app.runError) return app.runError;
         if (!app.biosRun) return app.plan.length + (app.plan.length === 1 ? " change" : " changes") + " applied." + (app.restartNeeded ? " Some take effect after a restart." : "")
-             + (app.reloginNeeded && !app.restartNeeded ? " GNOME shows the dock, extensions and Settings panel after you log in again: Restart GNOME does that." : "");
+             + (counting ? " Restarting GNOME in " + countdown + " s, so it loads the new dock, extensions and Settings panel."
+                : (relogin ? " GNOME shows the dock, extensions and Settings panel after you log in again." : ""));
         if (app.failed.length) return "The BIOS was not changed.";
         return (app.bios && app.bios.dryRun ? "Dry run: nothing was flashed. " : "BIOS " + (app.biosInfo.newest || "") + " is staged and is written during the restart. ")
              + "Keep the power on and don't touch the machine until it has fully started again, even if the screen stays black.";
@@ -35,6 +49,7 @@ Item {
         Row { anchors.horizontalCenter: parent.horizontalCenter; spacing: 14; topPadding: 8
             Btn { k: Input.g.back; text: "Back to the menu"; height: 52; onClicked: app.act("back") }
             Btn { visible: app.restartNeeded; k: Input.g.ok; text: "Restart now"; primary: true; height: 52; onClicked: app.backend.restart() }
-            Btn { visible: app.reloginNeeded && !app.restartNeeded; k: Input.g.ok; text: "Restart GNOME"; primary: true; height: 52; onClicked: app.backend.restartGnome() } }
+            Btn { visible: relogin; k: Input.g.ok; text: counting ? "Restart GNOME now" : "Restart GNOME"; primary: true; height: 52; onClicked: reloginNow() }
+            Btn { visible: counting; text: "Cancel"; height: 52; onClicked: cancelled = true } }
     }
 }
