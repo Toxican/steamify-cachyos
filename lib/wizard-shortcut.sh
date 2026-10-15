@@ -96,7 +96,7 @@ EOF
 #!/bin/bash
 # Installed by Steamify CachyOS: start the newest release of its app.
 set -o pipefail
-if [[ "\${1:-}" != --in-terminal ]] && ! python3 -c 'import PySide6.QtQml' 2>/dev/null; then
+if [[ "\${1:-}" != --in-terminal ]] && { ! python3 -c 'import PySide6.QtQml' 2>/dev/null || ! pacman -Q qt6-svg >/dev/null 2>&1; }; then
     exec $terminal "\$0" --in-terminal
 fi
 if ! curl -fsSL --max-time 30 "$WIZARD_APP_URL" | bash; then
