@@ -36,9 +36,11 @@ ApplicationWindow {
     // own shape, so the bars reach the edges and the content fills it.
     Item {
         id: stage
-        // On a desktop (a window, however large) the scale stops at 1.5: a 1440p or ultrawide monitor would otherwise show
-        // everything twice as big. The TV mode (--fullscreen, gamescope) scales to the screen: it is read from the couch.
-        readonly property real k: Math.min(win.width / 1280, win.height / 720, win.fullscreen ? Infinity : 1.5)
+        // On a desktop (a window, however large) the UI keeps the desktop's own scale: 1 here is one logical pixel, which Qt
+        // multiplies by the scale of GNOME or KDE, like any other app (a 1440p or ultrawide monitor would otherwise show
+        // everything twice as big). Only a window smaller than the layout shrinks it. The TV mode (--fullscreen, gamescope)
+        // scales to the screen: it is read from the couch.
+        readonly property real k: Math.min(win.width / 1280, win.height / 720, win.fullscreen ? Infinity : 1)
         width: win.width / k; height: win.height / k
         transformOrigin: Item.TopLeft
         scale: k
