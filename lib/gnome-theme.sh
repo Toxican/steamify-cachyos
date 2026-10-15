@@ -101,6 +101,9 @@ gnometheme_shell() {
     # Trash is in the dock, not on the desktop (Ubuntu does the same).
     gset gnometheme org.gnome.shell.extensions.ding show-trash false || true
     gset gnometheme $d show-trash true || true
+    # Desktop icons from the top right, like Ubuntu's and macOS's desktops (Desktop Icons NG fills from the corner it starts at).
+    gset gnometheme org.gnome.shell.extensions.ding start-corner "'top-right'" || true
+    gnometheme_desktop_icons_reset
     local uuid enabled
     for uuid in "${GNOME_THEME_EXTENSIONS[@]}"; do
         enabled="$(gs get org.gnome.shell enabled-extensions 2>/dev/null)" || return 0
@@ -109,6 +112,17 @@ gnometheme_shell() {
         else enabled="${enabled%]}, '$uuid']"; fi
         gset gnometheme org.gnome.shell enabled-extensions "$enabled"
     done
+}
+
+gnometheme_desktop_icons_reset() {
+    # Steamify's own launchers on the desktop were placed (and their spot saved) from the left corner: without a saved
+    # position Desktop Icons NG puts them where its start corner says, by name. Only these, never the user's files.
+    local dir f
+    dir="$(xdg-user-dir DESKTOP 2>/dev/null || echo "$HOME/Desktop")"
+    for f in "$dir/Return to Gaming Mode.desktop" "$dir/io.github.theupriser.Steamify.desktop" "$dir/steam.desktop"; do
+        [[ -e "$f" ]] && gio set -t unset "$f" metadata::nautilus-icon-position 2>/dev/null
+    done
+    return 0
 }
 
 gnometheme_extras_install() {
