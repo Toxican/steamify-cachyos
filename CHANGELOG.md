@@ -21,6 +21,7 @@ one per merged pull request.
 - **fix: turning the GNOME theme off also removes the dock's and tiling's settings schemas that were copied to `~/.local/share/glib-2.0/schemas` for GNOME Settings' panel (they stayed behind, for extensions that were gone). Desktop Icons NG and AppIndicator stay: they belong to the SteamOS conversion (the desktop shortcut and Steam's tray icon)**
 - **fix: turning everything off gives GNOME back what Steamify added for the desktop and tray icons: Desktop Icons NG and AppIndicator (and Extension Manager), which the SteamOS conversion and now the GNOME theme both need. When the last of the two is turned off, the two extensions leave the user's list of enabled extensions and the packages Steamify installed (noted in `gnomeextras.list` before installing, so packages the user had stay) are removed; while the other one is still on they stay, and are enabled again (the theme's undo puts back the list it found). Before, nothing removed them. The theme installs them itself too**
 - **feat: the GNOME theme puts the dock at the bottom of the screen (Ubuntu's own default is the left); it can still be moved in GNOME Settings > GNOME Desktop (the Dock panel)**
+- **feat: the GNOME theme puts the desktop icons at the top right (Desktop Icons NG's start corner, like Ubuntu and macOS) and clears the saved positions of Steamify's own launchers (Return to Gaming Mode, Steamify, Steam) so they are placed from there, in name order; the user's own files keep theirs. Turning the theme off puts the start corner back**
 
 ## 2.12.0 - 2026-10-13
 
