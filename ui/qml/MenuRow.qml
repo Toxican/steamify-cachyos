@@ -31,14 +31,9 @@ Item {
         color: row.selected ? Theme.cardSel : Theme.card
         border.width: row.selected ? 2 : 0; border.color: Theme.accent
         MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor
-            onClicked: {
-                Input.type = "keyboard";
-                var wasSelected = row.selected;
-                app.sel = row.rowIndex;
-                // A switch flips on the first click. The others (the BIOS update, the boot choice) need the row selected
-                // first: a stray click mustn't start a flash.
-                if (wasSelected || row.it.kind === "toggle") app.act("accept");
-            } }
+            // A click on the row only selects it; the switch, the Gaming/Desktop buttons and the BIOS button act on their own
+            // click (below), selecting the row too.
+            onClicked: { Input.type = "keyboard"; app.sel = row.rowIndex; } }
 
         Text { visible: !!row.it.parent; x: 20; anchors.verticalCenter: parent.verticalCenter; text: "└"; color: "#56627a"; font.pixelSize: 18 }
         Column {
@@ -74,14 +69,18 @@ Item {
             Rectangle { id: sw; visible: row.it.kind === "toggle"; anchors.right: parent.right; anchors.verticalCenter: parent.verticalCenter
                 width: 46; height: 26; radius: 13; color: row.on ? Theme.accent : "#343f50"
                 Behavior on color { ColorAnimation { duration: 120 } }
-                Rectangle { width: 20; height: 20; radius: 10; color: "#f4f7fb"; y: 3; x: row.on ? 23 : 3; Behavior on x { NumberAnimation { duration: 120 } } } }
+                Rectangle { width: 20; height: 20; radius: 10; color: "#f4f7fb"; y: 3; x: row.on ? 23 : 3; Behavior on x { NumberAnimation { duration: 120 } } }
+                MouseArea { anchors.fill: parent; anchors.margins: -6; cursorShape: Qt.PointingHandCursor
+                    onClicked: { Input.type = "keyboard"; app.sel = row.rowIndex; app.act("accept"); } } }
             Text { visible: row.it.kind === "toggle"; anchors.right: sw.left; anchors.rightMargin: 12; anchors.verticalCenter: parent.verticalCenter
                    text: row.it.on ? "now on" : "now off"; color: row.it.on ? Theme.good : Theme.faint; font.family: Theme.mono; font.pixelSize: 12 }
             // action (Update BIOS)
             Rectangle { visible: row.it.kind === "action"; anchors.right: parent.right; anchors.verticalCenter: parent.verticalCenter
                 width: at.implicitWidth + 24; height: 30; radius: 8; color: Theme.warnBg
                 Text { id: at; anchors.centerIn: parent; color: Theme.warn; font.family: Theme.body; font.pixelSize: 13; font.weight: Font.DemiBold
-                       text: app.biosChecking ? "Checking…" : app.bios && app.bios.selectable ? "Update…" : (app.bios && app.bios.newest ? "Up to date" : "Unavailable") } }
+                       text: app.biosChecking ? "Checking…" : app.bios && app.bios.selectable ? "Update…" : (app.bios && app.bios.newest ? "Up to date" : "Unavailable") }
+                MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor
+                    onClicked: { Input.type = "keyboard"; app.sel = row.rowIndex; app.act("accept"); } } }
         }
     }
 }
