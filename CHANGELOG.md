@@ -11,6 +11,8 @@ one per merged pull request.
 - `2ca288d` **fix: the NVIDIA gaming mode setup no longer fails with "the patched gamescope doesn't start" on a gamescope that works: the smoke test judged gamescope's exit status through a pipe into `grep -q` under `pipefail`, so gamescope's crash on the closed pipe (or a hung shutdown) counted as a failed test, intermittently, for the CPU-specific and the generic build alike (seen on an RTX 5080). The test now reads gamescope's output from a file and kills a hung shutdown (`timeout -k`)**
 - `645b331` **feat: the GNOME theme installs GNOME Settings with the "GNOME Desktop" panel (dock, desktop icons, tiling) as a prebuilt package, downloaded from the `settings` release of steamify-gnome-theme (built by GitHub Actions on current Arch, rebuilt weekly) and checked against its `.sha256`; a failure keeps the stock Settings. Turning the theme off puts the stock `gnome-control-center` back. Installs with the GNOME theme on re-apply it (feature version 2.13.0)**
 
+- **feat: after the GNOME theme is applied in a GNOME session, the app's done screen has "Restart GNOME" (GNOME Shell on Wayland can't restart in place, and the dock, extensions and Settings panel only show after a new login): with GDM autologin (the SteamOS conversion) Steamify's relogin helper logs the user straight back into the session they were in (without changing the session gaming mode's boot goes back to), else it is a plain logout (`gnome-session-quit`)**
+
 ## 2.12.0 - 2026-10-13
 
 - **feat: setting up the SteamOS conversion on NVIDIA first checks that nothing blocks it (a pacman lock, less than 1.5 GB free), and a failed setup is remembered: a desktop notification now and a reminder in the menu until a setup works**

@@ -195,7 +195,10 @@ backend_apply() {
     feature_record_unticked
     os_version_refresh
     [[ " ${TO_DISABLE[*]} ${TO_ENABLE[*]} " =~ \ (gaming|single|boot|kpin)\  ]] && RESTART_FOR_LOGIN=true
-    backend_event finished "\"failed\":$(json_list "${failed[@]}"),\"restart\":$(restart_needed && echo true || echo false)"
+    # (Only when the theme itself worked: a failed one has nothing to log in again for.)
+    local relogin=false
+    [[ " ${failed[*]:-} " != *" gnometheme "* ]] && gnometheme_relogin_needed "${TO_DISABLE[@]}" "${TO_ENABLE[@]}" && relogin=true
+    backend_event finished "\"failed\":$(json_list "${failed[@]}"),\"restart\":$(restart_needed && echo true || echo false),\"relogin\":$relogin"
 }
 
 backend_main() {
