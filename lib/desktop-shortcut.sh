@@ -141,3 +141,48 @@ gnome_extensions_enable() {
         gsettings set org.gnome.shell enabled-extensions "$enabled"
     done
 }
+
+# The packages behind them. Needed by the SteamOS conversion (the desktop shortcut's icon, Steam's tray icon) and by the
+# GNOME theme (its desktop and tray icons); a PC that has neither any more gets back what Steamify added.
+GNOME_EXTRA_PKGS=(gnome-shell-extension-desktop-icons-ng gnome-shell-extension-appindicator extension-manager)
+
+gnome_extras_note_missing() {
+    # Before they are installed: which of them Steamify brings itself (the others were the user's: they stay), one name per
+    # line in a file of its own, not a state value: kwriteconfig6 (kconfig) is one of the packages installed in that step.
+    # Already noted ones stay noted (they are installed by then, so they aren't "missing" again).
+    local p list="$STATE_DIR/gnomeextras.list"
+    mkdir -p "$STATE_DIR"
+    for p in "${GNOME_EXTRA_PKGS[@]}"; do
+        pacman -Q "$p" >/dev/null 2>&1 || grep -qxF "$p" "$list" 2>/dev/null || echo "$p" >> "$list"
+    done
+}
+
+gnome_extensions_disable() {
+    # The two out of the user's list of enabled extensions again.
+    user_session && command -v gsettings >/dev/null || return 0
+    local uuid enabled
+    for uuid in "${GNOME_EXTENSIONS[@]}"; do
+        enabled="$(gsettings get org.gnome.shell enabled-extensions 2>/dev/null)" || return 0
+        [[ "$enabled" == *"$uuid"* ]] || continue
+        enabled="$(sed -e "s/'$uuid', //; s/, '$uuid'//; s/'$uuid'//" <<<"$enabled")"
+        [[ "$enabled" == "[]" ]] && enabled="@as []"
+        gsettings set org.gnome.shell enabled-extensions "$enabled"
+    done
+}
+
+gnome_extras_release() {
+    # Called when the SteamOS conversion or the GNOME theme was turned off, after its own undoing. While the other one is
+    # still on, the extensions stay (and are enabled again: the theme's undo puts back the list it found). When neither is:
+    # they are disabled, and the packages Steamify installed are removed (a failed removal, because something else needs a
+    # package, keeps it).
+    [[ "$(desktop_kind)" == gnome ]] || return 0
+    if gaming_status || gnometheme_status; then gnome_extensions_enable; return 0; fi
+    gnome_extensions_disable
+    local p list="$STATE_DIR/gnomeextras.list"
+    for p in "${GNOME_EXTRA_PKGS[@]}"; do
+        grep -qxF "$p" "$list" 2>/dev/null || continue
+        pacman -Q "$p" >/dev/null 2>&1 || continue
+        sudo pacman -R --noconfirm "$p" >/dev/null 2>&1 || info "Keeping $p installed (another package needs it)."
+    done
+    rm -f "$list"
+}

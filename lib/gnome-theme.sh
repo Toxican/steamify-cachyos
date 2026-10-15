@@ -111,6 +111,15 @@ gnometheme_shell() {
     done
 }
 
+gnometheme_extras_install() {
+    # The desktop icons and the tray icons of the Ubuntu-style look: Desktop Icons NG and AppIndicator (and Extension Manager
+    # for them), the same the SteamOS conversion needs (lib/desktop-shortcut.sh). Not fatal: the theme works without them.
+    gnome_extras_note_missing
+    sudo pacman -S --needed --noconfirm "${GNOME_EXTRA_PKGS[@]}" >/dev/null 2>&1 ||
+        { warn "Couldn't install Desktop Icons NG and AppIndicator: the desktop and the tray show no icons."; return 0; }
+    gnome_extensions_enable
+}
+
 gnometheme_relogin_needed() {
     # A GNOME session is running and this run changed the theme: GNOME Shell on Wayland can't be restarted in place, so
     # the new extensions, the dock and the Settings panel show after the user logs in again.
@@ -186,6 +195,7 @@ gnometheme_enable() {
     fi
     { echo "$GNOME_THEME_MARK"; patch_file steamify-gnome-gtk4.css; } > "$GNOME_THEME_CSS"
     gnometheme_shell
+    gnometheme_extras_install
     gnometheme_settings_install
     ok "SteamOS theme for GNOME on (apps pick up the colors when they start again)."
     # (GNOME Shell on Wayland can't restart in place: the app offers "Restart GNOME", which is this.)
@@ -227,5 +237,7 @@ gnometheme_disable() {
             info "Keeping GNOME Settings with the Desktop panel (the stock one couldn't be installed)."
     fi
     state_clear gnometheme
+    # (After the state is cleared and the stylesheet is gone: the theme itself is off for gnome_extras_release's check.)
+    gnome_extras_release
     ok "Previous GNOME look restored."
 }

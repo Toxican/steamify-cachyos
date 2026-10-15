@@ -153,6 +153,7 @@ gaming_disable() {
     os_name_disable
     # NVIDIA with single user mode still on: nothing else logs in by itself any more.
     nvidia_present && single_status && single_login_enable
+    gnome_extras_release
     ok "The PC boots to the normal login screen again (from the next boot)."
 }
 
