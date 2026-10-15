@@ -12,6 +12,7 @@ one per merged pull request.
 - `645b331` **feat: the GNOME theme installs GNOME Settings with the "GNOME Desktop" panel (dock, desktop icons, tiling) as a prebuilt package, downloaded from the `settings` release of steamify-gnome-theme (built by GitHub Actions on current Arch, rebuilt weekly) and checked against its `.sha256`; a failure keeps the stock Settings. Turning the theme off puts the stock `gnome-control-center` back. Installs with the GNOME theme on re-apply it (feature version 2.13.0)**
 
 - **feat: after the GNOME theme is applied in a GNOME session, the app's done screen has "Restart GNOME" (GNOME Shell on Wayland can't restart in place, and the dock, extensions and Settings panel only show after a new login): with GDM autologin (the SteamOS conversion) Steamify's relogin helper logs the user straight back into the session they were in (without changing the session gaming mode's boot goes back to), else it is a plain logout (`gnome-session-quit`)**
+- **fix: the app on a desktop (a window, however large, also fullscreen) stops scaling at 1.5: on a 1440p or ultrawide monitor it was twice as big as designed (the scale followed the screen's height). The TV mode (`--fullscreen`, gamescope) still scales to the screen**
 
 ## 2.12.0 - 2026-10-13
 
