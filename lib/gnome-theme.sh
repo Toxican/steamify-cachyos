@@ -19,6 +19,10 @@ TILING_URL="https://github.com/ubuntu/Tiling-Assistant/releases/download/v56/til
 TILING_SHA256=961da0c6b8e5960770e68a06d71205765870435dbe8fe0ccc1ec50d4cc78265a
 GNOME_USER_EXTENSIONS="${XDG_DATA_HOME:-$HOME/.local/share}/gnome-shell/extensions"
 GNOME_THEME_WALLPAPER="/usr/share/wallpapers/Steam Deck Logo Default.jpg"
+# GNOME Settings with the "GNOME Desktop" panel (dock, desktop icons, tiling): built by GitHub Actions on current Arch
+# and rebuilt weekly (steamify-gnome-theme, settings/), so it isn't compiled here (a few minutes, 800 steps).
+GNOME_SETTINGS_PKG=steamify-gnome-control-center
+GNOME_SETTINGS_URL="https://github.com/theupriser/steamify-gnome-theme/releases/download/settings"
 
 gnometheme_status() {
     grep -qsF "$GNOME_THEME_MARK" "$GNOME_THEME_CSS"
@@ -107,6 +111,38 @@ gnometheme_shell() {
     done
 }
 
+gnometheme_settings_install() {
+    # The prebuilt GNOME Settings with the Desktop panel, replacing the stock one. Never fatal: the theme works without the
+    # panel, so a failed download or install keeps the stock Settings and says so.
+    pacman -Q "$GNOME_SETTINGS_PKG" >/dev/null 2>&1 && return 0
+    pacman -Q gnome-control-center >/dev/null 2>&1 || return 0
+    local cache="${XDG_CACHE_HOME:-$HOME/.cache}/steamify" file="$GNOME_SETTINGS_PKG-x86_64.pkg.tar.zst" want got
+    mkdir -p "$cache" || return 0
+    info "Downloading GNOME Settings with the Desktop panel..."
+    want="$(curl -fsL --connect-timeout 10 --max-time 30 "$GNOME_SETTINGS_URL/$file.sha256" 2>/dev/null | awk 'NR==1 {print $1}')"
+    if [[ -z "$want" ]] ||
+        ! curl -fsL --retry 2 --connect-timeout 15 --max-time 300 -o "$cache/$file.part" "$GNOME_SETTINGS_URL/$file"; then
+        rm -f "$cache/$file.part"
+        warn "Couldn't download GNOME Settings with the Desktop panel: the stock GNOME Settings stays."
+        return 0
+    fi
+    got="$(sha256sum "$cache/$file.part" | awk '{print $1}')"
+    if [[ "$got" != "$want" ]]; then
+        rm -f "$cache/$file.part"
+        warn "GNOME Settings with the Desktop panel didn't match its checksum: the stock GNOME Settings stays."
+        return 0
+    fi
+    mv -f "$cache/$file.part" "$cache/$file"
+    # --ask 4: pacman may replace the stock gnome-control-center it conflicts with.
+    if sudo pacman -U --noconfirm --ask 4 "$cache/$file"; then
+        state_set gnometheme installed_settings 1
+        ok "GNOME Settings with the Desktop panel installed (under Appearance, after the next login)."
+    else
+        warn "Installing GNOME Settings with the Desktop panel failed (its libraries may differ from this PC's): the stock GNOME Settings stays."
+    fi
+    return 0
+}
+
 gnometheme_enable() {
     if ! pacman -Q cachyos-vapor >/dev/null 2>&1; then
         info "Installing cachyos-vapor (its wallpapers and colors)..."
@@ -134,6 +170,7 @@ gnometheme_enable() {
     fi
     { echo "$GNOME_THEME_MARK"; patch_file steamify-gnome-gtk4.css; } > "$GNOME_THEME_CSS"
     gnometheme_shell
+    gnometheme_settings_install
     ok "SteamOS theme for GNOME on (apps pick up the colors when they start again)."
 }
 
@@ -153,6 +190,11 @@ gnometheme_disable() {
         # Fails, and stays installed, when the KDE theme or another package needs it.
         sudo pacman -R --noconfirm cachyos-vapor >/dev/null 2>&1 ||
             info "Keeping cachyos-vapor installed (another package needs it)."
+    fi
+    if [[ -n "$(state_get gnometheme installed_settings)" ]]; then
+        # The stock GNOME Settings back (it conflicts with, and so replaces, ours).
+        sudo pacman -S --noconfirm --ask 4 gnome-control-center >/dev/null 2>&1 ||
+            info "Keeping GNOME Settings with the Desktop panel (the stock one couldn't be installed)."
     fi
     state_clear gnometheme
     ok "Previous GNOME look restored."
