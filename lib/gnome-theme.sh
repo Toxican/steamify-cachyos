@@ -198,6 +198,18 @@ gnometheme_disable() {
     # (The Dock/Desktop Icons/Tiling Settings launchers of earlier prototypes.)
     rm -f "${XDG_DATA_HOME:-$HOME/.local/share}"/applications/steamify-{dock,icons,tiling}-settings.desktop \
         "${XDG_DATA_HOME:-$HOME/.local/share}/gnome-background-properties/steamify-steamos.xml"
+    # The schemas of the dock and of tiling that were copied next to the user's own for GNOME Settings' panel
+    # (gnometheme_extensions_install): they go with the extensions, or settings schemas of nothing are left behind.
+    local schemas="${XDG_DATA_HOME:-$HOME/.local/share}/glib-2.0/schemas" ext f
+    for ext in ubuntu-dock@ubuntu.com tiling-assistant@ubuntu.com; do
+        for f in "$GNOME_USER_EXTENSIONS/$ext"/schemas/*.gschema.xml; do
+            [[ -e "$f" ]] && rm -f "$schemas/$(basename "$f")"
+        done
+    done
+    # (Also by name: the extension folders may be gone already.)
+    rm -f "$schemas"/org.gnome.shell.extensions.{dash-to-dock,tiling-assistant}.gschema.xml
+    if compgen -G "$schemas/*.gschema.xml" >/dev/null; then glib-compile-schemas "$schemas" 2>/dev/null
+    else rm -f "$schemas/gschemas.compiled"; rmdir "$schemas" 2>/dev/null; fi
     rm -rf "$GNOME_USER_EXTENSIONS/steamify-vapor@steamify.github.io" "$GNOME_USER_EXTENSIONS/ubuntu-dock@ubuntu.com" "$GNOME_USER_EXTENSIONS/tiling-assistant@ubuntu.com"
     if [[ -f "$STATE_DIR/gnometheme-gtk4.css" ]]; then
         mv -f "$STATE_DIR/gnometheme-gtk4.css" "$GNOME_THEME_CSS"

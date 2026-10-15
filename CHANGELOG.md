@@ -18,6 +18,7 @@ one per merged pull request.
 - **fix: in the app a click on a row only selects it (a second click on the selected row used to flip it, so a click on a switch needed two); a click on the switch itself, or on the BIOS update button, acts at once and selects the row too**
 - **feat: a run that only needs a new GNOME login (the theme, no reboot) ends with a countdown on the done screen ("Restarting GNOME in 10 s", with Restart GNOME now and Cancel) and then logs in again by itself, the counterpart of KDE restarting plasmashell (GNOME Shell on Wayland is the compositor too and can't restart in place). A run that needs a reboot keeps "Restart now" (it loads GNOME fresh): before, the Restart GNOME button was hidden then, and nothing started by itself**
 - **fix: Restart GNOME logs in to GNOME: after the SteamOS conversion the account's session is gaming mode, and the relogin went there (a restart that took a minute: Steam starting in gaming mode). `steamify-gdm-relogin` takes the session to log in to (the one the app runs in) for this login only and puts the account's session, the one the next boot goes to, back once the new session is up**
+- **fix: turning the GNOME theme off also removes the dock's and tiling's settings schemas that were copied to `~/.local/share/glib-2.0/schemas` for GNOME Settings' panel (they stayed behind, for extensions that were gone). Desktop Icons NG and AppIndicator stay: they belong to the SteamOS conversion (the desktop shortcut and Steam's tray icon)**
 
 ## 2.12.0 - 2026-10-13
 
