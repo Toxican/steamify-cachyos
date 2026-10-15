@@ -91,10 +91,11 @@ gnometheme_shell() {
     # The top bar and dash colors (the Steamify Vapor extension), and the dock beside it.
     gnometheme_extensions_install
     gnometheme_backgrounds
-    # Like Ubuntu's dock: on the left, always there; its look is Ubuntu's own, left as it is. Its shape (a
-    # panel to the screen edge or floating) is left to the user: Dock Settings.
+    # Ubuntu's dock, always there, at the bottom (Ubuntu puts it on the left; on a wide screen the bottom is where the eye
+    # and the pointer are); its look is Ubuntu's own, left as it is. Its shape (a panel to the screen edge or floating)
+    # is left to the user: Dock Settings.
     local d=org.gnome.shell.extensions.dash-to-dock
-    gset gnometheme $d dock-position "'LEFT'" || true
+    gset gnometheme $d dock-position "'BOTTOM'" || true
     gset gnometheme $d dock-fixed true || true
     gset gnometheme $d running-indicator-style "'DOTS'" || true
     gset gnometheme $d click-action "'minimize-or-previews'" || true
