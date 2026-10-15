@@ -136,8 +136,15 @@ gsn_fetch_package() {
 
 gsn_smoke_test() {
     # The installed gamescope must start (headless, no screen needed): a build that crashes would leave gaming mode in a loop.
-    # It segfaults while shutting down headless (also unpatched builds), so what counts is that it ran the program.
-    timeout 25 gamescope --backend headless -W 640 -H 360 -r 60 -- true 2>&1 | grep -q 'Primary child shut down'
+    # It segfaults or hangs while shutting down headless (also unpatched builds), so what counts is that it ran the program.
+    # Into a file, not a pipe into grep -q: grep quits at the first match, gamescope then dies on the broken pipe, and with
+    # pipefail that made a working build count as broken. -k: a hung shutdown ignores the first signal.
+    local log rc=1
+    log="$(mktemp)" || return 1
+    timeout -k 3 25 gamescope --backend headless -W 640 -H 360 -r 60 -- true >"$log" 2>&1
+    grep -q 'Primary child shut down' "$log" && rc=0
+    rm -f "$log"
+    return "$rc"
 }
 
 gsn_build_package() {
