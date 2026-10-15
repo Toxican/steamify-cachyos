@@ -47,10 +47,14 @@ rm -rf "$DEST.new"; mv "$tmp/app" "$DEST.new"
 rm -rf "$DEST"; mv "$DEST.new" "$DEST"
 say "Installed to $DEST ($(grep -m1 -oP '^VERSION=\K.*' "$DEST/steamify.sh"))."
 
-if ! python3 -c 'import PySide6.QtQml' 2>/dev/null; then
-    say "The app needs PySide6 (Qt for Python); installing it..."
+missing=()
+python3 -c 'import PySide6.QtQml' 2>/dev/null || missing+=(pyside6)
+# The app's logo is an SVG: Qt needs its SVG plugin for it, and pyside6 doesn't pull it in.
+pacman -Q qt6-svg >/dev/null 2>&1 || missing+=(qt6-svg)
+if ((${#missing[@]})); then
+    say "The app needs ${missing[*]} (Qt for Python and its SVG support); installing..."
     # Piped in via curl, stdin isn't the terminal: sudo asks on it anyway.
-    sudo pacman -S --needed --noconfirm pyside6 </dev/tty || die "Installing pyside6 failed."
+    sudo pacman -S --needed --noconfirm "${missing[@]}" </dev/tty || die "Installing ${missing[*]} failed."
 fi
 
 # Launcher entry (its id also names the app to the desktop portal). The
