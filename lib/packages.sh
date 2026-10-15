@@ -92,6 +92,8 @@ install_required_packages() {
 
     if [[ ${#MISSING[@]} -gt 0 ]]; then
         python_hid_shim_ensure || return 1
+        # (What the GNOME extensions need is noted first: turning everything off removes what Steamify installed.)
+        [[ "$(desktop_kind)" == gnome ]] && gnome_extras_note_missing
         info "Installing missing packages: ${MISSING[*]}"
         sudo pacman -S --needed --noconfirm "${MISSING[@]}" || { err "Package installation failed."; return 1; }
     else
