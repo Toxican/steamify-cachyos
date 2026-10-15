@@ -31,7 +31,14 @@ Item {
         color: row.selected ? Theme.cardSel : Theme.card
         border.width: row.selected ? 2 : 0; border.color: Theme.accent
         MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor
-            onClicked: { Input.type = "keyboard"; if (row.selected) app.act("accept"); else app.sel = row.rowIndex; } }
+            onClicked: {
+                Input.type = "keyboard";
+                var wasSelected = row.selected;
+                app.sel = row.rowIndex;
+                // A switch flips on the first click. The others (the BIOS update, the boot choice) need the row selected
+                // first: a stray click mustn't start a flash.
+                if (wasSelected || row.it.kind === "toggle") app.act("accept");
+            } }
 
         Text { visible: !!row.it.parent; x: 20; anchors.verticalCenter: parent.verticalCenter; text: "└"; color: "#56627a"; font.pixelSize: 18 }
         Column {
