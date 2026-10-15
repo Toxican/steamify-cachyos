@@ -16,6 +16,7 @@ one per merged pull request.
 - **feat: after the GNOME theme is applied in a GNOME session, the app's done screen has "Restart GNOME" (GNOME Shell on Wayland can't restart in place, and the dock, extensions and Settings panel only show after a new login): with GDM autologin (the SteamOS conversion) Steamify's relogin helper logs the user straight back into the session they were in (without changing the session gaming mode's boot goes back to), else it is a plain logout (`gnome-session-quit`)**
 - **fix: the app on a desktop (a window, however large, also fullscreen) keeps the desktop's own scale instead of blowing its 1280x720 layout up to the screen's height (twice as big on a 1440p or ultrawide monitor): the layout fills the window at the scale of GNOME or KDE, and only a window smaller than 1280x720 shrinks it. The TV mode (`--fullscreen`, gamescope) still scales to the screen**
 - **fix: in the app a click on a row only selects it (a second click on the selected row used to flip it, so a click on a switch needed two); a click on the switch itself, or on the BIOS update button, acts at once and selects the row too**
+- **fix: turning the GNOME theme off also removes the dock's and tiling's settings schemas that were copied to `~/.local/share/glib-2.0/schemas` for GNOME Settings' panel (they stayed behind, for extensions that were gone). Desktop Icons NG and AppIndicator stay: they belong to the SteamOS conversion (the desktop shortcut and Steam's tray icon)**
 
 ## 2.12.0 - 2026-10-13
 
