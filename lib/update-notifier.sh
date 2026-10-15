@@ -30,6 +30,8 @@ notify_enable() {
     info "Adding update notifications..."
     # PySide6 for the tray icon, notify-send for the notification's buttons.
     python3 -c 'import PySide6.QtWidgets' 2>/dev/null || missing+=(pyside6)
+    # (Its icons are SVGs, and Qt needs its SVG plugin for those.)
+    pacman -Q qt6-svg >/dev/null 2>&1 || missing+=(qt6-svg)
     command -v notify-send >/dev/null || missing+=(libnotify)
     if ((${#missing[@]})); then
         sudo pacman -S --needed --noconfirm "${missing[@]}" ||
