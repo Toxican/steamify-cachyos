@@ -8,6 +8,7 @@ one per merged pull request.
 ## 2.13.0 - 2026-10-19
 
 - **feat: multi-user mode: with the SteamOS conversion, turning single user mode off now means the PC starts at the login screen (it logged in by itself before); switching between gaming mode and the desktop while logged in (Steam's Switch to Desktop, Return to Gaming Mode) still doesn't show it. A path unit and a helper (`steamify-relogin`) write the relogin entry plasma-login-manager needs for one switch. Single user mode on keeps autologin at every start. The login screen preselects the session "Boot into" says (gamescope, or the desktop) instead of the one used last**
+- **change: the update from a setup with SDDM (single user mode before 2.12.1) leaves nothing of it behind: its autologin files, steam-set-session's file for SDDM, the empty folder, the old sync bridge and the shortcut's sudoers rule are removed**
 - **change: the desktop shortcut is called "Switch to Gaming Mode" when the PC boots into the desktop (there is nothing to return to) and "Return to Gaming Mode" when it boots into gaming mode; changing "Boot into" renames it**
 - **change: the Return to Gaming Mode shortcut no longer restarts the login manager (it logs in again by itself), so its sudoers rule is removed**
 

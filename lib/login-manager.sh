@@ -113,6 +113,7 @@ gaming_enable() {
     remove_sddm_autologin
     remove_session_sync
     switch_to_plasmalogin || return 1
+    remove_sddm_autologin
     configure_autologin
     create_desktop_shortcut
     steam_enable
@@ -152,6 +153,9 @@ switch_to_plasmalogin() {
 remove_sddm_autologin() {
     # Earlier versions used SDDM (gaming, single user mode).
     sudo rm -f /etc/sddm.conf.d/10-gamescope-autologin.conf /etc/sddm.conf.d/zzz-steamify-autologin.conf
+    # steam-set-session's file only matters while SDDM is the login manager.
+    [[ "$(current_display_manager)" == sddm ]] || sudo rm -f /etc/sddm.conf.d/zz-steamos-autologin.conf
+    sudo rmdir /etc/sddm.conf.d 2>/dev/null || true
 }
 
 remove_autologin_conf() {
