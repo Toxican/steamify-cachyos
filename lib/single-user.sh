@@ -157,6 +157,7 @@ single_login_disable() {
 
 single_enable() {
     single_login_enable || return 1
+    set_login_mode single
     info "Turning off the lock screen, user switching and logging out..."
     stop_plasmashell_for_edit
 
@@ -183,6 +184,7 @@ single_enable() {
 
 single_disable() {
     single_login_disable
+    set_login_mode multi
     info "Restoring the lock screen, user switching and logging out..."
     stop_plasmashell_for_edit
     if has_journal single; then

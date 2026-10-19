@@ -5,6 +5,11 @@ All notable changes, per version and per commit. Versions follow
 `steamify.sh`. Versions before 0.7.0 were numbered afterwards,
 one per merged pull request.
 
+## 2.13.0 - 2026-10-19
+
+- **feat: multi-user mode: with the SteamOS conversion, turning single user mode off now means the PC starts at the login screen (it logged in by itself before); switching between gaming mode and the desktop while logged in (Steam's Switch to Desktop, Return to Gaming Mode) still doesn't show it. A path unit and a helper (`steamify-relogin`) write the relogin entry plasma-login-manager needs for one switch. Single user mode on keeps autologin at every start**
+- **change: the Return to Gaming Mode shortcut no longer restarts the login manager (it logs in again by itself), so its sudoers rule is removed**
+
 ## 2.12.1 - 2026-10-19
 
 - `b4fbf12` **fix: "Switch to Desktop" in Steam looped back to gamescope with single user mode (SDDM): Steam's newer client switches through `steamos-manager`, which only writes plasma-login-manager's `/etc/plasmalogin.conf.d/zzt-holo-temp-login.conf`. The conversion, single user mode included, now uses plasma-login-manager only; an existing SDDM setup is moved over by the update. plasma-login-manager lists the conf.d files once, at start, and steamos-manager removes that file at every start, so a drop-in for `plasmalogin.service` creates it (empty) after that: Steam's switch then lands in the file the login manager reads**

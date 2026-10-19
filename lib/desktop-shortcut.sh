@@ -1,5 +1,5 @@
 #!/bin/bash
-# "Return to Gaming Mode" desktop shortcut and the sudoers rule it needs.
+# "Return to Gaming Mode" desktop shortcut.
 # Sourced by steamify.sh; not meant to be run on its own.
 
 create_desktop_shortcut() {
@@ -17,23 +17,12 @@ create_desktop_shortcut() {
 
     mkdir -p "$desktop_dir"
 
-    # steamos-session-select writes the session; plasma-login-manager then
-    # needs a restart to log in to it, which the shortcut can't sudo for
-    # interactively (Terminal=false), so it gets a password-less rule scoped
-    # to exactly that command.
-    local exec_line="sh -c 'steamos-session-select gamescope && sudo -n /usr/bin/systemctl restart plasmalogin'"
-    local sudoers_tmp
-    sudoers_tmp="$(mktemp)"
-    cat > "$sudoers_tmp" << EOF
-$TARGET_USER ALL=(root) NOPASSWD: /usr/bin/systemctl restart plasmalogin
-EOF
-    if sudo visudo -cf "$sudoers_tmp" >/dev/null; then
-        sudo install -m 0440 -o root -g root "$sudoers_tmp" /etc/sudoers.d/gamescope-session-switch
-        ok "Installed /etc/sudoers.d/gamescope-session-switch for the shortcut."
-    else
-        warn "Generated sudoers rule failed validation; the shortcut will not be able to restart plasmalogin."
-    fi
-    rm -f "$sudoers_tmp"
+    # steamos-session-select writes the session and logs out; the login
+    # manager logs in to it by itself (Relogin=true, or the relogin helper in
+    # multi-user mode). Versions before 2.13.0 restarted the login manager,
+    # with a sudoers rule that is removed now.
+    local exec_line="steamos-session-select gamescope"
+    sudo rm -f /etc/sudoers.d/gamescope-session-switch
 
     # SteamOS itself uses Valve's "gaming-return" icon (Steam logo with a
     # return arrow; the Deck-style arrow is only used on Steam Deck

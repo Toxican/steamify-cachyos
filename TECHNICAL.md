@@ -31,6 +31,23 @@ only Sleep / Restart / Shut Down (kickoff `primaryActions=3`), which hides
 the Session dropdown with Log Out. (Restricting `action/logout` would also
 hide Restart and Shut Down.) Turning it off restores all of that.
 
+**Login.** With the SteamOS conversion, single user mode also decides how the
+PC logs in. On: autologin at every start (`10-gamescope-autologin.conf`:
+`User=`, `Relogin=true`). Off (multi-user): no autologin, so the PC starts at
+the login screen, while switching between gaming mode and the desktop while
+logged in still doesn't show it. plasma-login-manager logs in again by itself
+only with `User=` and `Relogin=true`, so `steamify-relogin.path` watches the
+files a switch writes (`zz-steamos-autologin.conf`, `zzt-holo-temp-login.conf`,
+`zzt-steamos-temp-login.conf`) and `steamify-relogin.service` writes them for
+the user logged in on seat0 into `zzt-steamify-relogin.conf`, and empties
+that file again when the next session is there (after 40 s at the latest).
+The file is empty at every login manager start (a drop-in for
+`plasmalogin.service`, which also keeps it on the login manager's file list,
+see below), so a reboot always ends at the login screen, and a Log Out
+(which no switch triggers) does too. Steam's own lock screen (Settings >
+Security: "On system wake and power up", "When switching to desktop mode")
+is a PIN screen inside Steam and independent of all of this.
+
 **KDE wallet.** KDE normally unlocks your wallet with the password you log in
 with; with autologin nobody types it, so apps that keep passwords in it (Brave,
 for example) ask for the wallet password. Single user mode does what SteamOS

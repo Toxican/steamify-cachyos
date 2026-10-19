@@ -2,13 +2,19 @@
 # Booting into gaming mode: autologin into gamescope with
 # plasma-login-manager (CachyOS's login manager). The session is chosen by
 # conf.d fragments only (see configure_autologin), so what steam-set-session
-# and steamos-manager write is honoured without a bridge.
+# and steamos-manager write is honoured without a bridge. With single user
+# mode on the PC logs in by itself at every start; with it off it boots to the
+# login screen, and only a session switch logs in again by itself
+# (install_relogin_helper).
 # Sourced by steamify.sh; not meant to be run on its own.
 
 BASE_CONF="/etc/plasmalogin.conf"
 CONF_DIR="/etc/plasmalogin.conf.d"
 AUTOLOGIN_CONF="$CONF_DIR/10-gamescope-autologin.conf"
 TEMP_LOGIN_DROPIN="/etc/systemd/system/plasmalogin.service.d/zz-steamify-temp-login.conf"
+RELOGIN_CONF="$CONF_DIR/zzt-steamify-relogin.conf"
+RELOGIN_SCRIPT="/usr/local/libexec/steamify-relogin"
+RELOGIN_UNIT="steamify-relogin"
 
 # The "SteamOS conversion" menu item: gaming mode boot, the Return to
 # Gaming Mode shortcut and Steam on the desktop (lib/steam-desktop.sh).
@@ -18,6 +24,7 @@ gaming_status() {
     # moves them to the current one.
     case "$(current_display_manager)" in
         plasmalogin)
+            [[ -f "$TEMP_LOGIN_DROPIN" ]] && return 0
             grep -qx "User=$USER" "$AUTOLOGIN_CONF" 2>/dev/null && return 0
             # Autologin in the base config, plus the sync bridge.
             sed -n '/^\[Autologin\]/,/^\[/p' "$BASE_CONF" 2>/dev/null | grep -qx "User=$USER" &&
@@ -149,6 +156,7 @@ remove_autologin_conf() {
     # Our fragment and what steam-set-session / steamos-manager wrote: the
     # session they name would still beat the restored base config.
     sudo rm -f "$AUTOLOGIN_CONF" "$CONF_DIR"/zz-steamos-autologin.conf "$CONF_DIR"/zzt-*-temp-login.conf
+    remove_relogin_helper
     remove_temp_login_dropin
 }
 
@@ -158,12 +166,14 @@ install_temp_login_dropin() {
     # "Switch to Desktop") is never read, and the login manager logs straight
     # back in to gamescope. steamos-manager's own drop-in removes those files
     # at every start, so ours (it sorts after) creates them empty, which puts
-    # them on the list.
+    # them on the list. The relogin file of multi-user mode is emptied here too:
+    # a start of the login manager is a fresh boot (or restart) to the login screen.
     info "Making plasma-login-manager read Steam's one-shot desktop login..."
     sudo mkdir -p "$(dirname "$TEMP_LOGIN_DROPIN")"
     sudo tee "$TEMP_LOGIN_DROPIN" > /dev/null << EOF
 [Service]
 ExecStartPre=-/usr/bin/touch $CONF_DIR/zzt-holo-temp-login.conf $CONF_DIR/zzt-steamos-temp-login.conf
+ExecStartPre=-/bin/sh -c ': > $RELOGIN_CONF'
 EOF
     sudo systemctl daemon-reload
 }
@@ -212,26 +222,59 @@ remove_base_autologin() {
 
 configure_autologin() {
     # The base config has no [Autologin] (CachyOS ships Session=plasma there, and
-    # the base config beats conf.d); User= and Relogin= live in our fragment,
-    # and the session in conf.d too: steam-set-session writes
-    # zz-steamos-autologin.conf and steamos-manager zzt-holo-temp-login.conf,
-    # which sort after our fragment and so win (the latter only if it
-    # existed when the login manager started: install_temp_login_dropin).
-    info "Configuring plasma-login-manager autologin for $TARGET_USER into gamescope (Relogin=true)"
+    # the base config beats conf.d). The session comes from conf.d:
+    # steam-set-session writes zz-steamos-autologin.conf and steamos-manager
+    # zzt-holo-temp-login.conf, which win over the default (the latter only
+    # if it existed when the login manager started: install_temp_login_dropin).
+    # Who logs in by itself, and when, is set_login_mode.
+    info "Configuring plasma-login-manager for $TARGET_USER, starting in gamescope..."
     sudo mkdir -p "$CONF_DIR"
     remove_base_autologin
-    sudo tee "$AUTOLOGIN_CONF" > /dev/null << EOF
-[Autologin]
-User=$TARGET_USER
-Session=gamescope-session.desktop
-Relogin=true
-EOF
     # Stray fragments of manual attempts, and a one-shot switch left over.
     sudo rm -f "$CONF_DIR"/zzz-steamos-autologin*.conf "$CONF_DIR"/zzt-*-temp-login.conf
     install_temp_login_dropin
     # Start in gamescope, through CachyOS's own tool so its file is current.
     sudo /usr/lib/steamos/steam-set-session gamescope-session.desktop
-    ok "Autologin configured:"
-    cat "$AUTOLOGIN_CONF"
+    set_login_mode "$(single_wanted && echo single || echo multi)"
     echo
+}
+
+single_wanted() { [[ "${WANTED[single]:-0}" == 1 ]]; }
+
+set_login_mode() {
+    # single: autologin at every start (our fragment). multi: the login screen
+    # at start; only a session switch logs in again (the relogin helper).
+    # Nothing to do without the SteamOS conversion.
+    [[ -f "$TEMP_LOGIN_DROPIN" ]] || return 0
+    if [[ "$1" == single ]]; then
+        remove_relogin_helper
+        sudo tee "$AUTOLOGIN_CONF" > /dev/null << EOF
+[Autologin]
+User=$TARGET_USER
+Session=gamescope-session.desktop
+Relogin=true
+EOF
+        ok "Single user: autologin for $TARGET_USER."
+    else
+        sudo rm -f "$AUTOLOGIN_CONF"
+        install_relogin_helper
+        ok "Multi-user: the PC starts at the login screen; switching between gaming mode and the desktop logs in again by itself."
+    fi
+}
+
+install_relogin_helper() {
+    patch_file steamify-relogin.sh | sudo install -Dm755 /dev/stdin "$RELOGIN_SCRIPT"
+    service_file "$RELOGIN_UNIT.path" | sudo tee "/etc/systemd/system/$RELOGIN_UNIT.path" > /dev/null
+    service_file "$RELOGIN_UNIT.service" | sudo tee "/etc/systemd/system/$RELOGIN_UNIT.service" > /dev/null
+    sudo systemctl daemon-reload
+    sudo systemctl enable --now "$RELOGIN_UNIT.path"
+}
+
+remove_relogin_helper() {
+    if [[ -f "/etc/systemd/system/$RELOGIN_UNIT.path" ]]; then
+        best_effort sudo systemctl disable --now "$RELOGIN_UNIT.path"
+        sudo rm -f "/etc/systemd/system/$RELOGIN_UNIT.path" "/etc/systemd/system/$RELOGIN_UNIT.service" "$RELOGIN_SCRIPT"
+        sudo systemctl daemon-reload
+    fi
+    sudo rm -f "$RELOGIN_CONF"
 }
