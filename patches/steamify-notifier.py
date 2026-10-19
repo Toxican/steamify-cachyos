@@ -103,7 +103,7 @@ def main():
         return 0
 
     from PySide6.QtCore import QObject, QTimer, Signal
-    from PySide6.QtGui import QAction, QIcon
+    from PySide6.QtGui import QAction
     from PySide6.QtWidgets import QApplication, QMenu, QSystemTrayIcon
 
     app = QApplication(sys.argv[:1])

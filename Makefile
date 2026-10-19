@@ -22,7 +22,10 @@ lint-py:
 
 lint-qml:
 	@Q="$$(command -v qmllint6 || command -v qmllint || ls /usr/lib/qt6/bin/qmllint 2>/dev/null)"; \
-	[ -n "$$Q" ] && "$$Q" --unqualified disable --max-warnings 0 ui/qml/*.qml || echo "qmllint not installed: skipped"
+	if [ -z "$$Q" ]; then echo "qmllint not installed: skipped"; else \
+	  args="--unqualified disable"; "$$Q" --help 2>&1 | grep -q -- --import && args="$$args --import disable"; \
+	  out="$$("$$Q" $$args ui/qml/*.qml 2>&1)"; rc=$$?; [ -z "$$out" ] || printf '%s\n' "$$out"; \
+	  [ $$rc -eq 0 ] && ! printf '%s\n' "$$out" | grep -q '^Warning:'; fi
 
 test:
 	@for t in $(TESTS); do echo "== $$t"; REPO="$(CURDIR)" bash "$$t" || exit 1; done
