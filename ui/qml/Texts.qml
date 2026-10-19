@@ -29,7 +29,7 @@ QtObject {
                   body: "Steam shows Steam Deck button icons in gaming mode.", changes: ["STEAM_GAMEPADUI_ARGS -steamos3"] },
         single: { label: "Single user mode", hint: "No password, lock screen or wallet prompts",
                   body: "Like SteamOS: never a login or lock screen, and no KDE wallet password prompts. Typing a password with a controller is no fun.",
-                  changes: ["SDDM autologin, no lock screen or user switching", "Valve's empty wallet; your own is kept aside", "Launcher shows Sleep, Restart, Shut Down only"] },
+                  changes: ["No lock screen or user switching", "Valve's empty wallet; your own is kept aside", "Launcher shows Sleep, Restart, Shut Down only"] },
         launcher: { label: "Steamify shortcut", hint: "The app on the desktop and in the launcher",
                     body: "Opens the newest Steamify app, so you never need the install command again. Steamify Terminal in the launcher opens the terminal menu.",
                     changes: ["Steamify CachyOS on the desktop and in the launcher (the app)", "Steamify Terminal in the launcher"] },

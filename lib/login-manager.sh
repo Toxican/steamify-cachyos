@@ -1,19 +1,28 @@
 #!/bin/bash
-# Booting into gaming mode: autologin into gamescope with SDDM or
-# plasma-login-manager (plus the session sync bridge the latter needs).
+# Booting into gaming mode: autologin into gamescope with
+# plasma-login-manager (CachyOS's login manager). The session is chosen by
+# conf.d fragments only (see configure_autologin), so what steam-set-session
+# and steamos-manager write is honoured without a bridge.
 # Sourced by steamify.sh; not meant to be run on its own.
 
 BASE_CONF="/etc/plasmalogin.conf"
+CONF_DIR="/etc/plasmalogin.conf.d"
+AUTOLOGIN_CONF="$CONF_DIR/10-gamescope-autologin.conf"
+TEMP_LOGIN_DROPIN="/etc/systemd/system/plasmalogin.service.d/zz-steamify-temp-login.conf"
 
 # The "SteamOS conversion" menu item: gaming mode boot, the Return to
 # Gaming Mode shortcut and Steam on the desktop (lib/steam-desktop.sh).
 gaming_status() {
-    # Autologin into gamescope is configured for this user.
+    # Autologin into gamescope is configured for this user. The layouts of
+    # versions before 2.12.1 count as on too: the update (feature_outdated)
+    # moves them to the current one.
     case "$(current_display_manager)" in
-        sddm) [[ -f /etc/sddm.conf.d/10-gamescope-autologin.conf ]] ;;
         plasmalogin)
+            grep -qx "User=$USER" "$AUTOLOGIN_CONF" 2>/dev/null && return 0
+            # Autologin in the base config, plus the sync bridge.
             sed -n '/^\[Autologin\]/,/^\[/p' "$BASE_CONF" 2>/dev/null | grep -qx "User=$USER" &&
                 [[ -f /etc/systemd/system/sync-steamos-session.path ]] ;;
+        sddm) [[ -f /etc/sddm.conf.d/10-gamescope-autologin.conf ]] ;;
         *) return 1 ;;
     esac
 }
@@ -91,26 +100,11 @@ os_version_refresh() {
 }
 
 gaming_enable() {
-    # LOGIN_MANAGER (sddm with single user, else plasmalogin) is set by the
-    # menu. Re-running with the other value switches over cleanly.
     install_required_packages || return 1
-    # NVIDIA: gamescope's picture is corrupted unless it is the patched one (no-op elsewhere).
-    gsn_enable || return 1
-    case "$LOGIN_MANAGER" in
-        sddm)
-            switch_to_sddm || return 1
-            configure_sddm_autologin
-            remove_session_sync
-            ;;
-        plasmalogin)
-            remove_sddm_autologin
-            switch_to_plasmalogin || return 1
-            configure_autologin
-            install_session_sync
-            ;;
-    esac
-    # (NVIDIA with single user mode from before the conversion: its desktop autologin would pin the Plasma session.)
-    single_login_release
+    remove_sddm_autologin
+    remove_session_sync
+    switch_to_plasmalogin || return 1
+    configure_autologin
     create_desktop_shortcut
     steam_enable
     os_name_enable || return 1
@@ -122,6 +116,7 @@ gaming_disable() {
     info "Turning off booting into gaming mode..."
     remove_sddm_autologin
     remove_session_sync
+    remove_autologin_conf
     restore_plasmalogin_config
     switch_to_plasmalogin
     remove_desktop_shortcut
@@ -146,7 +141,38 @@ switch_to_plasmalogin() {
 }
 
 remove_sddm_autologin() {
-    sudo rm -f /etc/sddm.conf.d/10-gamescope-autologin.conf
+    # Earlier versions used SDDM (gaming, single user mode).
+    sudo rm -f /etc/sddm.conf.d/10-gamescope-autologin.conf /etc/sddm.conf.d/zzz-steamify-autologin.conf
+}
+
+remove_autologin_conf() {
+    # Our fragment and what steam-set-session / steamos-manager wrote: the
+    # session they name would still beat the restored base config.
+    sudo rm -f "$AUTOLOGIN_CONF" "$CONF_DIR"/zz-steamos-autologin.conf "$CONF_DIR"/zzt-*-temp-login.conf
+    remove_temp_login_dropin
+}
+
+install_temp_login_dropin() {
+    # plasma-login-manager lists the conf.d files once, when it starts: a file
+    # created later (the one-shot login steamos-manager writes for Steam's
+    # "Switch to Desktop") is never read, and the login manager logs straight
+    # back in to gamescope. steamos-manager's own drop-in removes those files
+    # at every start, so ours (it sorts after) creates them empty, which puts
+    # them on the list.
+    info "Making plasma-login-manager read Steam's one-shot desktop login..."
+    sudo mkdir -p "$(dirname "$TEMP_LOGIN_DROPIN")"
+    sudo tee "$TEMP_LOGIN_DROPIN" > /dev/null << EOF
+[Service]
+ExecStartPre=-/usr/bin/touch $CONF_DIR/zzt-holo-temp-login.conf $CONF_DIR/zzt-steamos-temp-login.conf
+EOF
+    sudo systemctl daemon-reload
+}
+
+remove_temp_login_dropin() {
+    if [[ -f "$TEMP_LOGIN_DROPIN" ]]; then
+        sudo rm -f "$TEMP_LOGIN_DROPIN"
+        sudo systemctl daemon-reload
+    fi
 }
 
 restore_plasmalogin_config() {
@@ -160,63 +186,11 @@ restore_plasmalogin_config() {
     fi
 }
 
-switch_to_sddm() {
-    # Takes effect at the next boot; the running session is left alone.
-    [[ "$(current_display_manager)" == sddm ]] && return 0
-    info "Installing and enabling SDDM..."
-    sudo pacman -S --needed --noconfirm sddm || { err "Installing sddm failed."; return 1; }
-    local current
-    current="$(systemctl show -p Id --value display-manager 2>/dev/null)"
-    if [[ -n "$current" && "$current" != "sddm.service" ]]; then
-        sudo systemctl disable "$current"
-    fi
-    sudo systemctl enable -f sddm.service || { err "Enabling sddm failed."; return 1; }
-    ok "SDDM is the login manager from the next boot on."
-}
-
-remove_sddm_base_autologin() {
-    # /etc/sddm.conf is read last: an [Autologin] there would override our fragments.
-    if [[ -f /etc/sddm.conf ]] && grep -q '^\[Autologin\]' /etc/sddm.conf; then
-        backup_file /etc/sddm.conf
-        sudo awk '
-            /^\[Autologin\]/ { skip=1; next }
-            /^\[/ { skip=0 }
-            !skip { print }
-        ' /etc/sddm.conf | sudo tee /etc/sddm.conf.tmp > /dev/null &&
-            sudo mv /etc/sddm.conf.tmp /etc/sddm.conf
-        info "Removed [Autologin] from /etc/sddm.conf (backup kept)."
-    fi
-}
-
-configure_sddm_autologin() {
-    # User= and Relogin= live in our own fragment; steam-set-session keeps
-    # Session= up to date in zz-steamos-autologin.conf, which sorts later
-    # and so wins. /etc/sddm.conf is read last, so any [Autologin] there
-    # would override both and is removed.
-    local conf="/etc/sddm.conf.d/10-gamescope-autologin.conf"
-    info "Configuring SDDM autologin for $TARGET_USER into gamescope (Relogin=true)"
-    sudo mkdir -p /etc/sddm.conf.d
-    sudo tee "$conf" > /dev/null << EOF
-[Autologin]
-User=$TARGET_USER
-Session=gamescope-session.desktop
-Relogin=true
-EOF
-
-    remove_sddm_base_autologin
-
-    # Start in gamescope, through CachyOS's own tool so its file is current.
-    sudo /usr/lib/steamos/steam-set-session gamescope-session.desktop
-
-    ok "SDDM autologin configured:"
-    cat "$conf"
-    echo
-}
-
 remove_session_sync() {
-    # The plasmalogin sync bridge from an earlier run isn't needed on SDDM.
+    # The sync bridge of earlier versions (it copied the session into the
+    # base config, which no longer sets one) isn't needed any more.
     if [[ -f /etc/systemd/system/sync-steamos-session.path ]]; then
-        info "Removing the plasma-login-manager sync bridge (not needed with SDDM)..."
+        info "Removing the old session sync bridge (not needed any more)..."
         sudo systemctl disable --now sync-steamos-session.path 2>/dev/null
         sudo rm -f /etc/systemd/system/sync-steamos-session.path \
             /etc/systemd/system/sync-steamos-session.service \
@@ -225,75 +199,39 @@ remove_session_sync() {
     fi
 }
 
-configure_autologin() {
-    # Steps 3-5: plasmalogin.conf.d, the base [Autologin] section, stray fragments.
-    # 3. Ensure plasmalogin.conf.d exists (fixes Switch-to-Desktop crash)
-    info "Ensuring /etc/plasmalogin.conf.d exists (fixes the 'Switching to Desktop' hang bug)"
-    sudo mkdir -p /etc/plasmalogin.conf.d
-    ok "Directory present."
-    echo
-
-    # 4. Fix the base /etc/plasmalogin.conf
-    info "Configuring $BASE_CONF (Session=gamescope-session.desktop, User=$TARGET_USER, Relogin=true)"
-    backup_file "$BASE_CONF"
-
-    sudo touch "$BASE_CONF"
-
-    sudo awk '
-        BEGIN { in_autologin=0 }
-        /^\[Autologin\]/ { in_autologin=1; next }
-        /^\[/ { in_autologin=0 }
-        !in_autologin { print }
-    ' "$BASE_CONF" | sudo tee "${BASE_CONF}.tmp" > /dev/null || { err "Failed to rewrite $BASE_CONF."; exit 1; }
-
-    sudo mv "${BASE_CONF}.tmp" "$BASE_CONF"
-
-    sudo tee -a "$BASE_CONF" > /dev/null << EOF
-[Autologin]
-Session=gamescope-session.desktop
-User=$TARGET_USER
-Relogin=true
-EOF
-
-    ok "Base autologin config written:"
-    sudo sed -n '/^\[Autologin\]/,$p' "$BASE_CONF"
-    echo
-
-    # 5. Clean up any stray conf.d autologin fragments from manual attempts
-    info "Removing any leftover manual conf.d autologin overrides (base config now handles it)"
-    sudo rm -f /etc/plasmalogin.conf.d/zzz-steamos-autologin*.conf
-    ok "Cleaned."
-    echo
+remove_base_autologin() {
+    # The base config beats conf.d: an [Autologin] there would override every
+    # session switch.
+    if [[ -f "$BASE_CONF" ]] && grep -q '^\[Autologin\]' "$BASE_CONF"; then
+        backup_file "$BASE_CONF"
+        sudo awk '/^\[Autologin\]/ { skip=1; next } /^\[/ { skip=0 } !skip { print }' "$BASE_CONF" |
+            sudo tee "${BASE_CONF}.tmp" > /dev/null && sudo mv "${BASE_CONF}.tmp" "$BASE_CONF"
+        info "Removed [Autologin] from $BASE_CONF (backup kept)."
+    fi
 }
 
-install_session_sync() {
-    # Steps 6-8: sync bridge conf.d -> base config, its systemd units, first run.
-    # 6. Install the sync bridge: conf.d -> base config
-    local SYNC_SCRIPT="/usr/local/bin/sync-steamos-session.sh"
-    info "Installing session sync bridge at $SYNC_SCRIPT"
-
-    patch_file sync-steamos-session.sh | sudo tee "$SYNC_SCRIPT" > /dev/null
-
-    sudo chmod +x "$SYNC_SCRIPT"
-    ok "Sync script installed."
-    echo
-
-    # 7. systemd path watcher + service
-    info "Installing systemd path watcher so session switches take effect immediately"
-
-    service_file sync-steamos-session.path | sudo tee /etc/systemd/system/sync-steamos-session.path > /dev/null
-
-    service_file sync-steamos-session.service | sudo tee /etc/systemd/system/sync-steamos-session.service > /dev/null
-
-    sudo systemctl daemon-reload
-    sudo systemctl enable --now sync-steamos-session.path
-    ok "Path watcher enabled."
-    echo
-
-    # 8. Run it once now so current state is in sync
-    info "Running the sync once now to align current state"
-    sudo systemctl start sync-steamos-session.service
-    ok "Done. Current base config:"
-    sudo cat "$BASE_CONF"
+configure_autologin() {
+    # The base config has no [Autologin] (CachyOS ships Session=plasma there, and
+    # the base config beats conf.d); User= and Relogin= live in our fragment,
+    # and the session in conf.d too: steam-set-session writes
+    # zz-steamos-autologin.conf and steamos-manager zzt-holo-temp-login.conf,
+    # which sort after our fragment and so win (the latter only if it
+    # existed when the login manager started: install_temp_login_dropin).
+    info "Configuring plasma-login-manager autologin for $TARGET_USER into gamescope (Relogin=true)"
+    sudo mkdir -p "$CONF_DIR"
+    remove_base_autologin
+    sudo tee "$AUTOLOGIN_CONF" > /dev/null << EOF
+[Autologin]
+User=$TARGET_USER
+Session=gamescope-session.desktop
+Relogin=true
+EOF
+    # Stray fragments of manual attempts, and a one-shot switch left over.
+    sudo rm -f "$CONF_DIR"/zzz-steamos-autologin*.conf "$CONF_DIR"/zzt-*-temp-login.conf
+    install_temp_login_dropin
+    # Start in gamescope, through CachyOS's own tool so its file is current.
+    sudo /usr/lib/steamos/steam-set-session gamescope-session.desktop
+    ok "Autologin configured:"
+    cat "$AUTOLOGIN_CONF"
     echo
 }

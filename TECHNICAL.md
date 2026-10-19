@@ -21,16 +21,15 @@ and turns on what you ticked. To be able to undo:
 - **Packages** installed for the conversion (Steam, gamescope-session, ...)
   are kept when you turn it off; Steam Machine support removes its own.
 
-## Single user mode: SDDM, no locking
+## Single user mode: no locking
 
-Turning it on switches to **SDDM** and turns off everything that asks for a
+Turning it on turns off everything that asks for a
 password or another user, per user: `action/lock_screen`, `switch_user` and
 `start_new_session` restrictions in `kdeglobals`, no automatic locking
 (`kscreenlockerrc`), Meta+L and Ctrl+Alt+Del unbound, and the launcher shows
 only Sleep / Restart / Shut Down (kickoff `primaryActions=3`), which hides
 the Session dropdown with Log Out. (Restricting `action/logout` would also
-hide Restart and Shut Down.) Turning it off restores all of that and moves
-the conversion back to plasma-login-manager.
+hide Restart and Shut Down.) Turning it off restores all of that.
 
 **KDE wallet.** KDE normally unlocks your wallet with the password you log in
 with; with autologin nobody types it, so apps that keep passwords in it (Brave,
@@ -44,25 +43,16 @@ user wallet, with anything saved in it meanwhile, is kept as
 Passwords aren't shared between the two wallets.
 
 **Without the conversion** (any PC with it off; on NVIDIA that is before 2.12.0 or after turning it off) nothing else logs in by itself, so single user mode
-does that too: `single_login_enable` (`lib/single-user.sh`) switches to SDDM and writes
-`/etc/sddm.conf.d/zzz-steamify-autologin.conf` (`User=`, `Session=plasma.desktop`, `Relogin=true`; named to sort after
+does that too: `single_login_enable` (`lib/single-user.sh`) writes
+`/etc/plasmalogin.conf.d/zzz-steamify-autologin.conf` (`User=`, `Session=plasma.desktop`, `Relogin=true`; named to sort after
 `steam-set-session`'s `zz-steamos-autologin.conf`, which may still say gamescope from an earlier conversion), and drops any
-`[Autologin]` from `/etc/sddm.conf`. Turning it off removes the file and goes back to plasma-login-manager. With the
+`[Autologin]` from `/etc/plasmalogin.conf`. Turning it off removes the file. With the
 conversion on, the conversion does the login as before. Ticking single user mode only ticks the conversion where the
 conversion is offered.
 
-**SDDM** is what SteamOS uses, and CachyOS's `steam-set-session` supports it
-directly: it writes `/etc/sddm.conf.d/zz-steamos-autologin.conf`, which SDDM
-honours. The script installs and enables `sddm` (active from the next boot),
-writes `User=`, `Session=` and `Relogin=true` to
-`/etc/sddm.conf.d/10-gamescope-autologin.conf`, and removes any
-`[Autologin]` from `/etc/sddm.conf` (read last, so it would override both).
-No sync bridge or sudoers rule is needed; the shortcut just runs
-`steamos-session-select gamescope`, which logs out, and `Relogin=true` logs
-straight back in to gamescope.
-
-Without single user mode, the conversion uses **plasma-login-manager**
-(CachyOS's default since March 2026), which needs the workarounds below.
+The conversion uses **plasma-login-manager** (CachyOS's default since March
+2026). Versions before 2.12.1 put single user mode on SDDM; the first run of
+2.12.1 moves those back and removes the SDDM autologin files.
 
 ## Why this is needed (plasma-login-manager)
 
@@ -89,9 +79,20 @@ things get in the way:
    `/etc/plasmalogin.conf.d/zz-steamos-autologin.conf`. The base file takes
    priority, so none of those switches stick.
 
-The script sets `Session=`, `User=` and `Relogin=true` in the base config,
-and installs a small systemd path watcher that copies whatever CachyOS's
-tools write to the conf.d fragment into the base config.
+Since 2.12.1 the script leaves `[Autologin]` out of the base config
+altogether (a backup is kept) and puts `User=`, `Session=` and `Relogin=true` in
+`/etc/plasmalogin.conf.d/10-gamescope-autologin.conf`. What switches sessions
+writes later-sorting fragments (`steam-set-session`: `zz-steamos-autologin.conf`;
+Steam's "Switch to Desktop" through `steamos-manager`:
+`zzt-holo-temp-login.conf`), which then win, so no bridge is needed. plasma-login-manager
+re-reads the files it knows on every login but lists the directory only once, at start, so
+a drop-in for `plasmalogin.service` (`zz-steamify-temp-login.conf`, after steamos-manager's
+own `reset-oneshot-boot.conf`, which removes the `zzt-*` files at every start) creates them
+empty; Steam's one-shot switch then fills a file the login manager already watches. Older versions
+copied the session into the base config with a watcher on
+`zz-steamos-autologin.conf` only, and with SDDM (single user mode) a Steam that
+switches through `steamos-manager`, which only writes plasma-login-manager's files,
+logged straight back in to gamescope.
 
 ## What each component changes
 
@@ -100,14 +101,12 @@ tools write to the conf.d fragment into the base config.
 
 - installs missing packages: `gamescope-session-cachyos`, `steam`,
   `mangohud`, `xterm`, `ttf-liberation`, `wqy-zenhei`, `plasma-keyboard`;
-- *SDDM (single user mode):* installs/enables SDDM and writes its autologin
-  config;
-- *plasma-login-manager:* creates `/etc/plasmalogin.conf.d`, backs up and
-  rewrites the `[Autologin]` section of `/etc/plasmalogin.conf`, removes
-  stray `zzz-steamos-autologin*.conf` files from manual troubleshooting
-  (never `zz-steamos-autologin.conf`, which CachyOS's tools own), and
-  installs `/usr/local/bin/sync-steamos-session.sh` plus
-  `sync-steamos-session.path`/`.service`;
+- *plasma-login-manager:* creates `/etc/plasmalogin.conf.d`, backs up
+  `/etc/plasmalogin.conf` and drops its `[Autologin]` section, writes
+  `10-gamescope-autologin.conf`, removes stray `zzz-steamos-autologin*.conf`
+  files from manual troubleshooting (never `zz-steamos-autologin.conf`, which
+  CachyOS's tools own), and removes what older versions installed: the SDDM
+  autologin files and the sync bridge;
 - `KWIN_IM_SHOW_ALWAYS=1` for the virtual keyboard; the sub-option `silent`
   ("Start Steam silently in desktop mode", opt-in, always shown) writes
   `~/.config/autostart/steam.desktop` (the system steam.desktop with `-silent` in its Exec line). That is the
@@ -118,7 +117,7 @@ tools write to the conf.d fragment into the base config.
   restart the login manager without a password prompt.
 
 Turning it off restores `/etc/plasmalogin.conf` from its backup, removes the
-SDDM autologin, sync bridge, shortcut, sudoers rule and Steam autostart, and
+our fragment and the session fragments, shortcut, sudoers rule and Steam autostart, and
 switches back to plasma-login-manager.
 
 The conversion also sets what Steam's System settings show, see
@@ -615,7 +614,7 @@ immediately, which can turn into a loop - see
 | `lib/common.sh` | Output helpers, prompts, backups, plasmashell handling |
 | `lib/packages.sh` | Required packages, AUR helper (yay/paru) |
 | `lib/boot-session.sh` | Boot into gamescope or the desktop (`steamify-boot-desktop.service`) |
-| `lib/login-manager.sh` | SteamOS conversion: SDDM or plasmalogin autologin, sync bridge |
+| `lib/login-manager.sh` | SteamOS conversion: plasma-login-manager autologin |
 | `lib/steam-desktop.sh` | Steam in the Plasma session; Steam Deck/Machine icons |
 | `lib/desktop-shortcut.sh` | Return to Gaming Mode shortcut and its sudoers rule |
 | `lib/vapor-theme.sh` | SteamOS theme: installs and switches to `cachyos-vapor` |

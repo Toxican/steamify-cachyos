@@ -172,23 +172,23 @@ gamescope and the Plasma desktop. Primary target: the Valve Steam Machine
 
 ## Non-obvious behaviour to preserve
 
-- `apply_changes` sets `$LOGIN_MANAGER` from the menu: `sddm` when single
-  user mode is wanted, else `plasmalogin`. Toggling single user re-applies
-  `gaming` so it moves to the other login manager. Single user mode hides
+- plasma-login-manager is the only login manager (single user mode used
+  to switch to SDDM before 2.12.1; `remove_sddm_autologin` and
+  `remove_session_sync` clean up after those versions). Single user mode hides
   the launcher's Session dropdown via kickoff `primaryActions=3` (restricting
-  `action/logout` also hides Restart/Shut Down). Two login-manager paths:
-  **sddm** (like SteamOS: `steam-set-session` writes
-  `/etc/sddm.conf.d/zz-steamos-autologin.conf`, which SDDM honours; we add
-  `User=`/`Relogin=` in `10-gamescope-autologin.conf`, and `/etc/sddm.conf`
-  must not contain `[Autologin]` since it's read last) and **plasmalogin**
-  (needs the sync bridge and the shortcut's sudoers rule). Both must keep
-  working.
-
-- `steam-set-session` only writes `/etc/plasmalogin.conf.d/zz-steamos-autologin.conf`;
-  the base `/etc/plasmalogin.conf` wins, hence the sync bridge. The sync
-  service needs `StartLimitIntervalSec=0`, or bursts of session switches
-  get it rate-limited and all later switches silently stop working.
-- The sync script must only edit `Session=` inside `[Autologin]`.
+  `action/logout` also hides Restart/Shut Down).
+- The base `/etc/plasmalogin.conf` beats conf.d and CachyOS ships it with
+  `Session=plasma`, so it must contain **no** `[Autologin]`
+  (`remove_base_autologin`); `User=`/`Relogin=` live in our conf.d fragment
+  `10-gamescope-autologin.conf`. Everything that switches sessions
+  (`steam-set-session`: `zz-steamos-autologin.conf`; Steam's "Switch to
+  Desktop" via `steamos-manager`: `zzt-holo-temp-login.conf`) writes a conf.d
+  fragment sorting after ours and must be left to do so: no bridge, and
+  never delete those files while the conversion is on. plasma-login-manager
+  lists conf.d once at start (`MainConfigLoader.cpp`), so the `zzt-*` files
+  must exist (empty) then: the `plasmalogin.service` drop-in
+  `zz-steamify-temp-login.conf` creates them after steamos-manager's drop-in
+  removed them. Without it Steam's "Switch to Desktop" logs back in to gamescope.
 - The Steam desktop autostart unit is guarded with
   `ExecCondition=... XDG_CURRENT_DESKTOP = KDE`, so it doesn't start a
   second Steam inside gamescope.
@@ -236,8 +236,7 @@ gamescope and the Plasma desktop. Primary target: the Valve Steam Machine
   unticking gaming unticks it) and is never preselected (`NO_PRESELECT`), so
   the conversion boots into gamescope by default. Desktop is
   `steamify-boot-desktop.service`, ordered `Before=` the login managers:
-  `steam-set-session plasma.desktop` plus the plasmalogin sync bridge when it
-  exists, at every boot. CachyOS's `cachyos-gamescope-autologin` still sets
+  `steam-set-session plasma.desktop` at every boot. CachyOS's `cachyos-gamescope-autologin` still sets
   gamescope during each desktop session; the unit corrects it at boot.
 - `bios` is an *action* (`ACTIONS` in `lib/menu.sh`) and a sub-option of `machine`, not an on/off
   component: never preselected (not even on a first run), never re-applied
