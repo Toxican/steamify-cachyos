@@ -44,17 +44,32 @@ jobs:
 
   qml:
     runs-on: ubuntu-latest
-    # Not blocking until it has run once on the runner image (Qt packages).
+    # Not blocking: the runner's qmllint is 6.4, which reports Qt 6.4-specific things the app's QML does
+    # not have under 6.12 (make lint-qml is clean locally: a QSizeF/QSize binding, exit 255 without a message).
     continue-on-error: true
     steps:
       - uses: actions/checkout@v4
       - name: Install qmllint and the QML modules the app imports
         run: |
           sudo apt-get update -qq
-          sudo apt-get install -y -qq qt6-declarative-dev-tools qml6-module-qtquick qml6-module-qtquick-controls qml6-module-qtquick-window
+          sudo apt-get install -y -qq qt6-declarative-dev-tools qml6-module-qtqml qml6-module-qtqml-models qml6-module-qtquick qml6-module-qtquick-controls qml6-module-qtquick-templates qml6-module-qtquick-layouts qml6-module-qtquick-window
       # "unqualified" (a screen reading `app` from its parent) is how the screens get their
-      # AppState, so it is off; everything else must be clean.
+      # AppState, so it is off; "import" is off because qmllint does not see the folder's qmldir as a
+      # module and calls its singletons undeclared. Everything else must be clean (no "Warning:" line).
+      # The option only exists in newer qmllint (the runner's Qt is older): it is used where there.
       - name: qmllint
         run: |
           lint="$(command -v qmllint6 || echo /usr/lib/qt6/bin/qmllint)"
-          "$lint" --unqualified disable --max-warnings 0 ui/qml/*.qml
+          args=(--unqualified disable)
+          # Ubuntu keeps the QML modules outside qmllint's own folder.
+          for d in /usr/lib/*/qt6/qml /usr/lib/qt6/qml; do [[ -d "$d/QtQuick" ]] && { args+=(-I "$d"); break; }; done
+          "$lint" --help 2>&1 | grep -q -- '--import' && args+=(--import disable)
+          # Not --max-warnings 0: qmllint 6.12 exits with an error on it even when nothing is reported.
+          "$lint" --version
+          status=0
+          for f in ui/qml/*.qml; do
+              out="$("$lint" "${args[@]}" "$f" 2>&1)" && rc=0 || rc=$?
+              [[ -z "$out" ]] || printf '%s\n' "$out"
+              if [[ $rc -ne 0 ]] || grep -q '^Warning:' <<< "$out"; then echo "FAILED: $f (exit $rc)"; status=1; fi
+          done
+          exit $status
