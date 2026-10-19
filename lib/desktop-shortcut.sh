@@ -11,7 +11,18 @@ shortcut_name() {
     if boot_status; then echo "Switch to Gaming Mode"; else echo "Return to Gaming Mode"; fi
 }
 
-shortcut_dir() { xdg-user-dir DESKTOP 2>/dev/null || echo "$HOME/Desktop"; }
+shortcut_user_home() { getent passwd "$TARGET_USER" | cut -d: -f6; }
+
+shortcut_desktop_dir() {
+    # The target user's Desktop folder, from their user-dirs.dirs.
+    local user_home desktop_dir
+    user_home="$(shortcut_user_home)"
+    if [[ -f "$user_home/.config/user-dirs.dirs" ]]; then
+        desktop_dir=$(grep '^XDG_DESKTOP_DIR=' "$user_home/.config/user-dirs.dirs" | cut -d '"' -f 2)
+        desktop_dir="${desktop_dir/\$HOME/$user_home}"
+    fi
+    echo "${desktop_dir:-$user_home/Desktop}"
+}
 
 refresh_desktop_shortcut() {
     # After "Boot into" changed: the shortcut is renamed to match.
@@ -20,33 +31,20 @@ refresh_desktop_shortcut() {
 }
 
 create_desktop_shortcut() {
-    # Determine the home directory of the target user
-    local user_home
-    user_home="$(getent passwd "$TARGET_USER" | cut -d: -f6)"
-
-    # Locate the correct Desktop directory
-    local desktop_dir
-    if [[ -f "$user_home/.config/user-dirs.dirs" ]]; then
-        desktop_dir=$(grep '^XDG_DESKTOP_DIR=' "$user_home/.config/user-dirs.dirs" | cut -d '"' -f 2)
-        desktop_dir="${desktop_dir/\$HOME/$user_home}"
-    fi
-    desktop_dir="${desktop_dir:-$user_home/Desktop}"
-
+    local user_home desktop_dir
+    user_home="$(shortcut_user_home)"
+    desktop_dir="$(shortcut_desktop_dir)"
     mkdir -p "$desktop_dir"
 
     # steamos-session-select writes the session and logs out; the login
     # manager logs in to it by itself (Relogin=true, or the relogin helper in
     # multi-user mode). Versions before 2.13.0 restarted the login manager,
     # with a sudoers rule that is removed now.
+    # (Under GDM it is Steamify's own steamos-session-select, lib/login-manager.sh: it restarts GDM through
+    # the helper and rule session_tools_install adds.)
     local exec_line="steamos-session-select gamescope"
-    if [[ "$LOGIN_MANAGER" == "gdm" ]]; then
-        # Its own steamos-session-select (lib/login-manager.sh) restarts GDM, through the helper and rule gdm_fix_install adds.
-        :
-    else
-        sudo rm -f /etc/sudoers.d/gamescope-session-switch
-    fi
     # GNOME shows no icons on the desktop: the application grid gets the shortcut too.
-    gnome_app_shortcut=false
+    local gnome_app_shortcut=false
     [[ "$(desktop_kind)" == gnome ]] && gnome_app_shortcut=true
 
     # SteamOS itself uses Valve's "gaming-return" icon (Steam logo with a
@@ -57,14 +55,15 @@ create_desktop_shortcut() {
     [[ -f /usr/local/share/icons/hicolor/scalable/actions/gaming-return.svg ]] &&
         shortcut_icon="gaming-return"
 
-    # 2. Generate the .desktop shortcut with instant session switcher strings
     local name n shortcut_path
     name="$(shortcut_name)"
     shortcut_path="$desktop_dir/$name.desktop"
     for n in "${SHORTCUT_NAMES[@]}"; do [[ "$n" == "$name" ]] || rm -f "$desktop_dir/$n.desktop"; done
     info "Creating '$name' desktop shortcut at: $shortcut_path"
 
-    cat << EOF > "$shortcut_path"
+    # Written with its mode already set: Plasma opens a desktop icon it first
+    # saw non-executable in an editor.
+    install_executable "$shortcut_path" 755 << EOF
 [Desktop Entry]
 Name=$name
 Comment=Switch session to Gamescope
@@ -75,8 +74,6 @@ Type=Application
 Categories=System;
 EOF
 
-    # Fix permissions for the target user and KDE Plasma desktop ecosystem
-    chmod +x "$shortcut_path"
     if [[ "$gnome_app_shortcut" == true ]]; then
         mkdir -p "$user_home/.local/share/applications"
         cp "$shortcut_path" "$user_home/.local/share/applications/steamify-return-to-gaming-mode.desktop"
@@ -91,19 +88,20 @@ EOF
 
 set_shortcut_icon() {
     # set_shortcut_icon <icon>: update an existing shortcut, if any.
-    local n
+    local n dir
+    dir="$(shortcut_desktop_dir)"
     for n in "${SHORTCUT_NAMES[@]}"; do
-        [[ -f "$(shortcut_dir)/$n.desktop" ]] && sed -i "s/^Icon=.*/Icon=$1/" "$(shortcut_dir)/$n.desktop"
+        [[ -f "$dir/$n.desktop" ]] && sed -i "s/^Icon=.*/Icon=$1/" "$dir/$n.desktop"
     done
     return 0
 }
 
 remove_desktop_shortcut() {
-    local n
-    for n in "${SHORTCUT_NAMES[@]}"; do rm -f "$(shortcut_dir)/$n.desktop"; done
-    rm -f "$HOME/.local/share/applications/steamify-return-to-gaming-mode.desktop"
+    local n dir
+    dir="$(shortcut_desktop_dir)"
+    for n in "${SHORTCUT_NAMES[@]}"; do rm -f "$dir/$n.desktop"; done
+    rm -f "$(shortcut_user_home)/.local/share/applications/$GNOME_SHORTCUT_ID"
     gnome_dash_unpin
-    sudo rm -f /etc/sudoers.d/gamescope-session-switch
 }
 
 # GNOME draws no icons on the desktop: the shortcut is pinned to the dash

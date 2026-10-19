@@ -2,7 +2,12 @@
 # Output helpers, prompts and small shared utilities.
 # Sourced by steamify.sh; not meant to be run on its own.
 
-c_reset="\033[0m"; c_bold="\033[1m"; c_green="\033[32m"; c_yellow="\033[33m"; c_red="\033[31m"; c_cyan="\033[36m"; c_dim="\033[2m"
+# NO_COLOR (https://no-color.org): plain output, e.g. for a log file.
+if [[ -n "${NO_COLOR:-}" ]]; then
+    c_reset=""; c_bold=""; c_green=""; c_yellow=""; c_red=""; c_cyan=""; c_dim=""
+else
+    c_reset="\033[0m"; c_bold="\033[1m"; c_green="\033[32m"; c_yellow="\033[33m"; c_red="\033[31m"; c_cyan="\033[36m"; c_dim="\033[2m"
+fi
 
 info()  { echo -e "${c_cyan}[INFO]${c_reset} $*"; }
 ok()    { echo -e "${c_green}[OK]${c_reset} $*"; }
@@ -32,6 +37,39 @@ ask_yn() {
     read -rp "$(echo -e "${c_bold}${prompt}${c_reset} ${hint} ")" reply
     reply="${reply:-$default}"
     [[ "$reply" =~ ^[Yy]$ ]]
+}
+
+best_effort() {
+    # best_effort <command>...: for a step whose failure is fine (stopping a
+    # unit that isn't running, removing what isn't installed). Same exit status
+    # and output as the command, but its errors go to the log
+    # (~/.local/state/steamify/log/steamify.log) instead of vanishing, so a problem
+    # can still be found afterwards.
+    local log="${STEAMIFY_LOG:-${STATE_DIR:-$HOME/.local/state/steamify}/log/steamify.log}" e rc
+    e="$(mktemp)" || { "$@" 2>/dev/null; return; }
+    "$@" 2>"$e"; rc=$?
+    if [[ -s "$e" ]]; then
+        mkdir -p "${log%/*}" 2>/dev/null
+        # Kept small: a run that fails the same way every time shouldn't fill the disk.
+        [[ "$(stat -c %s "$log" 2>/dev/null || echo 0)" -gt 524288 ]] && : > "$log"
+        { echo "$(date -Is) exit $rc: $*"; sed 's/^/    /' "$e"; } >> "$log" 2>/dev/null
+    fi
+    rm -f "$e"
+    return $rc
+}
+
+# Temp dirs of this run, removed at exit (on_exit in steamify.sh), also when it
+# stops half way: make_tmpdir <variable>.
+TMP_DIRS=()
+make_tmpdir() {
+    local d
+    d="$(mktemp -d)" || return 1
+    TMP_DIRS+=("$d")
+    printf -v "$1" '%s' "$d"
+}
+
+cleanup_tmpdirs() {
+    [[ ${#TMP_DIRS[@]} -eq 0 ]] || rm -rf "${TMP_DIRS[@]}"
 }
 
 require_root_helper() {
@@ -97,7 +135,7 @@ stop_plasmashell_for_edit() {
     PLASMASHELL_WAS_RUNNING=false
     if pgrep -u "$USER" -x plasmashell >/dev/null; then
         PLASMASHELL_WAS_RUNNING=true
-        systemctl --user stop plasma-plasmashell.service 2>/dev/null
+        best_effort systemctl --user stop plasma-plasmashell.service
         pkill -u "$USER" -x plasmashell && sleep 2
     fi
 }
@@ -105,7 +143,7 @@ stop_plasmashell_for_edit() {
 restart_plasmashell_if_stopped() {
     if [[ "${PLASMASHELL_WAS_RUNNING:-false}" == true ]]; then
         rm -rf ~/.cache/plasmashell* ~/.cache/org.kde.dirmodel-qml.kcache
-        systemctl --user start plasma-plasmashell.service 2>/dev/null ||
+        best_effort systemctl --user start plasma-plasmashell.service ||
             { setsid plasmashell >/dev/null 2>&1 & }
     fi
 }

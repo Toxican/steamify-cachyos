@@ -33,7 +33,7 @@ bootstrap_yay() {
     sudo pacman -S --needed --noconfirm base-devel git || return 1
 
     local tmp_dir
-    tmp_dir="$(mktemp -d)"
+    make_tmpdir tmp_dir
     info "Cloning yay-bin from the AUR..."
     if ! git clone --depth 1 https://aur.archlinux.org/yay-bin.git "$tmp_dir/yay-bin"; then
         err "Failed to clone yay-bin from the AUR."

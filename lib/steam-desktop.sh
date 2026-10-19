@@ -33,7 +33,7 @@ silent_old_unit_remove() {
     # Before 2.11.0 the option was a systemd user unit: it would start Steam a second time.
     local unit="$HOME/.config/systemd/user/steam-desktop-autostart.service"
     [[ -f "$unit" ]] || return 0
-    user_systemctl disable --now steam-desktop-autostart.service 2>/dev/null
+    best_effort user_systemctl disable --now steam-desktop-autostart.service
     rm -f "$unit"
     user_systemctl daemon-reload
 }

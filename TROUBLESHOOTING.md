@@ -2,6 +2,13 @@
 
 See [TECHNICAL.md](TECHNICAL.md) for how each part works.
 
+## Where are the errors of the quiet steps?
+
+Steps that may fail without it mattering (stopping a service that isn't
+running, removing a package that isn't installed) don't show their errors in the
+wizard. They are kept in `~/.local/state/steamify/log/steamify.log` (the last
+512 KB), with the command and its exit status: attach it when you ask for help.
+
 ## Gaming mode shows a black screen or keeps restarting
 
 Press **Ctrl+Alt+F3**, log in with your username and password, and run:

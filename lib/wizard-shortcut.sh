@@ -69,43 +69,11 @@ launcher_enable() {
     local terminal
     terminal="$(wizard_terminal)"
     info "Adding the Steamify shortcut (the app on the desktop and in the launcher, Steamify Terminal in the launcher)..."
-    install_executable "$WIZARD_LAUNCHER" 755 << EOF
-#!/bin/bash
-# Installed by Steamify CachyOS: run its newest release.
-# pipefail: a failed download must count as a failure, not an empty script.
-set -o pipefail
-if ! curl -fsSL --max-time 30 "$WIZARD_URL" | bash; then
-    echo
-    echo "Couldn't download or run the wizard. Are you connected to the internet?"
-    echo
-    read -rp "Press Enter to close this window... " _
-    exit 1
-fi
-# Done: close the window after a countdown (Enter closes it right away).
-echo
-for (( i = 10; i > 0; i-- )); do
-    printf '\rClosing this window in %2d seconds (Enter to close now)... ' "\$i"
-    read -rs -t 1 _ && break
-done
-echo
-EOF
-
+    # Both scripts download the newest release when they run (patches/).
+    patch_file steamify-start.sh | fill URL="$WIZARD_URL" | install_executable "$WIZARD_LAUNCHER" 755
     # The app, without a terminal. Only the first time, when PySide6 still
     # has to be installed, it runs in a terminal: sudo asks for the password there.
-    install_executable "$WIZARD_APP_LAUNCHER" 755 << EOF
-#!/bin/bash
-# Installed by Steamify CachyOS: start the newest release of its app.
-set -o pipefail
-if [[ "\${1:-}" != --in-terminal ]] && { ! python3 -c 'import PySide6.QtQml' 2>/dev/null || ! pacman -Q qt6-svg >/dev/null 2>&1; }; then
-    exec $terminal "\$0" --in-terminal
-fi
-if ! curl -fsSL --max-time 30 "$WIZARD_APP_URL" | bash; then
-    msg="Couldn't download or start Steamify. Are you connected to the internet?"
-    if [[ "\${1:-}" == --in-terminal ]]; then echo; echo "\$msg"; read -rp "Press Enter to close this window... " _
-    else kdialog --title Steamify --sorry "\$msg" 2>/dev/null || zenity --error --title Steamify --text "\$msg" 2>/dev/null; fi
-    exit 1
-fi
-EOF
+    patch_file steamify-app-start.sh | fill URL="$WIZARD_APP_URL" TERMINAL="$terminal" | install_executable "$WIZARD_APP_LAUNCHER" 755
 
     # The icon comes with the release; without it, Steam's own icon.
     local icon=steam tmp

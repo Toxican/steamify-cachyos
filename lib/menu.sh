@@ -11,6 +11,20 @@ COMPONENTS=(gaming boot silent glyphs nvidia bigpicture nvsilent theme gnomethem
 ACTIONS=(bios)
 # Sub-options, shown indented under their parent and only while it's ticked.
 declare -A PARENT=([boot]=gaming [silent]=gaming [glyphs]=gaming [bigpicture]=nvidia [nvsilent]=nvidia [steamgame]=launcher [poweroff]=machine [kpin]=machine [hdmi]=machine [bios]=machine)
+# What ticking one item does to another, for the menu's toggles (toggle_component)
+# and the app's ticks (normalize_wanted). A sub-option needs its parent: ticking it
+# ticks the parent, unticking the parent unticks it (Where to boot is chosen with
+# --boot, so the app's ticks never bring the conversion for it; HDMI refresh boost is
+# retired and never brings Steam Machine support). Single user mode only makes sense
+# on top of the SteamOS conversion (where that is offered: on NVIDIA it logs in by
+# itself, see lib/single-user.sh).
+declare -A REQUIRES=([single]=gaming)
+for _c in "${!PARENT[@]}"; do [[ "$_c" == hdmi ]] || REQUIRES[$_c]=${PARENT[$_c]}; done
+unset _c
+# Opt-out sub-options are ticked and unticked along with their parent.
+declare -A FOLLOWS=([nvidia]=bigpicture [machine]=poweroff [launcher]=steamgame)
+# Ticking one unticks the other; in normalize_wanted the first in COMPONENTS wins.
+declare -A EXCLUDES=([bigpicture]=nvsilent [nvsilent]=bigpicture)
 # Never preselected on a first run: booting into the desktop is a choice,
 # gamescope is the default; HDMI-CEC is opt-in (it can wake the machine or
 # upset other devices on the TV, even on SteamOS), except on a Steam Machine,
@@ -26,7 +40,7 @@ NO_PRESELECT=(boot silent nvsilent cec kpin hdmi extended_controller_support)
 # FEATURE_BASELINE.
 FEATURE_BASELINE=2.1.0
 declare -A FEATURE_VERSION=(
-    [gaming]=2.13.1 [boot]=2.12.1 [silent]=2.11.0 [nvidia]=2.12.0 [bigpicture]=2.10.0 [nvsilent]=2.11.0 [theme]=2.1.0 [gnometheme]=2.14.0 [glyphs]=2.1.0 [single]=2.13.0
+    [gaming]=2.14.0 [boot]=2.12.1 [silent]=2.11.0 [nvidia]=2.12.0 [bigpicture]=2.10.0 [nvsilent]=2.11.0 [theme]=2.1.0 [gnometheme]=2.14.0 [glyphs]=2.1.0 [single]=2.13.0
     [launcher]=2.1.0 [cec]=2.7.0 [machine]=2.9.0 [poweroff]=2.2.0 [vram]=2.3.0 [notify]=2.5.0 [steamgame]=2.5.1 [extended_controller_support]=2.10.0
     [kpin]=2.1.0 [hdmi]=2.1.0
 )
@@ -76,6 +90,8 @@ component_available() {
     esac
 }
 
+is_wanted() { [[ "${WANTED[$1]:-0}" == 1 ]]; }
+is_current() { [[ "${CURRENT[$1]:-0}" == 1 ]]; }
 is_action() { [[ " ${ACTIONS[*]} " == *" $1 "* ]]; }
 
 boot_mode() {
@@ -120,7 +136,7 @@ feature_outdated() {
     local have want
     # "Gaming on NVIDIA" is on: the SteamOS conversion replaces it, as an update of what the PC has (lib/nvidia.sh).
     [[ "$1" == gaming ]] && nvidia_migration_pending && return 0
-    [[ "${CURRENT[$1]:-0}" == 1 ]] || return 1
+    is_current "$1" || return 1
     # NVIDIA: a newer patched gamescope is out (lib/gamescope-nvidia.sh): a normal run installs it.
     [[ "$1" == gaming ]] && nvidia_present && { gsn_update_pending || gsn_display_pending; } && return 0
     have="$(state_get features "$1" "$FEATURE_BASELINE")"
@@ -160,6 +176,8 @@ feature_new() {
     # A new default option: ticked for you (never turned on or off by itself).
     feature_added "$1" && [[ " ${NO_PRESELECT[*]} " != *" $1 "* ]]
 }
+
+feature_any_new() { feature_new "$1" || feature_new_optin "$1"; }
 
 feature_new_optin() {
     # A new opt-in option (unticked by default): the "new" badge only, it stays
@@ -270,14 +288,14 @@ defaults_options() {
                 warn "Leaving out ${LABEL[$c]%%:*}: not available on this PC."
             fi
         done
-        [[ "${WANTED[single]}" == 1 ]] && component_available gaming && WANTED[gaming]=1
+        is_wanted single && component_available gaming && WANTED[gaming]=1
         for c in "${COMPONENTS[@]}"; do
             [[ "${WANTED[$c]}" == 1 && -n "${PARENT[$c]:-}" ]] && WANTED[${PARENT[$c]}]=1
         done
     fi
     case "$boot" in
         desktop)
-            [[ "${WANTED[gaming]}" == 1 ]] || { err "--boot desktop needs the SteamOS conversion (gaming)."; return 1; }
+            is_wanted gaming || { err "--boot desktop needs the SteamOS conversion (gaming)."; return 1; }
             WANTED[boot]=1 ;;
         gamescope) WANTED[boot]=0 ;;
     esac
@@ -302,41 +320,53 @@ defaults_list() {
         on=false
         [[ "$sel" == true && " ${NO_PRESELECT[*]} " != *" $c "* ]] && on=true
         [[ "$c" == cec ]] && machine_available && on=true
-        items+="${items:+,}{\"id\":$(json_str "$c"),\"label\":$(json_str "${LABEL[$c]%%:*}")"
-        items+=",\"hint\":$(json_str "$( [[ "${LABEL[$c]}" == *:* ]] && echo "${LABEL[$c]#*: }")")"
-        items+=",\"kind\":\"$kind\",\"parent\":$(json_str "${PARENT[$c]:-}"),\"needs\":\"\",\"hideWhen\":$(json_str "$([[ "$c" == nvsilent ]] && echo bigpicture)"),\"on\":$on,\"selectable\":$sel}"
+        items+="${items:+,}$(json_item_head "$c" "$kind"),\"hideWhen\":$(json_str "$([[ "$c" == nvsilent ]] && echo bigpicture)"),\"on\":$on,\"selectable\":$sel}"
     done
     printf '[%s]\n' "$items"
 }
 
+children_of() {
+    # children_of <id>: the items that need <id> (REQUIRES), one per line.
+    local c
+    for c in "${COMPONENTS[@]}"; do [[ "${REQUIRES[$c]:-}" == "$1" ]] && echo "$c"; done
+    return 0
+}
+
 toggle_component() {
-    local c="$1"
+    local c="$1" p x
     component_selectable "$c" || return 1
     WANTED[$c]=$(( 1 - WANTED[$c] ))
-    # Single user mode only makes sense on top of the SteamOS conversion.
-    if [[ "$c" == single && "${WANTED[single]}" == 1 ]] && component_available gaming; then WANTED[gaming]=1; fi
-    if [[ "$c" == gaming && "${WANTED[gaming]}" == 0 ]]; then WANTED[single]=0; WANTED[boot]=0; fi
-    # Where to boot to is part of the conversion, too.
-    if [[ "$c" == boot && "${WANTED[boot]}" == 1 ]]; then WANTED[gaming]=1; fi
-    # Big Picture is opt-out: ticked along with "Gaming on NVIDIA".
-    if [[ "$c" == nvidia ]]; then WANTED[bigpicture]=${WANTED[nvidia]}; fi
-    if [[ "$c" == bigpicture && "${WANTED[bigpicture]}" == 1 ]]; then WANTED[nvidia]=1; WANTED[nvsilent]=0; fi
-    # Silent and Big Picture exclude each other.
-    if [[ "$c" == nvsilent && "${WANTED[nvsilent]}" == 1 ]]; then WANTED[nvidia]=1; WANTED[bigpicture]=0; fi
-    if [[ "$c" == nvidia && "${WANTED[nvidia]}" == 0 ]]; then WANTED[nvsilent]=0; fi
-    if [[ "$c" == gaming && "${WANTED[gaming]}" == 0 ]]; then WANTED[silent]=0; WANTED[glyphs]=0; fi
-    if [[ "$c" == silent && "${WANTED[silent]}" == 1 ]]; then WANTED[gaming]=1; fi
-    if [[ "$c" == glyphs && "${WANTED[glyphs]}" == 1 ]]; then WANTED[gaming]=1; fi
-    # The power-off fix is opt-out: ticked along with Steam Machine support.
-    if [[ "$c" == machine ]]; then WANTED[poweroff]=${WANTED[machine]}; fi
-    if [[ "$c" == poweroff && "${WANTED[poweroff]}" == 1 ]]; then WANTED[machine]=1; fi
-    if [[ "$c" == machine && "${WANTED[machine]}" == 0 ]]; then WANTED[kpin]=0; WANTED[bios]=0; fi
-    if [[ "$c" == kpin && "${WANTED[kpin]}" == 1 ]]; then WANTED[machine]=1; fi
-    if [[ "$c" == bios && "${WANTED[bios]}" == 1 ]]; then WANTED[machine]=1; fi
-    # Steam starts Steamify through the shortcut's start script.
-    # Opt-out, like the power-off fix: ticked along with the shortcut.
-    if [[ "$c" == launcher ]] && component_available steamgame; then WANTED[steamgame]=${WANTED[launcher]}; fi
-    if [[ "$c" == steamgame && "${WANTED[steamgame]}" == 1 ]]; then WANTED[launcher]=1; fi
+    if is_wanted "$c"; then
+        p="${REQUIRES[$c]:-}"
+        [[ -n "$p" ]] && component_available "$p" && WANTED[$p]=1
+        x="${EXCLUDES[$c]:-}"
+        [[ -n "$x" ]] && WANTED[$x]=0
+    else
+        for x in $(children_of "$c"); do WANTED[$x]=0; done
+    fi
+    x="${FOLLOWS[$c]:-}"
+    [[ -n "$x" ]] && component_available "$x" && WANTED[$x]=${WANTED[$c]}
+}
+
+normalize_wanted() {
+    # The same rules for a whole selection (the app ticks exactly the items it
+    # sends): a ticked sub-option brings its parent, two that exclude each other
+    # keep the first, and an unticked parent takes its sub-options with it
+    # (only where the parent is offered: single user mode stays on NVIDIA PCs).
+    local c p x
+    for c in "${COMPONENTS[@]}"; do
+        p="${REQUIRES[$c]:-}"
+        [[ -n "$p" && "$c" != boot && "${WANTED[$c]:-0}" == 1 ]] && component_available "$p" && WANTED[$p]=1
+    done
+    for c in "${COMPONENTS[@]}"; do
+        x="${EXCLUDES[$c]:-}"
+        [[ -n "$x" && "${WANTED[$c]:-0}" == 1 ]] && WANTED[$x]=0
+    done
+    for c in "${COMPONENTS[@]}"; do
+        p="${REQUIRES[$c]:-}"
+        [[ -n "$p" && "${WANTED[$p]:-0}" == 0 ]] && component_available "$p" && WANTED[$c]=0
+    done
+    return 0
 }
 
 show_menu() {
@@ -349,16 +379,16 @@ show_menu() {
         menu_visible "$c" || continue
         i=$((i + 1)); MENU_ITEMS[$i]=$c
         # Pad the plain word, then colour it: colour codes would count as width.
-        now="off"; [[ "${CURRENT[$c]}" == 1 ]] && now="on"
+        now="off"; is_current "$c" && now="on"
         is_action "$c" && now="-"
         now="$(printf '%-6s' "$now")"
-        [[ "${CURRENT[$c]}" == 1 ]] && now="${now/on/${c_green}on${c_reset}}"
-        want="[ ]"; [[ "${WANTED[$c]}" == 1 ]] && want="[x]"
+        is_current "$c" && now="${now/on/${c_green}on${c_reset}}"
+        want="[ ]"; is_wanted "$c" && want="[x]"
         if [[ "$c" == boot ]]; then
             # A choice rather than a checkbox: Now/Want show the mode.
-            now="gaming"; [[ "${CURRENT[boot]}" == 1 ]] && now="desk"
-            [[ "${CURRENT[gaming]}" == 1 ]] || now="-"
-            want="gaming"; [[ "${WANTED[boot]}" == 1 ]] && want="desk"
+            now="gaming"; is_current boot && now="desk"
+            is_current gaming || now="-"
+            want="gaming"; is_wanted boot && want="desk"
             printf "  %-3s %-6s %-6s   └ %s\n" "$i" "$now" "$want" "$(boot_choice "${WANTED[boot]}")"
         elif ! component_selectable "$c"; then
             local tree=""; [[ -n "${PARENT[$c]:-}" ]] && tree="  └ "
@@ -397,8 +427,8 @@ draw_menu_tui() {
     for c in "${COMPONENTS[@]}"; do
         menu_visible "$c" || continue
         MENU_ITEMS[$i]=$c
-        box="[ ]"; [[ "${WANTED[$c]}" == 1 ]] && box="[${c_green}x${c_reset}]"
-        state="  (now: off)"; [[ "${CURRENT[$c]}" == 1 ]] && state="  (now: ${c_green}on${c_reset})"
+        box="[ ]"; is_wanted "$c" && box="[${c_green}x${c_reset}]"
+        state="  (now: off)"; is_current "$c" && state="  (now: ${c_green}on${c_reset})"
         is_action "$c" && state="  (opt-in, runs once)"
         line="$box ${LABEL[$c]}"
         if [[ "$c" == boot ]]; then
@@ -406,9 +436,9 @@ draw_menu_tui() {
             # Indented under the conversion, whose sub-option it is.
             line="$(boot_choice "${WANTED[boot]}")"
             line="    └ ${line/\[/[${c_green}}"; line="${line/\]/${c_reset}]}"
-            local mode=gamescope; [[ "${CURRENT[boot]}" == 1 ]] && mode=desktop
+            local mode=gamescope; is_current boot && mode=desktop
             state="  (${c_bold}←/→${c_reset} choose)"
-            [[ "${CURRENT[gaming]}" == 1 ]] && state="  (now: $mode; ${c_bold}←/→${c_reset} choose)"
+            is_current gaming && state="  (now: $mode; ${c_bold}←/→${c_reset} choose)"
         elif [[ -n "${PARENT[$c]:-}" ]]; then
             line="    └ $line"
         fi
@@ -435,7 +465,6 @@ draw_menu_tui() {
 run_menu_tui() {
     local cursor=0 key rest count
     tput civis 2>/dev/null
-    trap 'tput cnorm 2>/dev/null' EXIT
     while true; do
         draw_menu_tui "$cursor"
         count=${#MENU_ITEMS[@]}
@@ -497,7 +526,7 @@ plan_changes() {
     done
     for c in "${COMPONENTS[@]}"; do
         component_available "$c" || continue
-        [[ "${WANTED[$c]}" == 1 ]] || continue
+        is_wanted "$c" || continue
         if is_action "$c"; then TO_ENABLE+=("$c"); continue; fi
         if [[ "${CURRENT[$c]}" == 0 || "$REAPPLY" == true ]] || feature_outdated "$c"; then
             TO_ENABLE+=("$c")
@@ -505,9 +534,16 @@ plan_changes() {
     done
 }
 
+refresh_after_apply() {
+    # After a run (the menu's and the app's): what depends on what was just changed. Steam's System settings
+    # show Steamify's version; the desktop shortcut's name follows "Boot into".
+    os_version_refresh
+    [[ " ${TO_DISABLE[*]} ${TO_ENABLE[*]} " == *" boot "* ]] && refresh_desktop_shortcut
+    return 0
+}
+
 apply_changes() {
     local c failed=()
-    choose_login_manager
 
     for c in "${TO_DISABLE[@]}"; do
         if [[ "$c" == boot ]]; then echo; echo -e "${c_bold}Boot into: gamescope${c_reset}"
@@ -526,6 +562,6 @@ apply_changes() {
         if "${c}_enable"; then is_action "$c" || feature_record "$c" enable; else failed+=("$c"); fi
     done
     feature_record_unticked
-    os_version_refresh
+    refresh_after_apply
     FAILED=("${failed[@]}")
 }

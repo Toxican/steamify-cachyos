@@ -42,7 +42,7 @@ single_wallet_enable() {
         ok "Single user mode's wallet (no password) is back; your own is kept as kdewallet.kwl$WALLET_BACKUP."
         return 0
     fi
-    tmp="$(mktemp -d)"
+    make_tmpdir tmp
     if ! fetch_valve_presets "$tmp"; then
         rm -rf "$tmp"
         warn "Couldn't get Valve's empty wallet; apps may still ask for the wallet password."
@@ -137,7 +137,7 @@ User=$TARGET_USER
 Session=plasma.desktop
 Relogin=true
 EOF
-    remove_sddm_autologin
+    remove_legacy_login_setup
     remove_base_autologin
 }
 

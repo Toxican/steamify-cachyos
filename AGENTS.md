@@ -47,7 +47,7 @@ gamescope and the Plasma desktop. Primary target: the Valve Steam Machine
   idempotent. `<id>_enable` is also used to re-apply. Optional
   `<id>_available` is checked via `component_available` (e.g. `machine`
   only on Fremont). Turn-on order is `COMPONENTS` order, turn-off reverse;
-  `gaming` must stay first. Dependencies live in `toggle_component`.
+  `gaming` must stay first. Dependencies are the `REQUIRES`, `FOLLOWS` and `EXCLUDES` tables in `lib/menu.sh`, used by `toggle_component` (the menu) and `normalize_wanted` (the app).
 - **NVIDIA** (`lib/gamescope-nvidia.sh`, `lib/nvidia.sh`): since 2.12.0 the SteamOS conversion (`gaming` and its options) runs on
   NVIDIA PCs with a patched gamescope (GBM scan-out: gamescope#2309; Steam's UI kept at the display's size), downloaded as the
   newest release of theupriser/steamify-gamescope-nvidia, with the pinned package (`GSN_VERSION`, `GSN_SHA256`), the copy the ISO
@@ -94,6 +94,16 @@ gamescope and the Plasma desktop. Primary target: the Valve Steam Machine
 
 - Bash, `set -uo pipefail` (no `-e`): check exit codes of steps that matter
   explicitly (`|| { err ...; exit 1; }` or `|| return 1`).
+- **Failure and quiet steps.** A function returns 0 when what it was asked
+  to do is in place and 1 when it isn't (after `err`); a step that is only an
+  extra (an icon cache, a service that may not exist) warns or stays silent and
+  doesn't change the return value. Never `cmd 2>/dev/null` on a step that
+  changes the system: use `best_effort cmd...` (same exit status, its errors go
+  to `$STATE_DIR/log/steamify.log`). `2>/dev/null` stays for probes (`pacman -Q`,
+  `grep -q`, `is-active`) whose failure is the answer.
+- **Temp dirs.** `make_tmpdir <variable>` (not `$(mktemp -d)`, whose
+  subshell can't register it): the entry point's `on_exit` removes them, also
+  when a run stops half way. That handler is the only `EXIT` trap.
 - Use the helpers from `lib/common.sh` (`info`, `ok`, `warn`, `err`,
   `ask_yn`, `backup_file`) for all output and prompts.
 - Runs as the normal user; use `sudo` per command, never require root.
@@ -173,8 +183,9 @@ gamescope and the Plasma desktop. Primary target: the Valve Steam Machine
 ## Non-obvious behaviour to preserve
 
 - plasma-login-manager is the only login manager (single user mode used
-  to switch to SDDM before 2.12.1; `remove_sddm_autologin` and
-  `remove_session_sync` clean up after those versions). Single user mode hides
+  to switch to SDDM before 2.12.1; `remove_legacy_login_setup` is the one
+  place that cleans up after every older layout: SDDM files, the sync bridge,
+  the shortcut's sudoers rule, the 2.13.x drop-ins). Single user mode hides
   the launcher's Session dropdown via kickoff `primaryActions=3` (restricting
   `action/logout` also hides Restart/Shut Down).
 - The base `/etc/plasmalogin.conf` beats conf.d and CachyOS ships it with
@@ -188,15 +199,23 @@ gamescope and the Plasma desktop. Primary target: the Valve Steam Machine
   decides the login: on, `10-gamescope-autologin.conf` (autologin always);
   off, no `User=` at all (the login screen) plus the relogin helper
   (`steamify-relogin.*`, `patches/steamify-relogin.sh`), which writes
-  `zzt-steamify-relogin.conf` for one session switch. `set_login_mode` does
-  both, plus `steamify-greeter-session` (the login screen's preselected session
-  = "Boot into", set in plasma-login-manager's greeter state at every start);
-  `gaming_status` uses the plasmalogin drop-in as the conversion's
-  marker, since the fragment is missing in multi-user mode. plasma-login-manager
-  lists conf.d once at start (`MainConfigLoader.cpp`), so the `zzt-*` files
-  must exist (empty) then: the `plasmalogin.service` drop-in
-  `zz-steamify-temp-login.conf` creates them after steamos-manager's drop-in
-  removed them. Without it Steam's "Switch to Desktop" logs back in to gamescope.
+  `zzt-steamify-relogin.conf` for one session switch. `set_login_mode` (called
+  from `configure_autologin` and from single user mode on/off) is the only
+  writer of that choice (`login_mode_apply`), plus `steamify-greeter-session`
+  (the login screen's preselected session = "Boot into", set in
+  plasma-login-manager's greeter state at every start). `gaming_status` uses
+  the plasmalogin drop-in as the conversion's marker, since the fragment is
+  missing in multi-user mode. plasma-login-manager lists conf.d once at start
+  (`MainConfigLoader.cpp`), so the `zzt-*` files must exist (empty) then: the
+  one `plasmalogin.service` drop-in `zz-steamify.conf` (`plasmalogin_dropin_write`)
+  creates them after steamos-manager's drop-in removed them (and runs the greeter
+  script in multi-user mode). Without it Steam's "Switch to Desktop" logs back in
+  to gamescope. Units and drop-ins are written and removed through `unit_write` /
+  `unit_remove`, which only mark that systemd must read them again:
+  `systemd_reload` does it once. `steamify-relogin` (path unit + `patches/steamify-relogin.sh`)
+  runs in both login modes: it empties a one-shot login (`zzt-*-temp-login.conf`) that is older than the
+  last `zz-steamos-autologin.conf` write (last pick wins, else Return to Gaming Mode lands on the
+  desktop again after Switch to Desktop), and only with `--relogin` (multi-user) writes the relogin entry.
 - The Steam desktop autostart unit is guarded with
   `ExecCondition=... XDG_CURRENT_DESKTOP = KDE`, so it doesn't start a
   second Steam inside gamescope.

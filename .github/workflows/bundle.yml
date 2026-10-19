@@ -40,7 +40,7 @@ jobs:
       - name: Check
         run: |
           bash -n dist/steamify.sh
-          python3 -m py_compile ui/steamify-ui
+          python3 -c 'import ast, sys; [ast.parse(open(f).read(), f) for f in sys.argv[1:]]' ui/steamify-ui patches/*.py
 
       # shellcheck through an action that brings its own binary: GitHub's runner has it installed,
       # Gitea's act_runner image doesn't. One file per run, as before (the exceptions are the bundle's).

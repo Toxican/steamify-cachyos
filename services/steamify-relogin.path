@@ -1,5 +1,5 @@
 [Unit]
-Description=Steamify CachyOS: log in again after a session switch (multi-user mode)
+Description=Steamify CachyOS: watch what picks the session of the next login
 
 [Path]
 PathChanged=/etc/plasmalogin.conf.d/zz-steamos-autologin.conf
