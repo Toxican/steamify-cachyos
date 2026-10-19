@@ -1,0 +1,10 @@
+[Unit]
+Description=Steamify CachyOS: log in again after a session switch (multi-user mode)
+
+[Path]
+PathChanged=/etc/plasmalogin.conf.d/zz-steamos-autologin.conf
+PathChanged=/etc/plasmalogin.conf.d/zzt-holo-temp-login.conf
+PathChanged=/etc/plasmalogin.conf.d/zzt-steamos-temp-login.conf
+
+[Install]
+WantedBy=multi-user.target

@@ -48,11 +48,15 @@ gamescope and the Plasma desktop. Primary target: the Valve Steam Machine
   `<id>_available` is checked via `component_available` (e.g. `machine`
   only on Fremont). Turn-on order is `COMPONENTS` order, turn-off reverse;
   `gaming` must stay first. Dependencies are the `REQUIRES`, `FOLLOWS` and `EXCLUDES` tables in `lib/menu.sh`, used by `toggle_component` (the menu) and `normalize_wanted` (the app).
-- **NVIDIA** (`lib/nvidia.sh`): gamescope's session is broken on NVIDIA, so the SteamOS conversion (`gaming`, `boot`, `single`,
-  `glyphs`) is hidden there (unless already on) and `nvidia` + its sub-option `bigpicture` ("Gaming on NVIDIA") replace it:
-  Steam on the Plasma desktop, started at login. Never reintroduce a gamescope session for NVIDIA without re-testing on the
-  hardware (notes: steamify-cachyos-dev, `nvidia/`). It can't be tested without the hardware: keep the branch behind
-  `.no-release-yet` until it was.
+- **NVIDIA** (`lib/gamescope-nvidia.sh`, `lib/nvidia.sh`): since 2.12.0 the SteamOS conversion (`gaming` and its options) runs on
+  NVIDIA PCs with a patched gamescope (GBM scan-out: gamescope#2309; Steam's UI kept at the display's size), downloaded as the
+  newest release of theupriser/steamify-gamescope-nvidia, with the pinned package (`GSN_VERSION`, `GSN_SHA256`), the copy the ISO
+  leaves, and a build here (`patches/gamescope-nvidia.PKGBUILD` + the two patches) as the fallback. "Gaming on NVIDIA" (`nvidia`,
+  `bigpicture`, `nvsilent`) isn't offered any more (`nvidia_available`); turning the conversion on turns it off (`nvidia_swap_out`).
+  Builds exist per CPU level (`gsn_cpu_variant`: znver4, v4, v3, generic; `GSN_SHA256` is a map; the installed one must pass `gsn_smoke_test`, else generic). A new pin = the release's tag + each variant's sha256 (from `SHA256SUMS`) in `lib/gamescope-nvidia.sh` and the PKGBUILD's pkgver/pkgrel, copied from the
+  repository (the patches in `patches/` must stay identical to that repository's). Steam must keep running with `-steamos3`
+  (without it games don't launch in gaming mode and the settings pages go): never "fix" the UI size by dropping flags or by
+  `XWAYLAND_COUNT`. Tested on an RTX 5080 only; keep the branch behind `.no-release-yet` until the whole flow ran on hardware.
 - **Feature versions.** Set `FEATURE_VERSION[<id>]` (`lib/menu.sh`) to the new
   `VERSION` whenever what `<id>_enable` sets up changes (a new component gets
   one too): installs recorded with an older version
@@ -166,10 +170,9 @@ gamescope and the Plasma desktop. Primary target: the Valve Steam Machine
     a warning when `VERSION` is a version that's already released (so a
     release branch that forgot its bump shows it on every PR).
   - A release that adds, removes or renames a menu row also retakes the
-    README screenshots (`assets/screenshot-menu-steam-machine.png` and
-    `assets/screenshot-menu-nvidia.png`, side by side in the README): the app from the branch on a Steam Machine and on a PC
-    with an NVIDIA card, every row visible and each window only as tall as its options need, the header showing the new
-    `VERSION`, 1600 px wide. Size the window with a KWin script (match the `steamify-ui` class exactly: a title match also hits
+    README screenshot (`assets/screenshot-menu-steam-machine.png`; NVIDIA PCs get the same menu, so there is no separate
+    one): the app from the branch on a Steam Machine, every row visible and the window only as tall as its options need, the header showing the new
+    `VERSION`, 1600 px wide. Size the window with a KWin script (match the `io.github.theupriser.Steamify` class exactly (`steamify-ui` until the GNOME work): a title match also hits
     Konsole and editor windows) and crop the full-screen capture to the client rectangle; mind the display scale (the Steam
     Machine runs at 1.75).
   - Users install through `releases/latest/download/steamify.sh`
@@ -179,23 +182,31 @@ gamescope and the Plasma desktop. Primary target: the Valve Steam Machine
 
 ## Non-obvious behaviour to preserve
 
-- `apply_changes` sets `$LOGIN_MANAGER` from the menu: `sddm` when single
-  user mode is wanted, else `plasmalogin`. Toggling single user re-applies
-  `gaming` so it moves to the other login manager. Single user mode hides
+- plasma-login-manager is the only login manager (single user mode used
+  to switch to SDDM before 2.12.1; `remove_sddm_autologin` and
+  `remove_session_sync` clean up after those versions). Single user mode hides
   the launcher's Session dropdown via kickoff `primaryActions=3` (restricting
-  `action/logout` also hides Restart/Shut Down). Two login-manager paths:
-  **sddm** (like SteamOS: `steam-set-session` writes
-  `/etc/sddm.conf.d/zz-steamos-autologin.conf`, which SDDM honours; we add
-  `User=`/`Relogin=` in `10-gamescope-autologin.conf`, and `/etc/sddm.conf`
-  must not contain `[Autologin]` since it's read last) and **plasmalogin**
-  (needs the sync bridge and the shortcut's sudoers rule). Both must keep
-  working.
-
-- `steam-set-session` only writes `/etc/plasmalogin.conf.d/zz-steamos-autologin.conf`;
-  the base `/etc/plasmalogin.conf` wins, hence the sync bridge. The sync
-  service needs `StartLimitIntervalSec=0`, or bursts of session switches
-  get it rate-limited and all later switches silently stop working.
-- The sync script must only edit `Session=` inside `[Autologin]`.
+  `action/logout` also hides Restart/Shut Down).
+- The base `/etc/plasmalogin.conf` beats conf.d and CachyOS ships it with
+  `Session=plasma`, so it must contain **no** `[Autologin]`
+  (`remove_base_autologin`); `User=`/`Relogin=` live in our conf.d fragment
+  `10-gamescope-autologin.conf`. Everything that switches sessions
+  (`steam-set-session`: `zz-steamos-autologin.conf`; Steam's "Switch to
+  Desktop" via `steamos-manager`: `zzt-holo-temp-login.conf`) writes a conf.d
+  fragment sorting after ours and must be left to do so: no bridge, and
+  never delete those files while the conversion is on. Single user mode
+  decides the login: on, `10-gamescope-autologin.conf` (autologin always);
+  off, no `User=` at all (the login screen) plus the relogin helper
+  (`steamify-relogin.*`, `patches/steamify-relogin.sh`), which writes
+  `zzt-steamify-relogin.conf` for one session switch. `set_login_mode` does
+  both, plus `steamify-greeter-session` (the login screen's preselected session
+  = "Boot into", set in plasma-login-manager's greeter state at every start);
+  `gaming_status` uses the plasmalogin drop-in as the conversion's
+  marker, since the fragment is missing in multi-user mode. plasma-login-manager
+  lists conf.d once at start (`MainConfigLoader.cpp`), so the `zzt-*` files
+  must exist (empty) then: the `plasmalogin.service` drop-in
+  `zz-steamify-temp-login.conf` creates them after steamos-manager's drop-in
+  removed them. Without it Steam's "Switch to Desktop" logs back in to gamescope.
 - The Steam desktop autostart unit is guarded with
   `ExecCondition=... XDG_CURRENT_DESKTOP = KDE`, so it doesn't start a
   second Steam inside gamescope.
@@ -243,8 +254,7 @@ gamescope and the Plasma desktop. Primary target: the Valve Steam Machine
   unticking gaming unticks it) and is never preselected (`NO_PRESELECT`), so
   the conversion boots into gamescope by default. Desktop is
   `steamify-boot-desktop.service`, ordered `Before=` the login managers:
-  `steam-set-session plasma.desktop` plus the plasmalogin sync bridge when it
-  exists, at every boot. CachyOS's `cachyos-gamescope-autologin` still sets
+  `steam-set-session plasma.desktop` at every boot. CachyOS's `cachyos-gamescope-autologin` still sets
   gamescope during each desktop session; the unit corrects it at boot.
 - `bios` is an *action* (`ACTIONS` in `lib/menu.sh`) and a sub-option of `machine`, not an on/off
   component: never preselected (not even on a first run), never re-applied
@@ -266,7 +276,7 @@ gamescope and the Plasma desktop. Primary target: the Valve Steam Machine
   again. Scripted input that runs out quits without restarting (never
   restart on EOF: `ask_yn` would take its default).
 - Steamify shortcut (`launcher`): "Steamify CachyOS" (desktop and launcher,
-  id `steamify-ui.desktop`, the app's own id) runs `curl | bash` of
+  id `io.github.theupriser.Steamify.desktop`, the app's own id; `steamify-ui.desktop` until the GNOME work) runs `curl | bash` of
   `releases/latest/download/steamify-app.sh` without a terminal (in Konsole
   only while PySide6 is missing, for sudo); "Steamify Terminal" (launcher)
   runs `steamify.sh` in Konsole. Both always the newest release. The entry

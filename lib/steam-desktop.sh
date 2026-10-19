@@ -9,8 +9,8 @@ steam_enable() {
     steam_env_dir="$HOME/.config/environment.d"
     mkdir -p "$steam_env_dir"
 
-    # 2. Prevent KDE Wayland from blocking the virtual keyboard overlay
-    echo "KWIN_IM_SHOW_ALWAYS=1" > "$steam_env_dir/99-kde-virtual-keyboard.conf"
+    # 2. Prevent KDE Wayland from blocking the virtual keyboard overlay (KWin only)
+    [[ "$(desktop_kind)" == kde ]] && echo "KWIN_IM_SHOW_ALWAYS=1" > "$steam_env_dir/99-kde-virtual-keyboard.conf"
 
     ok "Steam UI parameters and keyboard fix deployed successfully."
 }

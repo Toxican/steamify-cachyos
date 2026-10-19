@@ -15,11 +15,11 @@
 set -uo pipefail
 
 # Release version, see CHANGELOG.md.
-VERSION=2.12.0
+VERSION=2.14.0
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
-for lib in common valve-mirror state packages login-manager single-user steam-desktop steam-machine kernel-pin fremont-poweroff vram-booster hdmi-refresh nvidia controllers cec boot-session vapor-theme steamos-extras bios desktop-shortcut wizard-shortcut steam-game update-notifier first-login menu backend; do
+for lib in common valve-mirror state desktop packages login-manager single-user steam-desktop steam-machine kernel-pin fremont-poweroff vram-booster hdmi-refresh nvidia gamescope-nvidia controllers cec boot-session vapor-theme gnome-theme steamos-extras bios desktop-shortcut wizard-shortcut steam-game update-notifier first-login menu backend; do
     # shellcheck source=/dev/null
     source "$SCRIPT_DIR/lib/$lib.sh"
 done
@@ -37,6 +37,8 @@ require_root_helper
 #   --boot gamescope|desktop            only change where an installed conversion
 #       starts, everything else stays as it is (for scripts; no menu)
 #   --first-login                       the installer's one-time follow-up
+#   --desktop kde|gnome|last            which desktop "Switch to Desktop" goes to, when
+#       both are installed (kde, gnome, or the one you used last)
 #   (none)                              the menu
 MODE=menu
 case "${1:-}" in
@@ -44,6 +46,7 @@ case "${1:-}" in
     --defaults) MODE=defaults; [[ "${2:-}" == --list ]] && MODE=list ;;
     --boot) MODE=boot ;;
     --first-login) MODE=first-login ;;
+    --desktop) MODE=desktop-pref ;;
 esac
 BACKEND=false; [[ "$MODE" == backend ]] && BACKEND=true
 
@@ -174,6 +177,15 @@ run_boot_only() {
     ok "Starts in $mode from the next boot on."
 }
 
+run_desktop_pref() {
+    case "${2:-}" in
+        kde|gnome|last) ;;
+        *) err "--desktop takes kde, gnome or last (the one you used last)"; return 1 ;;
+    esac
+    desktop_pref_set "$2" || return 1
+    ok "Switch to Desktop goes to: $2."
+}
+
 case "$MODE" in
     backend)
         # The graphical app (steamify-ui) drives the same components through
@@ -186,6 +198,7 @@ case "$MODE" in
     list) defaults_list; exit 0 ;;
     defaults) run_defaults "$@"; exit $? ;;
     boot) run_boot_only "$@"; exit $? ;;
+    desktop-pref) run_desktop_pref "$@"; exit $? ;;
 esac
 
 # Menu loop: after each run the menu comes back with the new state, until

@@ -5,7 +5,7 @@
 
 # Menu order. Components are turned on in this order and off in reverse;
 # gaming must come first (single user builds on it).
-COMPONENTS=(gaming boot silent glyphs nvidia bigpicture nvsilent theme single launcher steamgame notify extended_controller_support vram cec machine poweroff kpin hdmi bios)
+COMPONENTS=(gaming boot silent glyphs nvidia bigpicture nvsilent theme gnometheme single launcher steamgame notify extended_controller_support vram cec machine poweroff kpin hdmi bios)
 # One-off actions rather than on/off components: never preselected, never
 # re-applied, not listed as on or off.
 ACTIONS=(bios)
@@ -40,7 +40,7 @@ NO_PRESELECT=(boot silent nvsilent cec kpin hdmi extended_controller_support)
 # FEATURE_BASELINE.
 FEATURE_BASELINE=2.1.0
 declare -A FEATURE_VERSION=(
-    [gaming]=2.9.0 [boot]=2.1.0 [silent]=2.11.0 [nvidia]=2.10.0 [bigpicture]=2.10.0 [nvsilent]=2.11.0 [theme]=2.1.0 [glyphs]=2.1.0 [single]=2.1.0
+    [gaming]=2.13.1 [boot]=2.12.1 [silent]=2.11.0 [nvidia]=2.12.0 [bigpicture]=2.10.0 [nvsilent]=2.11.0 [theme]=2.1.0 [gnometheme]=2.14.0 [glyphs]=2.1.0 [single]=2.13.0
     [launcher]=2.1.0 [cec]=2.7.0 [machine]=2.9.0 [poweroff]=2.2.0 [vram]=2.3.0 [notify]=2.5.0 [steamgame]=2.5.1 [extended_controller_support]=2.10.0
     [kpin]=2.1.0 [hdmi]=2.1.0
 )
@@ -53,8 +53,9 @@ declare -A LABEL=(
     [nvsilent]="Start Steam silently: in the tray at login, no window (untick: Steam's normal window)"
     [bigpicture]="Steam starts in Big Picture: the controller-friendly Steam (untick: Steam's normal window)"
     [theme]="Install SteamOS theme: Vapor look (cachyos-vapor)"
+    [gnometheme]="Install SteamOS theme for GNOME: Vapor look (dark, blue accent, Steam Deck wallpaper)"
     [glyphs]="Install Steam Deck/Machine icons: Deck button icons in gaming mode"
-    [single]="Single user mode: no password, lock screen or log out (SDDM)"
+    [single]="Single user mode: no password, lock screen or log out"
     [launcher]="Steamify shortcut: the app on the desktop, Steamify Terminal in the launcher"
     [steamgame]="Add as non-Steam game: Steamify in your Steam library, for the controller and gaming mode"
     [notify]="Update notifications: a notification when there's a new Steamify, never updates by itself"
@@ -71,11 +72,13 @@ declare -A CURRENT WANTED
 
 component_available() {
     case "$1" in
-        # gamescope's own session is broken on NVIDIA: the conversion is replaced by "Gaming on NVIDIA" there (shown
-        # anyway when it's already on, so it can be turned off).
-        gaming|boot|silent|glyphs) ! nvidia_present || gaming_status ;;
-        nvidia) nvidia_available ;;
-        bigpicture|nvsilent) bigpicture_available ;;
+        # The SteamOS conversion is offered on NVIDIA PCs too: it installs the patched gamescope there (lib/gamescope-nvidia.sh)
+        # and turns off "Gaming on NVIDIA" (lib/nvidia.sh), which is not offered any more (nvidia_available).
+        nvidia|bigpicture|nvsilent) nvidia_available ;;
+        # Plasma's Vapor theme and single user mode (KDE Wallet, screen locker, Plasma's menu): when Plasma is installed.
+        # The GNOME theme: when GNOME is. With both installed, each shows.
+        theme|single) desktop_installed kde ;;
+        gnometheme) desktop_installed gnome ;;
         machine|poweroff) machine_available ;;
         vram) vram_available ;;
         # Steamify in the Steam library is for gaming mode's controller: not needed for Big Picture on the desktop (NVIDIA PCs;
@@ -131,7 +134,11 @@ feature_outdated() {
     # On, but set up by an older version of that feature (compared as
     # versions: 2.10.0 is newer than 2.9.0).
     local have want
+    # "Gaming on NVIDIA" is on: the SteamOS conversion replaces it, as an update of what the PC has (lib/nvidia.sh).
+    [[ "$1" == gaming ]] && nvidia_migration_pending && return 0
     is_current "$1" || return 1
+    # NVIDIA: a newer patched gamescope is out (lib/gamescope-nvidia.sh): a normal run installs it.
+    [[ "$1" == gaming ]] && nvidia_present && { gsn_update_pending || gsn_display_pending; } && return 0
     have="$(state_get features "$1" "$FEATURE_BASELINE")"
     [[ "$have" == off ]] && have="$FEATURE_BASELINE"
     want="${FEATURE_VERSION[$1]:-$FEATURE_BASELINE}"
@@ -202,6 +209,17 @@ detect_components() {
         component_available "$c" || continue
         { feature_outdated "$c" || feature_new "$c"; } && WANTED[$c]=1
     done
+    # "Gaming on NVIDIA" was on: its replacement, the SteamOS conversion, comes with the defaults of a first run, and the
+    # PC starts the way it did: Steam in Big Picture at login becomes booting into gaming mode, any other Steam start
+    # (a normal window, or silent in the tray) becomes booting into the desktop, with the silent start kept.
+    if nvidia_migration_pending; then
+        WANTED[glyphs]=1
+        if bigpicture_status; then WANTED[boot]=0
+        else
+            WANTED[boot]=1
+            nvsilent_status && WANTED[silent]=1
+        fi
+    fi
     # The kernel pin is no longer needed (the power-off fix), and HDMI
     # refresh boost needed the pin: whatever is left of either is unticked,
     # so a normal run removes it.
@@ -354,6 +372,7 @@ normalize_wanted() {
 show_menu() {
     local i=0 c now want
     echo
+    gsn_fail_note
     printf "  ${c_bold}%-3s %-6s %-6s %s${c_reset}\n" "#" "Now" "Want" "Component"
     MENU_ITEMS=()
     for c in "${COMPONENTS[@]}"; do
@@ -509,8 +528,7 @@ plan_changes() {
         component_available "$c" || continue
         is_wanted "$c" || continue
         if is_action "$c"; then TO_ENABLE+=("$c"); continue; fi
-        if [[ "${CURRENT[$c]}" == 0 || "$REAPPLY" == true ]] || feature_outdated "$c" ||
-            [[ "$c" == gaming && "${CURRENT[single]}" != "${WANTED[single]}" ]]; then
+        if [[ "${CURRENT[$c]}" == 0 || "$REAPPLY" == true ]] || feature_outdated "$c"; then
             TO_ENABLE+=("$c")
         fi
     done
@@ -518,8 +536,7 @@ plan_changes() {
 
 apply_changes() {
     local c failed=()
-    LOGIN_MANAGER=plasmalogin
-    is_wanted single && LOGIN_MANAGER=sddm
+    choose_login_manager
 
     for c in "${TO_DISABLE[@]}"; do
         if [[ "$c" == boot ]]; then echo; echo -e "${c_bold}Boot into: gamescope${c_reset}"
@@ -527,6 +544,11 @@ apply_changes() {
         if "${c}_disable"; then feature_record "$c" disable; else failed+=("$c"); fi
     done
     for c in "${TO_ENABLE[@]}"; do
+        # A sub-option of something that just failed isn't applied: it would be left on without its parent.
+        if [[ -n "${PARENT[$c]:-}" && " ${failed[*]:-} " == *" ${PARENT[$c]} "* ]]; then
+            warn "Skipping ${LABEL[$c]%%:*}: ${LABEL[${PARENT[$c]}]%%:*} didn't work."
+            continue
+        fi
         if [[ "$c" == boot ]]; then echo; echo -e "${c_bold}Boot into: desktop${c_reset}"
         elif is_action "$c"; then echo; echo -e "${c_bold}Running: ${LABEL[$c]%%:*}${c_reset}"
         else echo; echo -e "${c_bold}Turning on: ${LABEL[$c]}${c_reset}"; fi

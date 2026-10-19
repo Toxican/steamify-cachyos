@@ -1,0 +1,14 @@
+{
+  "uuid": "steamify-vapor@steamify.github.io",
+  "name": "Steamify Vapor",
+  "description": "The SteamOS (Vapor) look for the shell, and log in to the desktop, not the overview.",
+  "shell-version": [
+    "45",
+    "46",
+    "47",
+    "48",
+    "49",
+    "50",
+    "51"
+  ]
+}

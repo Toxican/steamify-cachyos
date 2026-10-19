@@ -172,19 +172,27 @@ backend_apply() {
 
     backend_sudo || return 1
 
-    LOGIN_MANAGER=plasmalogin
-    is_wanted single && LOGIN_MANAGER=sddm
+    choose_login_manager
     local -a failed=()
     for c in "${TO_DISABLE[@]}"; do
         if backend_run_component "$c" disable; then feature_record "$c" disable; else failed+=("$c"); fi
     done
     for c in "${TO_ENABLE[@]}"; do
+        # A sub-option of something that just failed isn't applied: it would be left on without its parent.
+        if [[ -n "${PARENT[$c]:-}" && " ${failed[*]:-} " == *" ${PARENT[$c]} "* ]]; then
+            backend_event log "\"id\":$(json_str "$c"),\"line\":$(json_str "Skipped: ${LABEL[${PARENT[$c]}]%%:*} didn't work.")"
+            failed+=("$c")
+            continue
+        fi
         if backend_run_component "$c" enable; then is_action "$c" || feature_record "$c" enable; else failed+=("$c"); fi
     done
     feature_record_unticked
     os_version_refresh
     [[ " ${TO_DISABLE[*]} ${TO_ENABLE[*]} " =~ \ (gaming|single|boot|kpin)\  ]] && RESTART_FOR_LOGIN=true
-    backend_event finished "\"failed\":$(json_list "${failed[@]}"),\"restart\":$(restart_needed && echo true || echo false)"
+    # (Only when the theme itself worked: a failed one has nothing to log in again for.)
+    local relogin=false
+    [[ " ${failed[*]:-} " != *" gnometheme "* ]] && gnometheme_relogin_needed "${TO_DISABLE[@]}" "${TO_ENABLE[@]}" && relogin=true
+    backend_event finished "\"failed\":$(json_list "${failed[@]}"),\"restart\":$(restart_needed && echo true || echo false),\"relogin\":$relogin"
 }
 
 backend_main() {

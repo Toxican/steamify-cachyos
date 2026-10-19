@@ -59,6 +59,40 @@ krevert() {
     rm -f "$journal"
 }
 
+gs() {
+    # gsettings, also without a session (the installer's chroot): then in a
+    # session bus of its own, which writes the user's dconf database.
+    if user_session; then gsettings "$@"; else dbus-run-session -- gsettings "$@"; fi
+}
+
+gset() {
+    # gset <component> <schema> <key> <value>: gsettings (GNOME), recording the
+    # old value in the component's journal like kset does. <value> is in
+    # GVariant text form ('prefer-dark', true, 5). A key the schema lacks
+    # (newer GNOME only) is skipped, returning 1.
+    local component="$1" schema="$2" key="$3" value="$4"
+    local journal="$STATE_DIR/$component.gjournal" old id
+    gs get "$schema" "$key" >/dev/null 2>&1 || return 1
+    mkdir -p "$STATE_DIR"
+    id="$(printf '%s\t%s' "$schema" "$key")"
+    if ! grep -qxF -- "$id" <(cut -f1-2 "$journal" 2>/dev/null); then
+        old="$(gs get "$schema" "$key")"
+        printf '%s\t%s\n' "$id" "$(printf '%s' "$old" | base64 -w0)" >> "$journal"
+    fi
+    gs set "$schema" "$key" "$value"
+}
+
+grevert() {
+    # grevert <component>: put back every gsettings key the component changed.
+    local journal="$STATE_DIR/$1.gjournal" schema key old
+    [[ -f "$journal" ]] || return 0
+    while IFS=$'\t' read -r schema key old; do
+        old="$(printf '%s' "$old" | base64 -d)"
+        gs set "$schema" "$key" "$old" 2>/dev/null || gs reset "$schema" "$key" 2>/dev/null
+    done < <(tac "$journal")
+    rm -f "$journal"
+}
+
 has_journal() {
     [[ -s "$STATE_DIR/$1.journal" ]]
 }

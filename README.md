@@ -1,14 +1,9 @@
 # Steamify CachyOS
 
-The Steamify app's menu. On a Steam Machine (or any PC with an AMD or Intel
-graphics card) it offers the full SteamOS conversion, on the left. On a PC with
-an NVIDIA graphics card gamescope's gaming mode shows a corrupted picture, so the
-menu offers **Gaming on NVIDIA** instead (Steam on the desktop, started at login,
-optionally in Big Picture), on the right.
+The Steamify app's menu, on a Steam Machine. On a PC with an NVIDIA graphics card (GTX 16 / RTX 20 series or
+newer) the same SteamOS conversion is offered; Steamify installs a patched gamescope for it.
 
-| On a Steam Machine | On a PC with an NVIDIA graphics card |
-|---|---|
-| ![The Steamify app's menu on a Steam Machine](assets/screenshot-menu-steam-machine.png) | ![The Steamify app's menu on a PC with an NVIDIA graphics card](assets/screenshot-menu-nvidia.png) |
+![The Steamify app's menu on a Steam Machine](assets/screenshot-menu-steam-machine.png)
 
 Turn a CachyOS desktop PC into a SteamOS-style console: it boots straight
 into Steam's Big Picture (gamescope), and you can switch to the KDE Plasma
@@ -35,12 +30,8 @@ Steam Machine.
      as OS Version (e.g. `steamos-3.9`), `steam-machine` as OS Codename and
      Steamify's version as OS Variant. The OS name stays CachyOS
      ([details](TECHNICAL.md#what-steams-system-settings-show)).
-   - **NVIDIA graphics cards:** gamescope's gaming mode shows a corrupted
-     picture there (an open NVIDIA driver bug), so the conversion isn't
-     offered. **Gaming on NVIDIA** takes its place: Steam on the desktop,
-     installed if it's missing and started at login, in **Big Picture** or its
-     normal window as you choose
-     ([details](TECHNICAL.md#gaming-on-nvidia)).
+   - **NVIDIA support**: GeForce GTX 16 series and RTX 20, 30, 40 and 50 series
+     (Turing and newer) ([details](TECHNICAL.md#nvidia-graphics-cards)).
 2. **SteamOS theme** - the Vapor look of SteamOS for the desktop, with
    **Add to Steam** in right-click menus
    ([details](TECHNICAL.md#steamos-desktop-look)).
@@ -48,14 +39,14 @@ Steam Machine.
 4. **Single user mode** - like SteamOS: never a login or lock screen, and no
    KDE wallet password prompts (e.g. from Brave). Typing a password with a
    controller is no fun
-   ([details](TECHNICAL.md#single-user-mode-sddm-no-locking)).
+   ([details](TECHNICAL.md#single-user-mode-no-locking)).
 5. **Steamify shortcut** - "Steamify CachyOS" on the desktop and in the
    launcher opens the newest Steamify app, so you don't need the install
    command again. "Steamify Terminal" in the launcher opens the terminal menu.
    With **Add as non-Steam game** (on by default) it's in your Steam library
    too: started from Steam it gets your controller (a Steam Controller only
    talks to Steam), in gaming mode as well. Steam closes for a moment while
-   it's added, so that's done from the desktop. Not offered on PCs with an NVIDIA graphics card, which have no gaming mode.
+   it's added, so that's done from the desktop. Not offered on PCs with an NVIDIA graphics card yet (not tested there).
 6. **Update notifications** - on by default: a notification and a tray icon
    when there's a new Steamify, with Open Steamify and Skip this version. It
    never updates anything by itself
@@ -103,7 +94,7 @@ What Steamify can do on a Valve Steam Machine:
 - CachyOS with the KDE Plasma desktop (the default CachyOS Desktop edition)
 
 > **KDE Plasma only.** Steamify works with KDE Plasma and its login managers
-> (plasma-login-manager or SDDM). Other desktops (GNOME, Hyprland, Cosmic,
+> (plasma-login-manager). Other desktops (GNOME, Hyprland, Cosmic,
 > ...) and other display managers are not supported: the switching between gaming mode
 > and the desktop, the theme and the shortcuts are all built for Plasma.
 - Your normal user account, with permission to use `sudo`
@@ -132,7 +123,7 @@ You'll see a checklist:
          └ Boot into: [gamescope]  desktop
  > [x] Install SteamOS theme: Vapor look (cachyos-vapor)  (now: off)
    [x] Install Steam Deck/Machine icons: Deck button icons in gaming mode  (now: off)
-   [x] Single user mode: no password, lock screen or log out (SDDM)  (now: off)
+   [x] Single user mode: no password, lock screen or log out  (now: off)
    [x] Steamify shortcut: desktop icon to run this again  (now: off)
 
   Up/Down move   Space select   Left/Right choose   Enter run
@@ -187,6 +178,18 @@ Contributing (or an AI agent)? Read [AGENTS.md](AGENTS.md).
 
 MIT - do whatever you want with it. See [LICENSE.md](LICENSE.md).
 
+### Code from other projects
+
+Some files in `patches/` are not MIT. They keep their own license, and each file says where it comes from:
+
+| File | What | License and source |
+|---|---|---|
+| `steamify-fremont-poweroff.c` | Kernel module for the Steam Machine's power-off fix. It does what Valve's Steam Machine kernel does for this (clears the S4 wake bit of GPIO pin 18 at probe), but at power-off, for kernels without Valve's change. Valve's kernel: [evlaV/linux-integration](https://github.com/evlaV/linux-integration). | GPL-2.0, like the Linux kernel it is built into |
+| `cros-ec-cec.c` | Valve's Steam Machine HDMI-CEC driver (ChromeOS EC CEC, Copyright BayLibre; Valve's version of it), at a pinned commit of [evlaV/linux-integration](https://github.com/evlaV/linux-integration). Used when it can't be downloaded. | GPL-2.0+, unmodified (Steamify's `cros-ec-cec-single-port.patch` is applied when it is built) |
+| `gamescope-gbm-scanout.patch` | GBM scan-out for gamescope on NVIDIA: nine commits of [farnoy/gamescope](https://github.com/farnoy/gamescope) on [ValveSoftware/gamescope](https://github.com/ValveSoftware/gamescope). | gamescope's license (BSD-2-Clause) |
+| `gamescope-ui-native.patch` | Keeps Steam's interface at the display's size in gamescope on NVIDIA (a small patch after the one above). | gamescope's license (BSD-2-Clause) |
+| `gamescope-nvidia.PKGBUILD` | The recipe for the patched gamescope package, used only when it can't be downloaded. | MIT, like Steamify |
+
 ## Sources and credits
 
 Steamify is glue around other people's work. It installs, configures or
@@ -199,7 +202,7 @@ downloads the following, and doesn't claim any of it:
 | [Steam](https://store.steampowered.com), [gamescope](https://github.com/ValveSoftware/gamescope) and [MangoHud](https://github.com/flightlessmango/MangoHud) | The client, the compositor the gaming session is built on, and the overlay; installed through CachyOS's packages |
 | [evlaV/linux-integration](https://github.com/evlaV/linux-integration) | An unofficial mirror of Valve's kernel: its `cros_ec_cec` driver (GPL-2.0) for the Steam Machine's HDMI-CEC, downloaded at a pinned commit and checksum, then patched by `patches/cros-ec-cec-single-port.patch` |
 | `leds-valve-dkms-git` (AUR) | The Steam Machine's front LED bar driver |
-| [KDE Plasma](https://kde.org/plasma-desktop/), SDDM, plasma-login-manager | The desktop and the login managers whose settings it edits (`kwriteconfig6`, `lookandfeeltool`) |
+| [KDE Plasma](https://kde.org/plasma-desktop/), plasma-login-manager, [GNOME](https://www.gnome.org) / GDM | The desktop and the login managers whose settings it edits (`kwriteconfig6`, `lookandfeeltool`) |
 | [DKMS](https://github.com/dell/dkms), [fwupd](https://fwupd.org), [yay](https://github.com/Jguer/yay) / [paru](https://github.com/Morganamilo/paru) | Building kernel modules, flashing the BIOS, and installing AUR packages (yay is built from the AUR's `yay-bin` when neither is installed) |
 | [PySide6 / Qt](https://doc.qt.io/qtforpython-6/) | The graphical app |
 

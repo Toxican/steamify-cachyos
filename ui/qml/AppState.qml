@@ -18,6 +18,7 @@ Item {
     property var steps: ({})                 // id -> "wait"|"run"|"ok"|"fail"
     property var failed: []
     property bool restartNeeded: false
+    property bool reloginNeeded: false      // GNOME loads the new theme's extensions at the next login
     // Review & apply only when something would change; "Re-apply what's on"
     // is for when nothing did.
     readonly property bool canApply: computePlan().length > 0
@@ -65,7 +66,8 @@ Item {
         var w = {};
         for (var i = 0; i < items.length; i++) w[items[i].id] = items[i].kind === "action" ? false : items[i].wanted;
         want = w;
-        boot = nowOn("boot") ? "desktop" : "gamescope";
+        // (What the PC has, or what the backend ticked: "Gaming on NVIDIA" moving to the conversion keeps how Steam started.)
+        boot = want.boot ? "desktop" : "gamescope";
         if (sel > rows.length) sel = 0;
     }
     Connections { target: backend; function onStatusChanged() { if (app.screen === "menu" || app.screen === "done") app.syncFromStatus(); } }
@@ -101,7 +103,8 @@ Item {
             if (it.kind !== "toggle") continue;
             if (hidden(it)) { if (it.on) p.push({ id: it.id, action: "off" }); continue; }
             if (it.parent && !want[it.parent]) { if (it.on) p.push({ id: it.id, action: "off" }); continue; }
-            if (want[it.id] && !it.on) p.push({ id: it.id, action: "on", isNew: !!it["new"] });
+            // (An item that is off but flagged "update" replaces what the PC has: the conversion for "Gaming on NVIDIA".)
+            if (want[it.id] && !it.on) p.push({ id: it.id, action: it.update ? "update" : "on", isNew: !!it["new"] });
             else if (!want[it.id] && it.on) p.push({ id: it.id, action: "off" });
             else if (want[it.id] && (reapply || it.update)) p.push({ id: it.id, action: reapply ? "again" : "update" });
         }
@@ -121,7 +124,7 @@ Item {
     }
 
     // --- Password and apply ---
-    function resetRun() { steps = {}; failed = []; restartNeeded = false; runError = ""; doneCount = 0; logModel.clear(); }
+    function resetRun() { steps = {}; failed = []; restartNeeded = false; reloginNeeded = false; runError = ""; doneCount = 0; logModel.clear(); }
     function startApply(password) {
         resetRun();
         var s = {};
@@ -201,7 +204,7 @@ Item {
                 // A successful BIOS check ends with bios-ready instead, keeping
                 // the password for the flash.
                 app.sessionPassword = "";
-                app.failed = ev.failed || []; app.restartNeeded = !!ev.restart;
+                app.failed = ev.failed || []; app.restartNeeded = !!ev.restart; app.reloginNeeded = !!ev.relogin;
                 app.runError = app.errorText(ev.error);
                 app.screen = "done";
             }
@@ -247,6 +250,7 @@ Item {
             else if (a === "release") { holding = false; if (holdProgress < 1) holdProgress = 0; }
         } else if (screen === "done") {
             if (a === "accept" && restartNeeded) backend.restart();
+            else if (a === "accept" && reloginNeeded) backend.restartGnome();
             else if (a === "back" || a === "accept") backToMenu();
         }
     }
