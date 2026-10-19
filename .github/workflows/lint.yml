@@ -51,7 +51,7 @@ jobs:
       - name: Install qmllint and the QML modules the app imports
         run: |
           sudo apt-get update -qq
-          sudo apt-get install -y -qq qt6-declarative-dev-tools qml6-module-qtquick qml6-module-qtquick-controls qml6-module-qtquick-window
+          sudo apt-get install -y -qq qt6-declarative-dev-tools qml6-module-qtqml qml6-module-qtquick qml6-module-qtquick-controls qml6-module-qtquick-window
       # "unqualified" (a screen reading `app` from its parent) is how the screens get their
       # AppState, so it is off; "import" is off because qmllint does not see the folder's qmldir as a
       # module and calls its singletons undeclared. Everything else must be clean (no "Warning:" line).
@@ -60,6 +60,8 @@ jobs:
         run: |
           lint="$(command -v qmllint6 || echo /usr/lib/qt6/bin/qmllint)"
           args=(--unqualified disable)
+          # Ubuntu keeps the QML modules outside qmllint's own folder.
+          for d in /usr/lib/*/qt6/qml /usr/lib/qt6/qml; do [[ -d "$d/QtQuick" ]] && { args+=(-I "$d"); break; }; done
           "$lint" --help 2>&1 | grep -q -- '--import' && args+=(--import disable)
           # Not --max-warnings 0: qmllint 6.12 exits with an error on it even when nothing is reported.
           "$lint" --version
