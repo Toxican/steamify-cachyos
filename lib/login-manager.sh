@@ -110,11 +110,15 @@ os_version_refresh() {
 
 gaming_enable() {
     install_required_packages || return 1
+    # NVIDIA: gamescope's picture is corrupted unless it is the patched one (no-op elsewhere).
+    gsn_enable || return 1
     remove_sddm_autologin
     remove_session_sync
     switch_to_plasmalogin || return 1
     remove_sddm_autologin
     configure_autologin
+    # (NVIDIA with single user mode from before the conversion: its desktop autologin would pin the Plasma session.)
+    single_login_release
     create_desktop_shortcut
     steam_enable
     os_name_enable || return 1
