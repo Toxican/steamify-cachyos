@@ -7,8 +7,9 @@ one per merged pull request.
 
 ## 2.13.1 - 2026-10-19
 
-- **chore: bump VERSION to 2.13.1**
-- **fix: the SteamOS conversion installs and updates NVIDIA's patched gamescope again (`gsn_enable`) and releases single user mode's desktop autologin (`single_login_release`): both calls were dropped from `gaming_enable` in 2.12.1 and 2.13.0, so on NVIDIA PCs turning the conversion on left gamescope's picture corrupted, and a re-apply never updated the patched gamescope. Installs of 2.13.0 re-apply it (feature version 2.13.1). AMD and Intel PCs were not affected**
+- `ca2070a` **chore: bump VERSION to 2.13.1**
+- `762271a` **fix: the SteamOS conversion installs and updates NVIDIA's patched gamescope again (`gsn_enable`) and releases single user mode's desktop autologin (`single_login_release`): both calls were dropped from `gaming_enable` in 2.12.1 and 2.13.0, so on NVIDIA PCs turning the conversion on left gamescope's picture corrupted, and a re-apply never updated the patched gamescope. Installs of 2.13.0 re-apply it (feature version 2.13.1). AMD and Intel PCs were not affected**
+- **docs: the changelog entries of 2.13.1 get their commit hashes**
 
 ## 2.13.0 - 2026-10-19
 
