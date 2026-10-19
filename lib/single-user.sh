@@ -137,7 +137,7 @@ User=$TARGET_USER
 Session=plasma.desktop
 Relogin=true
 EOF
-    remove_sddm_autologin
+    remove_legacy_login_setup
     remove_base_autologin
 }
 

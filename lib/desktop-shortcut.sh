@@ -40,13 +40,9 @@ create_desktop_shortcut() {
     # manager logs in to it by itself (Relogin=true, or the relogin helper in
     # multi-user mode). Versions before 2.13.0 restarted the login manager,
     # with a sudoers rule that is removed now.
+    # (Under GDM it is Steamify's own steamos-session-select, lib/login-manager.sh: it restarts GDM through
+    # the helper and rule session_tools_install adds.)
     local exec_line="steamos-session-select gamescope"
-    if [[ "$LOGIN_MANAGER" == "gdm" ]]; then
-        # Its own steamos-session-select (lib/login-manager.sh) restarts GDM, through the helper and rule gdm_fix_install adds.
-        :
-    else
-        sudo rm -f /etc/sudoers.d/gamescope-session-switch
-    fi
     # GNOME shows no icons on the desktop: the application grid gets the shortcut too.
     local gnome_app_shortcut=false
     [[ "$(desktop_kind)" == gnome ]] && gnome_app_shortcut=true
@@ -106,7 +102,6 @@ remove_desktop_shortcut() {
     for n in "${SHORTCUT_NAMES[@]}"; do rm -f "$dir/$n.desktop"; done
     rm -f "$(shortcut_user_home)/.local/share/applications/$GNOME_SHORTCUT_ID"
     gnome_dash_unpin
-    sudo rm -f /etc/sudoers.d/gamescope-session-switch
 }
 
 # GNOME draws no icons on the desktop: the shortcut is pinned to the dash

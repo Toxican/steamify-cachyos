@@ -183,8 +183,9 @@ gamescope and the Plasma desktop. Primary target: the Valve Steam Machine
 ## Non-obvious behaviour to preserve
 
 - plasma-login-manager is the only login manager (single user mode used
-  to switch to SDDM before 2.12.1; `remove_sddm_autologin` and
-  `remove_session_sync` clean up after those versions). Single user mode hides
+  to switch to SDDM before 2.12.1; `remove_legacy_login_setup` is the one
+  place that cleans up after every older layout: SDDM files, the sync bridge,
+  the shortcut's sudoers rule, the 2.13.x drop-ins). Single user mode hides
   the launcher's Session dropdown via kickoff `primaryActions=3` (restricting
   `action/logout` also hides Restart/Shut Down).
 - The base `/etc/plasmalogin.conf` beats conf.d and CachyOS ships it with
@@ -198,15 +199,20 @@ gamescope and the Plasma desktop. Primary target: the Valve Steam Machine
   decides the login: on, `10-gamescope-autologin.conf` (autologin always);
   off, no `User=` at all (the login screen) plus the relogin helper
   (`steamify-relogin.*`, `patches/steamify-relogin.sh`), which writes
-  `zzt-steamify-relogin.conf` for one session switch. `set_login_mode` does
-  both, plus `steamify-greeter-session` (the login screen's preselected session
-  = "Boot into", set in plasma-login-manager's greeter state at every start);
-  `gaming_status` uses the plasmalogin drop-in as the conversion's
-  marker, since the fragment is missing in multi-user mode. plasma-login-manager
-  lists conf.d once at start (`MainConfigLoader.cpp`), so the `zzt-*` files
-  must exist (empty) then: the `plasmalogin.service` drop-in
-  `zz-steamify-temp-login.conf` creates them after steamos-manager's drop-in
-  removed them. Without it Steam's "Switch to Desktop" logs back in to gamescope.
+  `zzt-steamify-relogin.conf` for one session switch. `set_login_mode` (called
+  from `configure_autologin` and from single user mode on/off) is the only
+  writer of that choice (`login_mode_apply`), plus `steamify-greeter-session`
+  (the login screen's preselected session = "Boot into", set in
+  plasma-login-manager's greeter state at every start). `gaming_status` uses
+  the plasmalogin drop-in as the conversion's marker, since the fragment is
+  missing in multi-user mode. plasma-login-manager lists conf.d once at start
+  (`MainConfigLoader.cpp`), so the `zzt-*` files must exist (empty) then: the
+  one `plasmalogin.service` drop-in `zz-steamify.conf` (`plasmalogin_dropin_write`)
+  creates them after steamos-manager's drop-in removed them (and runs the greeter
+  script in multi-user mode). Without it Steam's "Switch to Desktop" logs back in
+  to gamescope. Units and drop-ins are written and removed through `unit_write` /
+  `unit_remove`, which only mark that systemd must read them again:
+  `systemd_reload` does it once.
 - The Steam desktop autostart unit is guarded with
   `ExecCondition=... XDG_CURRENT_DESKTOP = KDE`, so it doesn't start a
   second Steam inside gamescope.
