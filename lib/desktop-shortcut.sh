@@ -17,29 +17,23 @@ create_desktop_shortcut() {
 
     mkdir -p "$desktop_dir"
 
-    # On SDDM, steamos-session-select logging out is enough: Relogin=true
-    # logs straight back in to the newly selected session, like SteamOS.
-    # plasma-login-manager needs the sync bridge run and a restart, which
-    # the shortcut can't sudo for interactively (Terminal=false), so it gets
-    # a password-less rule scoped to exactly those two commands.
-    local exec_line="steamos-session-select gamescope"
-    if [[ "$LOGIN_MANAGER" == "plasmalogin" ]]; then
-        exec_line="sh -c 'steamos-session-select gamescope && sudo -n /usr/bin/systemctl start sync-steamos-session.service && sudo -n /usr/bin/systemctl restart plasmalogin'"
-        local sudoers_tmp
-        sudoers_tmp="$(mktemp)"
-        cat > "$sudoers_tmp" << EOF
-$TARGET_USER ALL=(root) NOPASSWD: /usr/bin/systemctl start sync-steamos-session.service, /usr/bin/systemctl restart plasmalogin
+    # steamos-session-select writes the session; plasma-login-manager then
+    # needs a restart to log in to it, which the shortcut can't sudo for
+    # interactively (Terminal=false), so it gets a password-less rule scoped
+    # to exactly that command.
+    local exec_line="sh -c 'steamos-session-select gamescope && sudo -n /usr/bin/systemctl restart plasmalogin'"
+    local sudoers_tmp
+    sudoers_tmp="$(mktemp)"
+    cat > "$sudoers_tmp" << EOF
+$TARGET_USER ALL=(root) NOPASSWD: /usr/bin/systemctl restart plasmalogin
 EOF
-        if sudo visudo -cf "$sudoers_tmp" >/dev/null; then
-            sudo install -m 0440 -o root -g root "$sudoers_tmp" /etc/sudoers.d/gamescope-session-switch
-            ok "Installed /etc/sudoers.d/gamescope-session-switch for the shortcut."
-        else
-            warn "Generated sudoers rule failed validation; the shortcut will not be able to restart plasmalogin."
-        fi
-        rm -f "$sudoers_tmp"
+    if sudo visudo -cf "$sudoers_tmp" >/dev/null; then
+        sudo install -m 0440 -o root -g root "$sudoers_tmp" /etc/sudoers.d/gamescope-session-switch
+        ok "Installed /etc/sudoers.d/gamescope-session-switch for the shortcut."
     else
-        sudo rm -f /etc/sudoers.d/gamescope-session-switch
+        warn "Generated sudoers rule failed validation; the shortcut will not be able to restart plasmalogin."
     fi
+    rm -f "$sudoers_tmp"
 
     # SteamOS itself uses Valve's "gaming-return" icon (Steam logo with a
     # return arrow; the Deck-style arrow is only used on Steam Deck

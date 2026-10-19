@@ -10,7 +10,6 @@
 
 BOOT_UNIT_NAME="steamify-boot-desktop.service"
 BOOT_UNIT="/etc/systemd/system/$BOOT_UNIT_NAME"
-SESSION_SYNC="/usr/local/bin/sync-steamos-session.sh"
 
 boot_status() {
     # On = boots into the desktop.
@@ -19,11 +18,7 @@ boot_status() {
 
 boot_enable() {
     info "Setting the PC to boot into the desktop..."
-    # The sync bridge (plasma-login-manager only; not there with SDDM) copies
-    # the session into the base config; run it right away rather than rely
-    # on its path unit, which could still be pending when the login manager
-    # starts.
-    service_file "$BOOT_UNIT_NAME" SESSION_SYNC="$SESSION_SYNC" | sudo tee "$BOOT_UNIT" > /dev/null
+    service_file "$BOOT_UNIT_NAME" | sudo tee "$BOOT_UNIT" > /dev/null
     sudo systemctl daemon-reload
     sudo systemctl enable "$BOOT_UNIT_NAME" || { err "Enabling $BOOT_UNIT_NAME failed."; return 1; }
     ok "Boots into the desktop from the next boot on (Return to Gaming Mode still works)."
@@ -36,7 +31,6 @@ boot_disable() {
     sudo systemctl daemon-reload
     # Next boot into gamescope, as the conversion sets it up.
     sudo /usr/lib/steamos/steam-set-session gamescope-session.desktop
-    [[ -x "$SESSION_SYNC" ]] && sudo "$SESSION_SYNC"
     ok "Boots into gaming mode from the next boot on."
 }
 

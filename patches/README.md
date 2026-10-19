@@ -7,7 +7,6 @@ read and reviewed on their own. `lib/*.sh` reads them with `patch_file
 | File | Used by | What |
 |---|---|---|
 | `steamify-fremont-poweroff.c` | `lib/fremont-poweroff.sh` (Steam Machine support) | Kernel module (DKMS): clears GPIO 18's S4/S5 wake bit before power-off, so the Steam Machine stays off with recent kernels |
-| `sync-steamos-session.sh` | `lib/login-manager.sh` (SteamOS conversion, plasma-login-manager) | The sync bridge: copies Steam's session choice from `zz-steamos-autologin.conf` into `plasmalogin.conf`'s `[Autologin]` |
 | `ensure-kernel-headers.sh` | `lib/steam-machine.sh` (Steam Machine support) | Run at boot: installs missing headers for every installed kernel |
 | `leds-valve-dkms.conf` | `lib/steam-machine.sh` (Steam Machine support) | `/etc/dkms` override: build the LED driver for DKMS's target kernel; appended to someone's own override, which is backed up and restored |
 | `steamify-fremont-poweroff.dkms.conf`, `steamify-cros-ec-cec.dkms.conf` | `lib/fremont-poweroff.sh`, `lib/cec.sh` | The DKMS modules' `dkms.conf` (`fill NAME=... VERSION=...`) |
