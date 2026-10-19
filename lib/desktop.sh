@@ -31,16 +31,15 @@ desktop_session_file() {
 }
 
 choose_login_manager() {
-    # LOGIN_MANAGER for gaming_enable. With KDE and GNOME both installed the active login
-    # manager stays (switching it would be a surprise); otherwise gdm on GNOME, else
+    # Prints the login manager gaming_enable sets up. With KDE and GNOME both installed the active
+    # login manager stays (switching it would be a surprise); otherwise gdm on GNOME, else
     # plasmalogin (single user mode no longer means SDDM since 2.12.1).
     local current
     current="$(current_display_manager)"
     if desktop_installed gnome && desktop_installed kde; then
-        case "$current" in gdm|plasmalogin) LOGIN_MANAGER="$current"; return ;; esac
+        case "$current" in gdm|plasmalogin) echo "$current"; return ;; esac
     fi
-    if [[ "$(desktop_kind)" == gnome ]]; then LOGIN_MANAGER=gdm
-    else LOGIN_MANAGER=plasmalogin; fi
+    if [[ "$(desktop_kind)" == gnome ]]; then echo gdm; else echo plasmalogin; fi
 }
 
 # Which desktop "Switch to Desktop" (and booting into the desktop) goes to when both are

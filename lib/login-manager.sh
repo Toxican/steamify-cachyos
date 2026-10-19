@@ -119,10 +119,12 @@ os_version_refresh() {
 }
 
 gaming_enable() {
+    local login_manager
+    login_manager="$(choose_login_manager)"
     install_required_packages || return 1
     # NVIDIA: gamescope's picture is corrupted unless it is the patched one (no-op elsewhere).
     gsn_enable || return 1
-    case "$LOGIN_MANAGER" in
+    case "$login_manager" in
         plasmalogin)
             switch_to_plasmalogin || return 1
             remove_legacy_login_setup
@@ -137,7 +139,7 @@ gaming_enable() {
             ;;
     esac
     # CachyOS's own session tools only go to Plasma and only know plasma-login-manager: with GNOME installed ours replace them.
-    if [[ "$LOGIN_MANAGER" == gdm ]] || desktop_installed gnome; then session_tools_install || return 1; fi
+    if [[ "$login_manager" == gdm ]] || desktop_installed gnome; then session_tools_install "$login_manager" || return 1; fi
     # (NVIDIA with single user mode from before the conversion: its desktop autologin would pin the Plasma session.)
     single_login_release
     systemd_reload
@@ -395,7 +397,7 @@ session_tools_install() {
         patch_file steamify-gdm-session-select.sh |
             sudo install -Dm755 /dev/stdin "$GDM_FIX_DIR/steamos-session-select" || { err "Installing the GDM session tools failed."; return 1; }
     patch_file steamify-gdm.hook | fill DIR="$GDM_FIX_DIR" | sudo install -Dm644 /dev/stdin "$GDM_HOOK"
-    if [[ "$(current_display_manager)" == gdm || "$LOGIN_MANAGER" == gdm ]]; then
+    if [[ "$(current_display_manager)" == gdm || "${1:-}" == gdm ]]; then
         # steamos-session-select logs in again through this helper (no password: it runs from the gaming session and from a shortcut).
         patch_file steamify-gdm-relogin.sh | sudo install -Dm755 /dev/stdin "$GDM_RELOGIN"
         echo "$TARGET_USER ALL=(root) NOPASSWD: $GDM_RELOGIN" | sudo install -Dm440 /dev/stdin "$GDM_SUDOERS"

@@ -172,7 +172,6 @@ backend_apply() {
 
     backend_sudo || return 1
 
-    choose_login_manager
     local -a failed=()
     for c in "${TO_DISABLE[@]}"; do
         if backend_run_component "$c" disable; then feature_record "$c" disable; else failed+=("$c"); fi
@@ -187,7 +186,7 @@ backend_apply() {
         if backend_run_component "$c" enable; then is_action "$c" || feature_record "$c" enable; else failed+=("$c"); fi
     done
     feature_record_unticked
-    os_version_refresh
+    refresh_after_apply
     [[ " ${TO_DISABLE[*]} ${TO_ENABLE[*]} " =~ \ (gaming|single|boot|kpin)\  ]] && RESTART_FOR_LOGIN=true
     # (Only when the theme itself worked: a failed one has nothing to log in again for.)
     local relogin=false

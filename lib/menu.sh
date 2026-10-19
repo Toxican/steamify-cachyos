@@ -534,9 +534,16 @@ plan_changes() {
     done
 }
 
+refresh_after_apply() {
+    # After a run (the menu's and the app's): what depends on what was just changed. Steam's System settings
+    # show Steamify's version; the desktop shortcut's name follows "Boot into".
+    os_version_refresh
+    [[ " ${TO_DISABLE[*]} ${TO_ENABLE[*]} " == *" boot "* ]] && refresh_desktop_shortcut
+    return 0
+}
+
 apply_changes() {
     local c failed=()
-    choose_login_manager
 
     for c in "${TO_DISABLE[@]}"; do
         if [[ "$c" == boot ]]; then echo; echo -e "${c_bold}Boot into: gamescope${c_reset}"
@@ -555,6 +562,6 @@ apply_changes() {
         if "${c}_enable"; then is_action "$c" || feature_record "$c" enable; else failed+=("$c"); fi
     done
     feature_record_unticked
-    os_version_refresh
+    refresh_after_apply
     FAILED=("${failed[@]}")
 }
