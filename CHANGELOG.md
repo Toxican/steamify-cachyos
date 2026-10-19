@@ -5,6 +5,15 @@ All notable changes, per version and per commit. Versions follow
 `steamify.sh`. Versions before 0.7.0 were numbered afterwards,
 one per merged pull request.
 
+## 2.13.0 - 2026-10-19
+
+- `e04a3a5` **feat: multi-user mode: with the SteamOS conversion, turning single user mode off now means the PC starts at the login screen (it logged in by itself before); switching between gaming mode and the desktop while logged in (Steam's Switch to Desktop, Return to Gaming Mode) still doesn't show it. A path unit and a helper (`steamify-relogin`) write the relogin entry plasma-login-manager needs for one switch. Single user mode on keeps autologin at every start**
+- `e04a3a5` **change: the Return to Gaming Mode shortcut no longer restarts the login manager (it logs in again by itself), so its sudoers rule is removed**
+- `9aecd2a` **feat: the login screen preselects the session "Boot into" says (gamescope, or the desktop) instead of the one used last (a drop-in for `plasmalogin.service` sets plasma-login-manager's greeter state before every start)**
+- `9aecd2a` **change: the desktop shortcut is called "Switch to Gaming Mode" when the PC boots into the desktop (there is nothing to return to) and "Return to Gaming Mode" when it boots into gaming mode; changing "Boot into" renames it**
+- `4183857` **change: the update from a setup with SDDM (single user mode before 2.12.1) leaves nothing of it behind: its autologin files, steam-set-session's file for SDDM, the empty folder, the old sync bridge and the shortcut's sudoers rule are removed**
+- **docs: the changelog entries of 2.13.0 get their commit hashes**
+
 ## 2.12.1 - 2026-10-19
 
 - `b4fbf12` **fix: "Switch to Desktop" in Steam looped back to gamescope with single user mode (SDDM): Steam's newer client switches through `steamos-manager`, which only writes plasma-login-manager's `/etc/plasmalogin.conf.d/zzt-holo-temp-login.conf`. The conversion, single user mode included, now uses plasma-login-manager only; an existing SDDM setup is moved over by the update. plasma-login-manager lists the conf.d files once, at start, and steamos-manager removes that file at every start, so a drop-in for `plasmalogin.service` creates it (empty) after that: Steam's switch then lands in the file the login manager reads**

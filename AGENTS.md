@@ -184,7 +184,15 @@ gamescope and the Plasma desktop. Primary target: the Valve Steam Machine
   (`steam-set-session`: `zz-steamos-autologin.conf`; Steam's "Switch to
   Desktop" via `steamos-manager`: `zzt-holo-temp-login.conf`) writes a conf.d
   fragment sorting after ours and must be left to do so: no bridge, and
-  never delete those files while the conversion is on. plasma-login-manager
+  never delete those files while the conversion is on. Single user mode
+  decides the login: on, `10-gamescope-autologin.conf` (autologin always);
+  off, no `User=` at all (the login screen) plus the relogin helper
+  (`steamify-relogin.*`, `patches/steamify-relogin.sh`), which writes
+  `zzt-steamify-relogin.conf` for one session switch. `set_login_mode` does
+  both, plus `steamify-greeter-session` (the login screen's preselected session
+  = "Boot into", set in plasma-login-manager's greeter state at every start);
+  `gaming_status` uses the plasmalogin drop-in as the conversion's
+  marker, since the fragment is missing in multi-user mode. plasma-login-manager
   lists conf.d once at start (`MainConfigLoader.cpp`), so the `zzt-*` files
   must exist (empty) then: the `plasmalogin.service` drop-in
   `zz-steamify-temp-login.conf` creates them after steamos-manager's drop-in
