@@ -38,6 +38,7 @@ one per merged pull request.
 - `66036ef` **test: the menu rules, the plan and the app's and installer's JSON are checked against a golden file (`tests/menu-test.sh` in steamify-cachyos-dev); `make check`, `.editorconfig`, `.shellcheckrc`**
 - `fac4670` **docs: README lists the sources and projects Steamify builds on, with licences and thanks**
 - **chore: merge release/2.14.0 into the optimization branch (`feature/code-cleanup`): the refactors above on top of 2.12.1 to 2.14.0. The rule tables replace the inline rules of the app (checked equal on 9000 random selections over six hardware profiles; the one difference is the documented one: a ticked "Add as non-Steam game" also ticks the Steamify shortcut), the shortcut's start scripts are the files in `patches/` with 2.14's terminal choice and `zenity` fallback, `--desktop` is a mode of the entry point, and the desktop shortcut is one module for KDE and GNOME**
+- **ci: the Lint workflow ran on a runner for the first time: `qmllint` there has no `--max-warnings` (and 6.12 exits with an error on it even when nothing is reported), so the step checks the output for warnings and uses `--import disable` only where the option exists (it silences three false "not declared as singleton" warnings for `ui/qml/qmldir`); `make lint-qml` does the same. `ruff` found an unused `QIcon` import in `patches/steamify-notifier.py`: removed**
 
 ## 2.13.1 - 2026-10-19
 
