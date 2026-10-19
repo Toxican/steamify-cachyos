@@ -1,9 +1,9 @@
 [Unit]
-Description=Steamify CachyOS: allow the login manager to log in again for a session switch
+Description=Steamify CachyOS: a session was picked for the next login (the last pick wins; multi-user mode: log in again)
 # Switches can come in bursts; never let the start rate limit stop the helper.
 StartLimitIntervalSec=0
 
 [Service]
 Type=oneshot
 TimeoutStartSec=60
-ExecStart=/usr/local/libexec/steamify-relogin
+ExecStart=/usr/local/libexec/steamify-relogin @ARGS@

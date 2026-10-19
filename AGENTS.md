@@ -212,7 +212,10 @@ gamescope and the Plasma desktop. Primary target: the Valve Steam Machine
   script in multi-user mode). Without it Steam's "Switch to Desktop" logs back in
   to gamescope. Units and drop-ins are written and removed through `unit_write` /
   `unit_remove`, which only mark that systemd must read them again:
-  `systemd_reload` does it once.
+  `systemd_reload` does it once. `steamify-relogin` (path unit + `patches/steamify-relogin.sh`)
+  runs in both login modes: it empties a one-shot login (`zzt-*-temp-login.conf`) that is older than the
+  last `zz-steamos-autologin.conf` write (last pick wins, else Return to Gaming Mode lands on the
+  desktop again after Switch to Desktop), and only with `--relogin` (multi-user) writes the relogin entry.
 - The Steam desktop autostart unit is guarded with
   `ExecCondition=... XDG_CURRENT_DESKTOP = KDE`, so it doesn't start a
   second Steam inside gamescope.

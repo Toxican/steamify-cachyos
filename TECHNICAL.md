@@ -48,6 +48,13 @@ see below), so a reboot always ends at the login screen, and a Log Out
 Security: "On system wake and power up", "When switching to desktop mode")
 is a PIN screen inside Steam and independent of all of this.
 
+In both modes `steamify-relogin.path` also makes the last pick win: a one-shot login
+(`zzt-*-temp-login.conf`, Steam's Switch to Desktop) sorts after `zz-steamos-autologin.conf` and
+nothing removes it since the login manager's restart stopped being part of a switch, so after Switch
+to Desktop, Return to Gaming Mode (which writes gamescope into `zz-steamos-autologin.conf`) would be
+sent back to the desktop. The helper empties a one-shot that is older than that pick (file times);
+a one-shot written after it (a new Switch to Desktop) stays.
+
 The login screen preselects the session "Boot into" says (gamescope, or the
 desktop), not the one used last: plasma-login-manager keeps the last session per
 user in `/var/lib/plasmalogin/.local/state/plasma-login-greeterstaterc`
