@@ -307,13 +307,15 @@ set_login_mode() {
 
 login_mode_apply() {
     # login_mode_apply single|multi
-    #   single - autologin at every start (our fragment), no relogin helper;
-    #   multi  - the login screen at start: only a session switch logs in again (the relogin helper), and
+    #   single - autologin at every start (our fragment);
+    #   multi  - the login screen at start: only a session switch logs in again (the helper's --relogin), and
     #            the login screen preselects what "Boot into" says (the greeter session script).
+    # The session helper is there in both: the last pick of a session wins over a stale one-shot login.
     case "$1" in
         single)
-            relogin_helper_remove
             unit_remove "$GREETER_SCRIPT"
+            sudo rm -f "$RELOGIN_CONF"
+            relogin_helper_install "" || return 1
             plasmalogin_dropin_write single || return 1
             sudo tee "$AUTOLOGIN_CONF" > /dev/null << EOF || return 1
 [Autologin]
@@ -321,11 +323,13 @@ User=$TARGET_USER
 Session=gamescope-session.desktop
 Relogin=true
 EOF
+            systemd_reload
+            sudo systemctl enable --now "$RELOGIN_UNIT.path" || return 1
             ok "Single user: autologin for $TARGET_USER."
             ;;
         multi)
             sudo rm -f "$AUTOLOGIN_CONF"
-            relogin_helper_install || return 1
+            relogin_helper_install --relogin || return 1
             patch_file steamify-greeter-session.sh | fill USER="$TARGET_USER" | sudo install -Dm755 /dev/stdin "$GREETER_SCRIPT" || return 1
             plasmalogin_dropin_write multi || return 1
             systemd_reload
@@ -338,9 +342,10 @@ EOF
 }
 
 relogin_helper_install() {
+    # relogin_helper_install <args of the script>: --relogin in multi-user mode, nothing in single user mode.
     patch_file steamify-relogin.sh | sudo install -Dm755 /dev/stdin "$RELOGIN_SCRIPT" || return 1
     service_file "$RELOGIN_UNIT.path" | unit_write "/etc/systemd/system/$RELOGIN_UNIT.path" || return 1
-    service_file "$RELOGIN_UNIT.service" | unit_write "/etc/systemd/system/$RELOGIN_UNIT.service"
+    service_file "$RELOGIN_UNIT.service" ARGS="${1:-}" | unit_write "/etc/systemd/system/$RELOGIN_UNIT.service"
 }
 
 relogin_helper_remove() {
