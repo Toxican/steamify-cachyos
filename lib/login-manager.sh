@@ -254,12 +254,14 @@ single_wanted() { [[ "${WANTED[single]:-0}" == 1 ]]; }
 
 set_login_mode() {
     # single: autologin at every start (our fragment). multi: the login screen
-    # at start; only a session switch logs in again (the relogin helper).
+    # at start; only a session switch logs in again (the relogin helper, with --relogin).
+    # The helper is there in both: the last pick of a session wins over a stale one-shot login.
     # Nothing to do without the SteamOS conversion.
     [[ -f "$TEMP_LOGIN_DROPIN" ]] || return 0
     if [[ "$1" == single ]]; then
-        remove_relogin_helper
         remove_greeter_session
+        sudo rm -f "$RELOGIN_CONF"
+        install_relogin_helper
         sudo tee "$AUTOLOGIN_CONF" > /dev/null << EOF
 [Autologin]
 User=$TARGET_USER
@@ -269,16 +271,17 @@ EOF
         ok "Single user: autologin for $TARGET_USER."
     else
         sudo rm -f "$AUTOLOGIN_CONF"
-        install_relogin_helper
+        install_relogin_helper --relogin
         install_greeter_session
         ok "Multi-user: the PC starts at the login screen; switching between gaming mode and the desktop logs in again by itself."
     fi
 }
 
 install_relogin_helper() {
+    # install_relogin_helper [--relogin]: the argument of the script is --relogin in multi-user mode only.
     patch_file steamify-relogin.sh | sudo install -Dm755 /dev/stdin "$RELOGIN_SCRIPT"
     service_file "$RELOGIN_UNIT.path" | sudo tee "/etc/systemd/system/$RELOGIN_UNIT.path" > /dev/null
-    service_file "$RELOGIN_UNIT.service" | sudo tee "/etc/systemd/system/$RELOGIN_UNIT.service" > /dev/null
+    service_file "$RELOGIN_UNIT.service" ARGS="${1:-}" | sudo tee "/etc/systemd/system/$RELOGIN_UNIT.service" > /dev/null
     sudo systemctl daemon-reload
     sudo systemctl enable --now "$RELOGIN_UNIT.path"
 }

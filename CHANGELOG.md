@@ -7,7 +7,9 @@ one per merged pull request.
 
 ## 2.13.2 - 2026-10-19
 
-- **chore: bump VERSION to 2.13.2**
+- `ca98c2c` **chore: bump VERSION to 2.13.2**
+- `dd8b242` **fix: "Return to Gaming Mode" after Steam's "Switch to Desktop" landed on the desktop again: the one-shot login steamos-manager writes (`zzt-*-temp-login.conf`) sorts after the session steam-set-session picks and nothing removed it since 2.13.0 (the login manager's restart did before). The session helper (`steamify-relogin`, now installed in single user mode too, with `--relogin` only in multi-user mode) empties a one-shot that is older than the last pick: the last pick wins. Installs of 2.13.x get it with the update (feature version 2.13.2) (found on a Steam Machine)**
+- **docs: the changelog entries of 2.13.2 get their commit hashes**
 
 ## 2.13.1 - 2026-10-19
 
