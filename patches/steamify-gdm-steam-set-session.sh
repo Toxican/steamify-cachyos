@@ -1,6 +1,6 @@
 #!/bin/bash
 # steam-set-session with GDM support (Steamify prototype). CachyOS's own only
-# knows plasma-login-manager and SDDM and quietly does nothing on GDM. GDM
+# knows plasma-login-manager and quietly does nothing on GDM. GDM
 # has no autologin fragment: it takes the user's session from
 # AccountsService, so that is where the session goes.
 set -e
@@ -38,7 +38,6 @@ remember_desktop() {
 
 case "$DM_ID" in
     plasmalogin) CONF_FILE="/etc/plasmalogin.conf.d/zz-steamos-autologin.conf" ;;
-    sddm) CONF_FILE="/etc/sddm.conf.d/zz-steamos-autologin.conf" ;;
     gdm)
         if [[ -n "${PKEXEC_UID:-}" ]]; then TARGET_USER="$(id -un "$PKEXEC_UID")"
         else TARGET_USER="${SUDO_USER:-}"; fi

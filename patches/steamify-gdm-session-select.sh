@@ -13,7 +13,7 @@ relogin() {
     case "$DM_ID" in
         gdm) sudo -n /usr/local/libexec/steamify-gdm-relogin ;;
         *)
-            # sddm and plasma-login-manager log in again by themselves (Relogin=true): just end the session.
+            # plasma-login-manager logs in again by itself (Relogin=true, or the relogin helper in multi-user mode): just end the session.
             if [[ "${XDG_CURRENT_DESKTOP:-}" == *GNOME* ]]; then gnome-session-quit --no-prompt --logout
             else qdbus6 org.kde.Shutdown /Shutdown org.kde.Shutdown.logout; fi ;;
     esac

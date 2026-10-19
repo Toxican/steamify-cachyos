@@ -39,7 +39,7 @@ Steam Machine.
 4. **Single user mode** - like SteamOS: never a login or lock screen, and no
    KDE wallet password prompts (e.g. from Brave). Typing a password with a
    controller is no fun
-   ([details](TECHNICAL.md#single-user-mode-sddm-no-locking)).
+   ([details](TECHNICAL.md#single-user-mode-no-locking)).
 5. **Steamify shortcut** - "Steamify CachyOS" on the desktop and in the
    launcher opens the newest Steamify app, so you don't need the install
    command again. "Steamify Terminal" in the launcher opens the terminal menu.
@@ -94,7 +94,7 @@ What Steamify can do on a Valve Steam Machine:
 - CachyOS with the KDE Plasma desktop (the default CachyOS Desktop edition)
 
 > **KDE Plasma only.** Steamify works with KDE Plasma and its login managers
-> (plasma-login-manager or SDDM). Other desktops (GNOME, Hyprland, Cosmic,
+> (plasma-login-manager). Other desktops (GNOME, Hyprland, Cosmic,
 > ...) and other display managers are not supported: the switching between gaming mode
 > and the desktop, the theme and the shortcuts are all built for Plasma.
 - Your normal user account, with permission to use `sudo`
@@ -123,7 +123,7 @@ You'll see a checklist:
          └ Boot into: [gamescope]  desktop
  > [x] Install SteamOS theme: Vapor look (cachyos-vapor)  (now: off)
    [x] Install Steam Deck/Machine icons: Deck button icons in gaming mode  (now: off)
-   [x] Single user mode: no password, lock screen or log out (SDDM)  (now: off)
+   [x] Single user mode: no password, lock screen or log out  (now: off)
    [x] Steamify shortcut: desktop icon to run this again  (now: off)
 
   Up/Down move   Space select   Left/Right choose   Enter run

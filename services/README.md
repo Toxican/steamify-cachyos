@@ -9,8 +9,8 @@ in the shell code.
 
 | File | Used by | What |
 |---|---|---|
+| `steamify-relogin.path`, `.service` | `lib/login-manager.sh` (SteamOS conversion, single user mode off) | Logs in again by itself after a session switch (`patches/steamify-relogin.sh`) |
 | `steamify-boot-desktop.service` | `lib/boot-session.sh` (Boot into: desktop) | Sets the Plasma session before the login manager starts |
-| `sync-steamos-session.path`, `.service` | `lib/login-manager.sh` (SteamOS conversion, plasma-login-manager) | The sync bridge: copies Steam's session choice into `plasmalogin.conf` |
 | `steamify-steam-autostart.service` | `lib/nvidia.sh` (Gaming on NVIDIA) | Steam at login on the Plasma desktop, normal or in Big Picture (user unit) |
 | `ensure-kernel-headers.service` | `lib/steam-machine.sh` (Steam Machine support) | Installs missing kernel headers at boot, so DKMS builds for every kernel |
 | `steamify-update-check.service`, `.timer` | `lib/update-notifier.sh` (Update notifications) | The daily and login check for a new release (user units) |

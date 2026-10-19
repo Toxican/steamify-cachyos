@@ -1,7 +1,7 @@
 #!/bin/bash
 # Single user, no password, like SteamOS: no lock screen, user switching or
 # log out, since typing a password with a controller is miserable. Goes
-# together with SDDM (see lib/login-manager.sh). All changes are journaled
+# together with plasma-login-manager (see lib/login-manager.sh). All changes are journaled
 # per user (lib/state.sh), so turning it off restores KDE's previous state.
 # Sourced by steamify.sh; not meant to be run on its own.
 
@@ -120,16 +120,16 @@ single_launcher_drop() {
 }
 
 # Without the SteamOS conversion (NVIDIA PCs: gamescope's session is broken there) nothing logs in by itself, so single user
-# mode does it: SDDM, autologin into the Plasma session. Named to sort after steam-set-session's zz-steamos-autologin.conf,
-# which may still say gamescope from an earlier conversion.
-SINGLE_AUTOLOGIN=${SINGLE_AUTOLOGIN:-/etc/sddm.conf.d/zzz-steamify-autologin.conf}
+# mode does it: plasma-login-manager, autologin into the Plasma session. Named to sort after steam-set-session's
+# zz-steamos-autologin.conf, which may still say gamescope from an earlier conversion.
+SINGLE_AUTOLOGIN=${SINGLE_AUTOLOGIN:-/etc/plasmalogin.conf.d/zzz-steamify-autologin.conf}
 
 single_login_needed() { nvidia_present && ! gaming_status; }
 
 single_login_enable() {
     single_login_needed || return 0
-    switch_to_sddm || return 1
-    info "Logging in to the desktop by itself (SDDM autologin for $TARGET_USER)..."
+    switch_to_plasmalogin || return 1
+    info "Logging in to the desktop by itself (autologin for $TARGET_USER)..."
     sudo mkdir -p "$(dirname "$SINGLE_AUTOLOGIN")"
     sudo tee "$SINGLE_AUTOLOGIN" > /dev/null << EOF
 [Autologin]
@@ -137,7 +137,8 @@ User=$TARGET_USER
 Session=plasma.desktop
 Relogin=true
 EOF
-    remove_sddm_base_autologin
+    remove_sddm_autologin
+    remove_base_autologin
 }
 
 single_login_release() {
@@ -152,12 +153,11 @@ single_login_release() {
 single_login_disable() {
     [[ -f "$SINGLE_AUTOLOGIN" ]] || return 0
     sudo rm -f "$SINGLE_AUTOLOGIN"
-    # The way back is CachyOS's own login manager, unless the conversion is on (it keeps SDDM).
-    gaming_status || switch_to_plasmalogin
 }
 
 single_enable() {
     single_login_enable || return 1
+    set_login_mode single
     info "Turning off the lock screen, user switching and logging out..."
     stop_plasmashell_for_edit
 
@@ -184,6 +184,7 @@ single_enable() {
 
 single_disable() {
     single_login_disable
+    set_login_mode multi
     info "Restoring the lock screen, user switching and logging out..."
     stop_plasmashell_for_edit
     if has_journal single; then

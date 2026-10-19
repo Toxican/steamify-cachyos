@@ -120,7 +120,7 @@ gnometheme_desktop_icons_reset() {
     # position Desktop Icons NG puts them where its start corner says, by name. Only these, never the user's files.
     local dir f
     dir="$(xdg-user-dir DESKTOP 2>/dev/null || echo "$HOME/Desktop")"
-    for f in "$dir/Return to Gaming Mode.desktop" "$dir/io.github.theupriser.Steamify.desktop" "$dir/steam.desktop"; do
+    for f in "$dir/Return to Gaming Mode.desktop" "$dir/Switch to Gaming Mode.desktop" "$dir/io.github.theupriser.Steamify.desktop" "$dir/steam.desktop"; do
         [[ -e "$f" ]] && gio set -t unset "$f" metadata::nautilus-icon-position 2>/dev/null
     done
     return 0
