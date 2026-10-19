@@ -246,7 +246,8 @@ plasmalogin_dropin_write() {
         echo "[Service]"
         echo "ExecStartPre=-/usr/bin/touch $CONF_DIR/zzt-holo-temp-login.conf $CONF_DIR/zzt-steamos-temp-login.conf"
         echo "ExecStartPre=-/bin/sh -c ': > $RELOGIN_CONF'"
-        [[ "$1" == multi ]] && echo "ExecStartPre=-$GREETER_SCRIPT"
+        # (An if, not "&&": the group's status is the pipeline's under pipefail.)
+        if [[ "$1" == multi ]]; then echo "ExecStartPre=-$GREETER_SCRIPT"; fi
     } | unit_write "$PLM_DROPIN"
 }
 
