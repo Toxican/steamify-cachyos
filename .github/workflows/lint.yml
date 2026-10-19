@@ -62,6 +62,11 @@ jobs:
           args=(--unqualified disable)
           "$lint" --help 2>&1 | grep -q -- '--import' && args+=(--import disable)
           # Not --max-warnings 0: qmllint 6.12 exits with an error on it even when nothing is reported.
-          out="$("$lint" "${args[@]}" ui/qml/*.qml 2>&1)"; rc=$?
-          printf '%s\n' "$out"
-          [[ $rc -eq 0 ]] && ! grep -q '^Warning:' <<< "$out"
+          "$lint" --version
+          status=0
+          for f in ui/qml/*.qml; do
+              out="$("$lint" "${args[@]}" "$f" 2>&1)" && rc=0 || rc=$?
+              [[ -z "$out" ]] || printf '%s\n' "$out"
+              if [[ $rc -ne 0 ]] || grep -q '^Warning:' <<< "$out"; then echo "FAILED: $f (exit $rc)"; status=1; fi
+          done
+          exit $status
