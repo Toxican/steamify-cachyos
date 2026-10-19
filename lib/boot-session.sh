@@ -26,7 +26,6 @@ boot_enable() {
     service_file "$BOOT_UNIT_NAME" DESKTOP_SESSION="$(boot_desktop_arg)" | sudo tee "$BOOT_UNIT" > /dev/null
     sudo systemctl daemon-reload
     sudo systemctl enable "$BOOT_UNIT_NAME" || { err "Enabling $BOOT_UNIT_NAME failed."; return 1; }
-    refresh_desktop_shortcut
     ok "Boots into the desktop from the next boot on (the shortcut \"Switch to Gaming Mode\" goes to gaming mode)."
 }
 
@@ -37,7 +36,6 @@ boot_disable() {
     sudo systemctl daemon-reload
     # Next boot into gamescope, as the conversion sets it up.
     sudo /usr/lib/steamos/steam-set-session gamescope-session.desktop
-    refresh_desktop_shortcut
     ok "Boots into gaming mode from the next boot on."
 }
 
