@@ -7,8 +7,9 @@ one per merged pull request.
 
 ## 2.12.1 - 2026-10-19
 
-- **fix: "Switch to Desktop" in Steam looped back to gamescope with single user mode (SDDM): Steam's newer client switches through `steamos-manager`, which only writes plasma-login-manager's `/etc/plasmalogin.conf.d/zzt-holo-temp-login.conf`. The conversion, single user mode included, now uses plasma-login-manager only; an existing SDDM setup is moved over by the update. plasma-login-manager lists the conf.d files once, at start, and steamos-manager removes that file at every start, so a drop-in for `plasmalogin.service` creates it (empty) after that: Steam's switch then lands in the file the login manager reads**
-- **refactor: no session sync bridge any more: the base `/etc/plasmalogin.conf` has no `[Autologin]` (backed up), `User=`/`Relogin=` are in `/etc/plasmalogin.conf.d/10-gamescope-autologin.conf`, and the conf.d fragments that `steam-set-session` and `steamos-manager` write win on their own. The Return to Gaming Mode shortcut's sudoers rule only allows restarting the login manager; the boot-into-desktop unit only runs `steam-set-session`**
+- `b4fbf12` **fix: "Switch to Desktop" in Steam looped back to gamescope with single user mode (SDDM): Steam's newer client switches through `steamos-manager`, which only writes plasma-login-manager's `/etc/plasmalogin.conf.d/zzt-holo-temp-login.conf`. The conversion, single user mode included, now uses plasma-login-manager only; an existing SDDM setup is moved over by the update. plasma-login-manager lists the conf.d files once, at start, and steamos-manager removes that file at every start, so a drop-in for `plasmalogin.service` creates it (empty) after that: Steam's switch then lands in the file the login manager reads**
+- `b4fbf12` **refactor: no session sync bridge any more: the base `/etc/plasmalogin.conf` has no `[Autologin]` (backed up), `User=`/`Relogin=` are in `/etc/plasmalogin.conf.d/10-gamescope-autologin.conf`, and the conf.d fragments that `steam-set-session` and `steamos-manager` write win on their own. The Return to Gaming Mode shortcut's sudoers rule only allows restarting the login manager; the boot-into-desktop unit only runs `steam-set-session`**
+- **docs: the changelog entries of 2.12.1 get their commit hash (`b4fbf12`)**
 
 ## 2.12.0 - 2026-10-13
 
