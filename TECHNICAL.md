@@ -48,6 +48,12 @@ see below), so a reboot always ends at the login screen, and a Log Out
 Security: "On system wake and power up", "When switching to desktop mode")
 is a PIN screen inside Steam and independent of all of this.
 
+The login screen preselects the session "Boot into" says (gamescope, or the
+desktop), not the one used last: plasma-login-manager keeps the last session per
+user in `/var/lib/plasmalogin/.local/state/plasma-login-greeterstaterc`
+(`LastLoggedInSession`, a JSON object), and a drop-in for `plasmalogin.service`
+runs `steamify-greeter-session` before every start to set it.
+
 **KDE wallet.** KDE normally unlocks your wallet with the password you log in
 with; with autologin nobody types it, so apps that keep passwords in it (Brave,
 for example) ask for the wallet password. Single user mode does what SteamOS
@@ -129,7 +135,7 @@ logged straight back in to gamescope.
   `~/.config/autostart/steam.desktop` (the system steam.desktop with `-silent` in its Exec line). That is the
   file Steam's own setting "Run Steam when my computer starts" creates and removes, so the setting shows it. An older
   `steam-desktop-autostart` user unit is removed;
-- the **Return to Gaming Mode** shortcut; on plasma-login-manager with a
+- the **Return to Gaming Mode** shortcut ("Switch to Gaming Mode" when "Boot into" is the desktop); on plasma-login-manager with a
   narrow sudoers rule (`/etc/sudoers.d/gamescope-session-switch`) so it can
   restart the login manager without a password prompt.
 

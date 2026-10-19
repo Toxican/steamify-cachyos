@@ -15,6 +15,8 @@ TEMP_LOGIN_DROPIN="/etc/systemd/system/plasmalogin.service.d/zz-steamify-temp-lo
 RELOGIN_CONF="$CONF_DIR/zzt-steamify-relogin.conf"
 RELOGIN_SCRIPT="/usr/local/libexec/steamify-relogin"
 RELOGIN_UNIT="steamify-relogin"
+GREETER_SCRIPT="/usr/local/libexec/steamify-greeter-session"
+GREETER_DROPIN="/etc/systemd/system/plasmalogin.service.d/zz-steamify-greeter-session.conf"
 
 # The "SteamOS conversion" menu item: gaming mode boot, the Return to
 # Gaming Mode shortcut and Steam on the desktop (lib/steam-desktop.sh).
@@ -157,6 +159,7 @@ remove_autologin_conf() {
     # session they name would still beat the restored base config.
     sudo rm -f "$AUTOLOGIN_CONF" "$CONF_DIR"/zz-steamos-autologin.conf "$CONF_DIR"/zzt-*-temp-login.conf
     remove_relogin_helper
+    remove_greeter_session
     remove_temp_login_dropin
 }
 
@@ -248,6 +251,7 @@ set_login_mode() {
     [[ -f "$TEMP_LOGIN_DROPIN" ]] || return 0
     if [[ "$1" == single ]]; then
         remove_relogin_helper
+        remove_greeter_session
         sudo tee "$AUTOLOGIN_CONF" > /dev/null << EOF
 [Autologin]
 User=$TARGET_USER
@@ -258,6 +262,7 @@ EOF
     else
         sudo rm -f "$AUTOLOGIN_CONF"
         install_relogin_helper
+        install_greeter_session
         ok "Multi-user: the PC starts at the login screen; switching between gaming mode and the desktop logs in again by itself."
     fi
 }
@@ -270,9 +275,28 @@ install_relogin_helper() {
     sudo systemctl enable --now "$RELOGIN_UNIT.path"
 }
 
+install_greeter_session() {
+    # The login screen preselects the session "Boot into" says, not the last one.
+    patch_file steamify-greeter-session.sh | fill USER="$TARGET_USER" | sudo install -Dm755 /dev/stdin "$GREETER_SCRIPT"
+    sudo mkdir -p "$(dirname "$GREETER_DROPIN")"
+    sudo tee "$GREETER_DROPIN" > /dev/null << EOF
+[Service]
+ExecStartPre=-$GREETER_SCRIPT
+EOF
+    sudo systemctl daemon-reload
+    sudo "$GREETER_SCRIPT" || true
+}
+
+remove_greeter_session() {
+    if [[ -f "$GREETER_DROPIN" ]]; then
+        sudo rm -f "$GREETER_DROPIN" "$GREETER_SCRIPT"
+        sudo systemctl daemon-reload
+    fi
+}
+
 remove_relogin_helper() {
     if [[ -f "/etc/systemd/system/$RELOGIN_UNIT.path" ]]; then
-        best_effort sudo systemctl disable --now "$RELOGIN_UNIT.path"
+        sudo systemctl disable --now "$RELOGIN_UNIT.path" 2>/dev/null || true
         sudo rm -f "/etc/systemd/system/$RELOGIN_UNIT.path" "/etc/systemd/system/$RELOGIN_UNIT.service" "$RELOGIN_SCRIPT"
         sudo systemctl daemon-reload
     fi
