@@ -44,6 +44,12 @@ one per merged pull request.
 - **fix: the single user login of the refactor returned an error under `pipefail` (the drop-in writer ended in a failed `&&`), so the SteamOS conversion's update failed on a PC in single user mode (found on a Steam Machine; the tests now run with `pipefail`)**
 - **fix: "Return to Gaming Mode" after Steam's "Switch to Desktop" landed on the desktop again: the one-shot login steamos-manager writes (`zzt-*-temp-login.conf`) sorts after the session steam-set-session picks and nothing removed it since 2.13.0 (the login manager's restart did before). The session helper (`steamify-relogin`, now in single user mode too, with `--relogin` only in multi-user mode) empties a one-shot that is older than the last pick: the last pick wins (found on a Steam Machine)**
 
+## 2.13.2 - 2026-10-19
+
+- `ca98c2c` **chore: bump VERSION to 2.13.2**
+- `dd8b242` **fix: "Return to Gaming Mode" after Steam's "Switch to Desktop" landed on the desktop again: the one-shot login steamos-manager writes (`zzt-*-temp-login.conf`) sorts after the session steam-set-session picks and nothing removed it since 2.13.0 (the login manager's restart did before). The session helper (`steamify-relogin`, now installed in single user mode too, with `--relogin` only in multi-user mode) empties a one-shot that is older than the last pick: the last pick wins. Installs of 2.13.x get it with the update (feature version 2.13.2) (found on a Steam Machine)**
+- **docs: the changelog entries of 2.13.2 get their commit hashes**
+
 ## 2.13.1 - 2026-10-19
 
 - `ca2070a` **chore: bump VERSION to 2.13.1**
