@@ -1,1 +1,0 @@
-Wake-on-LAN and Wake-on-WLAN (#108) are untested on the hardware: the wake from sleep and from power-off has to be tried at the Steam Machine first.
