@@ -4,7 +4,7 @@
 # a connection is up. Enabling it only right before the first suspend of a boot was too late (the Wi-Fi link is already being taken
 # down): that first suspend didn't wake on a magic packet (#108); the following ones did.
 [[ "${2:-}" == up ]] || exit 0
-[[ -d "/sys/class/net/${1:-}/wireless" ]] || exit 0
-phy="$(iw dev "$1" info 2>/dev/null | awk '/wiphy/ { print "phy" $2; exit }')"
+# `iw` only knows the adapter of a Wi-Fi interface: anything else (a cable, the loopback) ends here.
+phy="$(iw dev "${1:-}" info 2>/dev/null | awk '/wiphy/ { print "phy" $2; exit }')"
 [[ -n "$phy" ]] && iw phy "$phy" wowlan enable magic-packet >/dev/null 2>&1
 exit 0
