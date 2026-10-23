@@ -163,7 +163,10 @@ backend_apply() {
     [[ "${WANTED[machine]:-0}" == 0 ]] && WANTED[poweroff]=0
     [[ "${WANTED[kpin]:-0}" == 1 ]] && WANTED[machine]=1
     [[ "${WANTED[wifi]:-0}" == 1 ]] && WANTED[machine]=1
-    [[ "${WANTED[machine]:-0}" == 0 ]] && { WANTED[kpin]=0; WANTED[wifi]=0; }
+    [[ "${WANTED[wol]:-0}" == 1 ]] && WANTED[machine]=1
+    [[ "${WANTED[wowlan]:-0}" == 1 ]] && { WANTED[machine]=1; WANTED[wifi]=1; }
+    [[ "${WANTED[wifi]:-0}" == 0 ]] && WANTED[wowlan]=0
+    [[ "${WANTED[machine]:-0}" == 0 ]] && { WANTED[kpin]=0; WANTED[wifi]=0; WANTED[wol]=0; WANTED[wowlan]=0; }
     # Retired: only ever removed.
     WANTED[hdmi]=0
     case "$boot" in desktop) WANTED[boot]=1; WANTED[gaming]=1 ;; gamescope) WANTED[boot]=0 ;; esac
