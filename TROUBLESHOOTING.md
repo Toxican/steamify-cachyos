@@ -82,8 +82,22 @@ which build loads:
 sudo dmesg | grep fw_build_timestamp       # 2025-07-16 10:46 is SteamOS's build, 10:33 is CachyOS's
 ```
 
-Still waking? Try with Wake-on-WLAN off (untick it, restart): some other device, for example the TV over HDMI-CEC,
-can wake the machine as well.
+Still waking? Find out what wakes it, with the kernel's own wake messages: turn them on, suspend once, and read them.
+
+```bash
+echo 1 | sudo tee /sys/power/pm_debug_messages
+systemctl suspend                          # let it wake by itself, then:
+sudo journalctl -b -g 'Triggering wakeup|Wakeup unrelated|non-EC GPE' | tail
+cat /proc/acpi/wakeup                      # what may wake the machine at all
+```
+
+`IRQ 40` with "Wakeup unrelated to ACPI SCI" is the Wi-Fi adapter itself (the firmware problem above). `IRQ 1` (the keyboard
+controller) together with `IRQ 9` and "ACPI non-EC GPE wakeup" a few seconds after suspending is an input device or something
+else on the machine: a controller or its Puck, a keyboard, a remote session sending input, the TV over HDMI-CEC. Those
+wake the machine with Wake-on-WLAN off as well, so test with it off (untick it, restart) to tell the two apart. Tested on a
+Steam Machine: a Wi-Fi magic packet woke it 10 times out of 10; in about 60 suspends without a packet one woke through the Wi-Fi
+adapter (IRQ 40), and a stretch with more going on (remote sessions, controllers) had several of the keyboard-controller wakes,
+also with Wake-on-WLAN off.
 
 ## Wake-on-LAN or Wake-on-WLAN does nothing
 
