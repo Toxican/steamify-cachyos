@@ -199,7 +199,7 @@ backend_apply() {
     done
     feature_record_unticked
     os_version_refresh
-    [[ " ${TO_DISABLE[*]} ${TO_ENABLE[*]} " =~ \ (gaming|single|boot|kpin)\  ]] && RESTART_FOR_LOGIN=true
+    [[ " ${TO_DISABLE[*]} ${TO_ENABLE[*]} " =~ \ (gaming|single|boot|kpin|cecaudio)\  ]] && RESTART_FOR_LOGIN=true
     backend_event finished "\"failed\":$(json_list "${failed[@]}"),\"restart\":$(restart_needed && echo true || echo false)"
 }
 

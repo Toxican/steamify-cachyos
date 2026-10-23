@@ -422,8 +422,11 @@ HDMI-CEC like the power-off fix) therefore **replaces CachyOS's PipeWire and Wir
   `~/.config/wireplumber/wireplumber.conf.d/90-steamify-cec-volume.conf`: the HDMI sound card gets the socket as
   `api.alsa.external-volume-control`, the description "HDMI / DisplayPort" (what Steam shows on SteamOS) and
   `monitor.alsa.enable-external-volume-control = true`.
-- PipeWire, PipeWire-Pulse and WirePlumber (and Sunshine, which creates its virtual sound devices in PipeWire) restart; Steam
-  shows the buttons from its next start.
+- **A restart is asked for** (the same prompt as the login changes), and nothing is restarted live: PipeWire, WirePlumber and
+  everything using them (Sunshine and a Moonlight stream, games, Steam) keep running with the old libraries until then. A live
+  restart was tried first and took Moonlight's host down: Sunshine's unit rate-limits starts (five in 500 s) and a few
+  on/off rounds hit that. Not every PC has Sunshine, or another program that depends on PipeWire staying up, so the option
+  doesn't look for them. Steam shows the buttons after that restart.
 
 Turning it off removes the unit, the script, the rule, the repository and its `pacman.conf` section (the file is identical to
 its backup afterwards), reinstalls the packages it swapped from CachyOS's repositories and removes the packages Valve's

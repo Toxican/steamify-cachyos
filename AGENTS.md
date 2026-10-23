@@ -344,7 +344,9 @@ gamescope and the Plasma desktop. Primary target: the Valve Steam Machine
   into `/var/lib/pacman/sync` yourself, never `pacman -Sy` for it (a partial upgrade). The two empty `/etc/pipewire/*.conf.d`
   directories are removed first (Valve's package has symlinks there). The WirePlumber rule is in `~/.config/wireplumber`,
   since `/etc/wireplumber` is a dangling symlink (`steamdeck-dsp`). Off puts CachyOS's packages back and removes what Valve's
-  brought along (`state_get cecaudio extra_pkgs`); `pacman.conf` must be identical to its backup afterwards.
+  brought along (`state_get cecaudio extra_pkgs`); `pacman.conf` must be identical to its backup afterwards. Never
+  restart PipeWire, WirePlumber or Sunshine from the option: it asks for a restart of the PC (`RESTART_FOR_LOGIN`; Sunshine's
+  unit allows five starts per 500 s, and not every PC has Sunshine or anything else that depends on PipeWire).
   Test it on the real machine: on, Steam's Audio page (HDMI output) shows TV Volume; off, a slider and no leftovers.
 - Add as non-Steam game (`steamgame`, `lib/steam-game.sh`, sub-option of
   `launcher`, ticked along with it, 2.5.1): edits Steam's `shortcuts.vdf`

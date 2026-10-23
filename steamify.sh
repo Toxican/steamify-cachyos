@@ -86,7 +86,7 @@ after_run() {
     if [[ -n "${BIOS_NEEDS_RESTART:-}" ]]; then
         warn "The BIOS update is installed at the next restart."
     else
-        info "The login changes take effect after a restart."
+        info "The changes take effect after a restart."
     fi
     while true; do
         read -rp "$(echo -e "${c_bold}[m]${c_reset} back to the menu   ${c_bold}[r]${c_reset} restart now: ")" reply || return 1
@@ -220,8 +220,8 @@ while true; do
     fi
 
     apply_changes
-    # Login manager changes only take effect after a restart.
-    [[ " ${TO_DISABLE[*]} ${TO_ENABLE[*]} " =~ \ (gaming|single|boot|kpin)\  ]] &&
+    # Login manager changes only take effect after a restart, and so does the swap of PipeWire (cecaudio).
+    [[ " ${TO_DISABLE[*]} ${TO_ENABLE[*]} " =~ \ (gaming|single|boot|kpin|cecaudio)\  ]] &&
         RESTART_FOR_LOGIN=true
 
     echo

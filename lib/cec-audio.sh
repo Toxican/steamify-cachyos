@@ -93,11 +93,10 @@ wireplumber.settings = {
 EOF
 }
 
-cecaudio_restart_audio() {
-    user_systemctl restart pipewire.service pipewire-pulse.service wireplumber.service 2>/dev/null
-    # Sunshine's virtual sound devices live in PipeWire: they come back with it.
-    user_systemctl try-restart sunshine.service 2>/dev/null
-}
+# Nothing is restarted here: PipeWire, WirePlumber and everything that uses them (Sunshine and its Moonlight stream, games,
+# Steam) keep running with the old libraries until the PC restarts, which the run asks for (RESTART_FOR_LOGIN, set where
+# the plan is applied). A live restart took Moonlight's host down: Sunshine's unit rate-limits starts (five in 500 s), and
+# not every PC has Sunshine, or another program that depends on PipeWire's running state.
 
 cecaudio_enable() {
     local before after p pkgs=() extras=() known
@@ -137,8 +136,7 @@ cecaudio_enable() {
     service_file "$VALVE_AUDIO_UNIT.timer" | sudo tee "/etc/systemd/system/$VALVE_AUDIO_UNIT.timer" >/dev/null
     sudo systemctl daemon-reload
     sudo systemctl enable --now "$VALVE_AUDIO_UNIT.timer" >/dev/null 2>&1
-    cecaudio_restart_audio
-    ok "HDMI-CEC volume on: Steam shows the TV's volume buttons from its next start (restart gaming mode)."
+    ok "HDMI-CEC volume on: Steam shows the TV's volume buttons after a restart."
     warn "PipeWire and WirePlumber are Valve's builds now, kept in step with SteamOS (not with CachyOS); audio behaviour may differ."
 }
 
@@ -164,6 +162,5 @@ cecaudio_disable() {
     fi
     for p in $extras; do sudo pacman -Rns --noconfirm "$p" >/dev/null 2>&1; done
     state_clear cecaudio
-    cecaudio_restart_audio
-    ok "HDMI-CEC volume removed: CachyOS's PipeWire and WirePlumber are back."
+    ok "HDMI-CEC volume removed: CachyOS's PipeWire and WirePlumber are back after a restart."
 }
