@@ -414,6 +414,35 @@ Where Steam Machine support was set up before 2.2.0, the menu ticks the
 power-off fix as a new default sub-option (see feature versions below), so a
 normal run adds it.
 
+## Wi-Fi firmware (Steam Machine)
+
+The Steam Machine's Wi-Fi adapter is a Qualcomm QCNFA765 (`17cb:1103`, QCA2066, `ath11k_pci`). CachyOS's
+`linux-firmware-atheros` and SteamOS report the same firmware version
+(`WLAN.HSP.1.1-03926.13-...`), but their `amss.bin` differs (builds from
+2025-07-16 10:33 and 10:46; decompressed SHA-256 `6be9c226...` and
+`a0c75e4c...`; `board-2.bin` and `m3.bin` are identical). With CachyOS's, a
+suspend with Wake-on-WLAN on (`iw phy phyN wowlan enable magic-packet`) ends at
+once: the adapter raises a PCIe PME (`Triggering wakeup from IRQ 40`, the
+root port, `RootSta: PME ReqID 0600`) and the machine wakes. With SteamOS's it
+stays asleep and wakes on a Wi-Fi magic packet (found and tested by a user,
+#108).
+
+Valve ships its build as `linux-firmware-holo` in the `holo-main` repository of
+its package mirror (not in the numbered `holo-X.Y` repositories, and not in
+`core`, which has the same `amss.bin` as CachyOS), under
+`usr/lib/firmware/updates/`. The **Wi-Fi firmware from SteamOS** sub-option of Steam
+Machine support (`wifi`, `lib/fremont-wifi.sh`, opt-in, only offered on a
+Steam Machine with that adapter) downloads that package with the checksum from
+Valve's package index (`fetch_holo_pkg`) and installs only
+`ath11k/QCA2066/hw2.1/amss.bin.zst` to the same place. The kernel reads
+`/usr/lib/firmware/updates` before `/usr/lib/firmware`, so no file of
+`linux-firmware` is changed (its updates don't undo this, and there is nothing
+to back up); turning the item off removes the one file. The menu row says which `amss.bin` the kernel will load (the decompressed SHA-256 against the two
+known builds: Valve's, CachyOS's, or another one, e.g. from a newer `linux-firmware`), and nothing is
+installed when the package already ships Valve's. The new firmware is
+loaded at the next restart. Tested on a Steam Machine: after the restart
+`dmesg | grep fw_build_timestamp` shows `2025-07-16 10:46` (CachyOS's own build is `10:33`).
+
 ## Add as non-Steam game
 
 A sub-option of the Steamify shortcut (`steamgame`, `lib/steam-game.sh`, new
@@ -648,6 +677,7 @@ immediately, which can turn into a loop - see
 | `lib/cec.sh` | HDMI-CEC: Valve's `cecd` and friends from its `holo` repository |
 | `lib/steam-machine.sh` | Steam Machine support: LED driver, LED access, steamos-manager |
 | `lib/fremont-poweroff.sh` | Steam Machine support: the power-off fix (DKMS module from `patches/`) |
+| `lib/fremont-wifi.sh` | Steam Machine support: Wi-Fi firmware from SteamOS (Wake-on-WLAN) |
 | `lib/steam-game.sh` | Add as non-Steam game: Steamify in the Steam library (`patches/steam-shortcuts.py`) |
 | `lib/update-notifier.sh` | Update notifications: the notifier from `patches/` and its user timer |
 | `lib/first-login.sh` | `--defaults` without a session (the Steam Machine ISO's installer): the one-time first-login step that sets up single user's launcher on Plasma's new layout and opens the app |
