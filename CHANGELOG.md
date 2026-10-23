@@ -5,6 +5,14 @@ All notable changes, per version and per commit. Versions follow
 `steamify.sh`. Versions before 0.7.0 were numbered afterwards,
 one per merged pull request.
 
+## 2.14.1 - 2026-10-23
+
+- `c125dc8` **chore: bump VERSION to 2.14.1**
+- `67ee388` **chore: changelog hashes of the 2.14.1 commits so far**
+- **docs: new README screenshot: the 2.14.1 menu on a Steam Machine with every option really on (the HDMI-CEC volume row under HDMI-CEC), no badges**
+- `3755d22` **fix: HDMI-CEC volume no longer restarts PipeWire, WirePlumber and Sunshine itself; it asks for a restart of the PC, like the login changes (the app's "Restart now" too). A live restart took Moonlight's host down (Sunshine's unit allows five starts per 500 s, and a few on/off rounds hit that), and not every PC has Sunshine or another program that depends on PipeWire staying up. The WirePlumber rule moved to `~/.config/wireplumber` (`/etc/wireplumber` is a dangling symlink once Valve's packages are in) (#107)**
+- `928c745` **feat: new default sub-option of HDMI-CEC on a Steam Machine, "HDMI-CEC volume" (`cecaudio`): Steam's Audio settings get SteamOS's TV Volume buttons (minus, plus, mute) and the HDMI CEC toggle instead of a slider that doesn't reach the TV (#107). They need Valve's builds of PipeWire and WirePlumber, which carry a patch CachyOS's don't have, so the option replaces CachyOS's (64-bit and 32-bit) by Valve's (checksums verified) in a local pacman repository that is listed before CachyOS's, so `pacman -Syu` keeps them, and that a weekly timer refreshes from Valve's newest `jupiter-X.Y` and `multilib-X.Y`. Audio may behave differently, and Valve's PipeWire is usually a little behind CachyOS's. Off puts CachyOS's packages back and removes what Valve's brought along (`steamdeck-dsp`, `noisetorch`), the repository and its `pacman.conf` section. The new files: `lib/cec-audio.sh`, `patches/steamify-valve-audio.sh`, `services/steamify-valve-audio.service` and `.timer`**
+
 ## 2.14.0 - 2026-10-23
 
 - **chore: bump VERSION to 2.14.0** (the release was 2.13.3 until the GNOME release became 2.15.0)

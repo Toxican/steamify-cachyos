@@ -12,5 +12,6 @@ in the shell code.
 | `steamify-relogin.path`, `.service` | `lib/login-manager.sh` (SteamOS conversion, single user mode off) | Logs in again by itself after a session switch (`patches/steamify-relogin.sh`) |
 | `steamify-boot-desktop.service` | `lib/boot-session.sh` (Boot into: desktop) | Sets the Plasma session before the login manager starts |
 | `steamify-steam-autostart.service` | `lib/nvidia.sh` (Gaming on NVIDIA) | Steam at login on the Plasma desktop, normal or in Big Picture (user unit) |
+| `steamify-valve-audio.service`, `.timer` | `lib/cec-audio.sh` (HDMI-CEC volume) | The weekly refresh of the local repository with Valve's PipeWire and WirePlumber (system units) |
 | `ensure-kernel-headers.service` | `lib/steam-machine.sh` (Steam Machine support) | Installs missing kernel headers at boot, so DKMS builds for every kernel |
 | `steamify-update-check.service`, `.timer` | `lib/update-notifier.sh` (Update notifications) | The daily and login check for a new release (user units) |

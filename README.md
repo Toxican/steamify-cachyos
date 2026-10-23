@@ -78,6 +78,16 @@ What Steamify can do on a Valve Steam Machine:
 - **HDMI-CEC** - ticked by default here, as on SteamOS: use Steam with your
   TV's remote, and the TV turns on and off with the Steam Machine
   ([details](TECHNICAL.md#hdmi-cec)).
+  - **HDMI-CEC volume** (ticked along with it, untick to opt out) - Steam's
+    Audio settings get SteamOS's **TV Volume** buttons (minus, plus, mute)
+    and the HDMI CEC toggle, instead of a slider that doesn't reach the TV.
+    This needs Valve's builds of **PipeWire and WirePlumber**: they carry a
+    patch CachyOS's don't have. They **replace CachyOS's** (Steamify keeps
+    them in a local package repository, so `pacman -Syu` doesn't undo it, and
+    refreshes it weekly), so audio on this PC may behave differently, and they
+    are a little behind CachyOS's version (Valve takes PipeWire from Arch with
+    a delay). Unticking puts CachyOS's packages back
+    ([details](TECHNICAL.md#hdmi-cec-volume-steam-machine)).
 - **Steam Machine support** - the front **LED bar** works, Steam's
   **hardware settings** (fan, performance) work, and the power button puts
   it to sleep like a console. Steam's System settings show the serial
@@ -200,7 +210,7 @@ Some files in `patches/` are not MIT. They keep their own license, and each file
 
 ### Downloaded, not shipped
 
-Valve's packages (the CEC daemon, the BIOS update and the Steam Machine's Wi-Fi firmware) are downloaded from Valve's own
+Valve's packages (the CEC daemon, its PipeWire and WirePlumber, the BIOS update and the Steam Machine's Wi-Fi firmware) are downloaded from Valve's own
 package mirror when you tick the option, and checked against the checksum in Valve's package index. Steamify doesn't
 contain or redistribute them; each package carries its own license (the Wi-Fi firmware's is in its `Notice.txt`).
 

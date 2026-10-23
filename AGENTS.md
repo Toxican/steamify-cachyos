@@ -334,6 +334,20 @@ gamescope and the Plasma desktop. Primary target: the Valve Steam Machine
   packet for the right MAC (must wake) and one for a wrong MAC (must not). Ping the
   address of the link under test, and read `PM: suspend entry/exit` in the journal: a wake by the keyboard controller
   (`pm_wakeup_irq` = i8042) is not the packet.
+- HDMI-CEC volume (`cecaudio`, `lib/cec-audio.sh`, default sub-option of `cec`, Steam Machine only, #107): Steam's TV
+  Volume buttons and HDMI CEC toggle need **Valve's** PipeWire (its `libspa-alsa.so` reads `api.alsa.external-volume-control`)
+  and WirePlumber (`monitor.alsa.enable-external-volume-control`): CachyOS's have neither, so the option swaps them (all of
+  PipeWire, 64-bit from `jupiter-X.Y`, 32-bit from `multilib-X.Y`) and says so everywhere (menu, app, README, TECHNICAL.md).
+  Never add Valve's own repository to `pacman.conf` (its kernel, Mesa, systemd would replace CachyOS's): they live in the
+  local repository `steamify-valve-audio` (`/var/lib/steamify/valve-audio`, filled by `patches/steamify-valve-audio.sh`,
+  weekly by a timer and on enable), listed **before** CachyOS's repositories so `pacman -Syu` keeps them; copy its database
+  into `/var/lib/pacman/sync` yourself, never `pacman -Sy` for it (a partial upgrade). The two empty `/etc/pipewire/*.conf.d`
+  directories are removed first (Valve's package has symlinks there). The WirePlumber rule is in `~/.config/wireplumber`,
+  since `/etc/wireplumber` is a dangling symlink (`steamdeck-dsp`). Off puts CachyOS's packages back and removes what Valve's
+  brought along (`state_get cecaudio extra_pkgs`); `pacman.conf` must be identical to its backup afterwards. Never
+  restart PipeWire, WirePlumber or Sunshine from the option: it asks for a restart of the PC (`RESTART_FOR_LOGIN`; Sunshine's
+  unit allows five starts per 500 s, and not every PC has Sunshine or anything else that depends on PipeWire).
+  Test it on the real machine: on, Steam's Audio page (HDMI output) shows TV Volume; off, a slider and no leftovers.
 - Add as non-Steam game (`steamgame`, `lib/steam-game.sh`, sub-option of
   `launcher`, ticked along with it, 2.5.1): edits Steam's `shortcuts.vdf`
   with `patches/steam-shortcuts.py` only while Steam is closed (Steam

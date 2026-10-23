@@ -5,12 +5,12 @@
 
 # Menu order. Components are turned on in this order and off in reverse;
 # gaming must come first (single user builds on it).
-COMPONENTS=(gaming boot silent glyphs nvidia bigpicture nvsilent theme single launcher steamgame notify extended_controller_support vram cec machine poweroff wifi wol wowlan kpin hdmi bios)
+COMPONENTS=(gaming boot silent glyphs nvidia bigpicture nvsilent theme single launcher steamgame notify extended_controller_support vram cec cecaudio machine poweroff wifi wol wowlan kpin hdmi bios)
 # One-off actions rather than on/off components: never preselected, never
 # re-applied, not listed as on or off.
 ACTIONS=(bios)
 # Sub-options, shown indented under their parent and only while it's ticked.
-declare -A PARENT=([boot]=gaming [silent]=gaming [glyphs]=gaming [bigpicture]=nvidia [nvsilent]=nvidia [steamgame]=launcher [poweroff]=machine [wifi]=machine [wol]=machine [wowlan]=machine [kpin]=machine [hdmi]=machine [bios]=machine)
+declare -A PARENT=([boot]=gaming [silent]=gaming [glyphs]=gaming [bigpicture]=nvidia [nvsilent]=nvidia [steamgame]=launcher [cecaudio]=cec [poweroff]=machine [wifi]=machine [wol]=machine [wowlan]=machine [kpin]=machine [hdmi]=machine [bios]=machine)
 # Never preselected on a first run: booting into the desktop is a choice,
 # gamescope is the default; HDMI-CEC is opt-in (it can wake the machine or
 # upset other devices on the TV, even on SteamOS), except on a Steam Machine,
@@ -28,7 +28,7 @@ FEATURE_BASELINE=2.1.0
 declare -A FEATURE_VERSION=(
     [gaming]=2.13.2 [boot]=2.12.1 [silent]=2.14.0 [nvidia]=2.12.0 [bigpicture]=2.10.0 [nvsilent]=2.11.0 [theme]=2.1.0 [glyphs]=2.1.0 [single]=2.13.0
     [launcher]=2.1.0 [cec]=2.7.0 [machine]=2.9.0 [poweroff]=2.2.0 [vram]=2.3.0 [notify]=2.5.0 [steamgame]=2.5.1 [extended_controller_support]=2.10.0
-    [kpin]=2.1.0 [hdmi]=2.1.0 [wifi]=2.14.0 [wol]=2.14.0 [wowlan]=2.14.0
+    [kpin]=2.1.0 [hdmi]=2.1.0 [wifi]=2.14.0 [wol]=2.14.0 [wowlan]=2.14.0 [cecaudio]=2.14.1
 )
 
 declare -A LABEL=(
@@ -47,6 +47,7 @@ declare -A LABEL=(
     [extended_controller_support]="Extended controller support: Xbox wireless dongle (xone), Xbox controllers over Bluetooth (xpadneo)"
     [vram]="VRAM booster: the game in front keeps its VRAM, background apps make room"
     [cec]="HDMI-CEC: use Steam with the TV remote, TV on/off with the PC (experimental)"
+    [cecaudio]="HDMI-CEC volume: the TV's volume buttons in Steam, with Valve's PipeWire and WirePlumber instead of CachyOS's"
     [machine]="Steam Machine support: LED bar driver, hardware settings in Steam"
     [poweroff]="Power-off fix: the Steam Machine stays off after shutting down"
     [wifi]="Wi-Fi firmware from SteamOS: Wake-on-WLAN works, the Steam Machine wakes on a Wi-Fi magic packet"
@@ -64,6 +65,7 @@ component_available() {
         # and turns off "Gaming on NVIDIA" (lib/nvidia.sh), which is not offered any more (nvidia_available).
         nvidia|bigpicture|nvsilent) nvidia_available ;;
         machine|poweroff) machine_available ;;
+        cecaudio) cecaudio_available ;;
         wifi) wifi_available ;;
         wol) wol_available ;;
         wowlan) wowlan_available ;;
@@ -330,6 +332,9 @@ toggle_component() {
     if [[ "$c" == gaming && "${WANTED[gaming]}" == 0 ]]; then WANTED[silent]=0; WANTED[glyphs]=0; fi
     if [[ "$c" == silent && "${WANTED[silent]}" == 1 ]]; then WANTED[gaming]=1; fi
     if [[ "$c" == glyphs && "${WANTED[glyphs]}" == 1 ]]; then WANTED[gaming]=1; fi
+    # The TV's volume buttons are opt-out, like the power-off fix: ticked along with HDMI-CEC, which they need.
+    if [[ "$c" == cec ]] && component_available cecaudio; then WANTED[cecaudio]=${WANTED[cec]}; fi
+    if [[ "$c" == cecaudio && "${WANTED[cecaudio]}" == 1 ]]; then WANTED[cec]=1; fi
     # The power-off fix is opt-out: ticked along with Steam Machine support.
     if [[ "$c" == machine ]]; then WANTED[poweroff]=${WANTED[machine]}; fi
     if [[ "$c" == poweroff && "${WANTED[poweroff]}" == 1 ]]; then WANTED[machine]=1; fi
