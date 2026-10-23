@@ -5,6 +5,10 @@ All notable changes, per version and per commit. Versions follow
 `steamify.sh`. Versions before 0.7.0 were numbered afterwards,
 one per merged pull request.
 
+## 2.14.1 - 2026-10-23
+
+- **chore: bump VERSION to 2.14.1**
+
 ## 2.14.0 - 2026-10-23
 
 - **chore: bump VERSION to 2.14.0** (the release was 2.13.3 until the GNOME release became 2.15.0)
