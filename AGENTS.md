@@ -322,13 +322,17 @@ gamescope and the Plasma desktop. Primary target: the Valve Steam Machine
   backup would be ours to keep). `wifi_build` tells which build loads (decompressed SHA-256 of Valve's and CachyOS's;
   a newer `linux-firmware` shows "unknown"); nothing is installed when the package already has Valve's. Steamify ships
   no firmware. If Valve moves the package to a numbered repository, prefer that over `holo-main`.
-- Wake-on-LAN and Wake-on-WLAN (`wol`, `wowlan`, `lib/wake-on-lan.sh`, opt-in sub-options of `machine`): one
-  NetworkManager drop-in each in `/etc/NetworkManager/conf.d` (`ethernet.wake-on-lan=64`, `wifi.wake-on-wlan=8`, in a
-  `connection-steamify-*` section), then `nmcli general reload conf` and `nmcli device reapply` for the devices of that
-  type. Never call `ethtool` or `iw ... wowlan` for this: they don't survive a restart. Wake-on-WLAN works from sleep
-  only and brings `wifi` along (`toggle_component`, `backend.sh`, `AppState.qml` all have the rule); wired wake from
-  power-off also needs wake-on-LAN in the BIOS. Test the wakes on the real machine (`TESTPLAN.md` W2): suspend and a
-  magic packet, shut down and a magic packet.
+- Wake-on-LAN and Wake-on-WLAN (`wol`, `wowlan`, `lib/wake-on-lan.sh`, opt-in sub-options of `machine`). Wired: one
+  NetworkManager drop-in (`ethernet.wake-on-lan=64` in a `connection-steamify-*` section), then `nmcli general reload
+  conf` and `nmcli device reapply`. Wireless: **not** NetworkManager (with the Steam Machine's iwd backend it ignores
+  `wifi.wake-on-wlan`, tested), a systemd sleep hook (`patches/steamify-wowlan-sleep.sh` as
+  `/usr/lib/systemd/system-sleep/steamify-wowlan`) that runs `iw phy ... wowlan enable magic-packet` on `pre`. Never set
+  either with a one-off `ethtool` or `iw` call: they don't survive a restart. Wake-on-WLAN works from sleep only and
+  brings `wifi` along (`toggle_component`, `backend.sh`, `AppState.qml` all have the rule); wired wake from power-off
+  also needs wake-on-LAN in the BIOS. Test the wakes on the real machine (`TESTPLAN.md` W2): suspend, then a magic
+  packet for the right MAC (must wake) and one for a wrong MAC (must not), shut down and a magic packet. Ping the
+  address of the link under test, and read `PM: suspend entry/exit` in the journal: a wake by the keyboard controller
+  (`pm_wakeup_irq` = i8042) is not the packet.
 - Add as non-Steam game (`steamgame`, `lib/steam-game.sh`, sub-option of
   `launcher`, ticked along with it, 2.5.1): edits Steam's `shortcuts.vdf`
   with `patches/steam-shortcuts.py` only while Steam is closed (Steam

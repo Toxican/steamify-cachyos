@@ -446,20 +446,25 @@ loaded at the next restart. Tested on a Steam Machine: after the restart
 ## Wake-on-LAN and Wake-on-WLAN (Steam Machine)
 
 Two opt-in sub-options of Steam Machine support (`wol` and `wowlan`, `lib/wake-on-lan.sh`). Linux doesn't keep either
-setting: `ethtool -s ... wol g` and `iw phy ... wowlan enable magic-packet` are gone after a restart. NetworkManager
-sets both for the connections that don't have their own value (`default`), so each item is one drop-in in
-`/etc/NetworkManager/conf.d`: `90-steamify-wake-on-lan.conf` (`ethernet.wake-on-lan=64`, magic packet) and
-`90-steamify-wake-on-wlan.conf` (`wifi.wake-on-wlan=8`, magic packet), in a `connection-steamify-...` section each.
-Nothing of NetworkManager's own files is edited; off removes the drop-in. After writing it the item reloads
-NetworkManager's configuration (`nmcli general reload conf`) and re-applies the active devices of that type
-(`nmcli device reapply`), which doesn't drop the connection.
+setting: `ethtool -s ... wol g` and `iw phy ... wowlan enable magic-packet` are gone after a restart.
 
-- **Wired** is offered where there is an `en*` network device. Waking from sleep needs only this. Waking from power-off
-  also needs wake-on-LAN in the BIOS (and the BIOS not cutting the NIC's power in its energy-saving mode), which
-  Steamify can't read or set.
-- **Wireless** is only offered with the QCA2066 adapter and wakes from sleep only (the adapter has no power when the
-  machine is off). It needs the [SteamOS Wi-Fi firmware](#wi-fi-firmware-steam-machine): with CachyOS's own the
-  machine wakes up again at once. Ticking it ticks that item; unticking the firmware unticks it.
+- **Wired** (`wol`) is offered where there is an `en*` network device. NetworkManager sets it for the connections that
+  don't have their own value (`default`): one drop-in, `/etc/NetworkManager/conf.d/90-steamify-wake-on-lan.conf`
+  (`ethernet.wake-on-lan=64`, magic packet, in a `connection-steamify-wake-on-lan` section), and nothing of
+  NetworkManager's own files is edited. After writing it the item reloads NetworkManager's configuration
+  (`nmcli general reload conf`) and re-applies the wired devices (`nmcli device reapply`), which doesn't drop the
+  connection. Waking from sleep needs only this. Waking from power-off also needs wake-on-LAN in the BIOS (and the BIOS
+  not cutting the NIC's power in its energy-saving mode), which Steamify can't read or set. Off removes the file.
+- **Wireless** (`wowlan`) is only offered with the QCA2066 adapter and wakes from sleep only (the adapter has no power
+  when the machine is off). NetworkManager can't do it here: with the iwd backend (the Steam Machine's, in
+  `99-valve-wifi-backend.conf`) it ignores `wifi.wake-on-wlan`, also set on the connection itself and after a reconnect
+  (tried on a Steam Machine), and with any backend it can't change it on a live connection. So a systemd sleep hook,
+  `/usr/lib/systemd/system-sleep/steamify-wowlan` ([`patches/steamify-wowlan-sleep.sh`](patches/steamify-wowlan-sleep.sh)),
+  runs `iw phy ... wowlan enable magic-packet` for every Wi-Fi adapter right before each suspend (`pre`); the item installs
+  `iw` when it is missing. Off removes the hook and turns the setting off. It needs the
+  [SteamOS Wi-Fi firmware](#wi-fi-firmware-steam-machine): with CachyOS's own the machine wakes up again at once.
+  Ticking it ticks that item; unticking the firmware unticks it. A `90-steamify-wake-on-wlan.conf` of a development
+  build of 2.14.0 is removed when found.
 
 ## Add as non-Steam game
 

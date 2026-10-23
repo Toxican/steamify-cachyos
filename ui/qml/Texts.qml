@@ -62,7 +62,7 @@ QtObject {
                changes: ["One NetworkManager setting (/etc/NetworkManager/conf.d), nothing else of NetworkManager is changed", "From power-off it also needs wake-on-LAN in the BIOS", "Off: the file is removed again"] },
         wowlan: { label: "Wake-on-WLAN", hint: "Wakes from sleep on a magic packet over Wi-Fi",
                   body: "Wakes the Steam Machine from sleep with a magic packet over Wi-Fi. It does not work from power-off: the Wi-Fi adapter has no power then. It needs the SteamOS Wi-Fi firmware, so that item is ticked along with this one: with CachyOS's own firmware the machine wakes up again right away.",
-                  changes: ["One NetworkManager setting (/etc/NetworkManager/conf.d), nothing else of NetworkManager is changed", "Brings along the Wi-Fi firmware from SteamOS", "Off: the file is removed again"] },
+                  changes: ["A small script in /usr/lib/systemd/system-sleep turns it on right before every sleep", "Brings along the Wi-Fi firmware from SteamOS", "Off: the script is removed again"] },
         kpin: { label: "Pin the kernel", hint: "No longer needed: untick for CachyOS's current kernel",
                 body: "Kept the Steam Machine on CachyOS kernel 7.1.6, which powered off properly. The power-off fix does that on every kernel now, so the pin is removed and CachyOS's current kernel comes back.",
                 changes: ["Removed from IgnorePkg", "linux-cachyos updated to CachyOS's current version"] },

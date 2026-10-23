@@ -90,10 +90,13 @@ can wake the machine as well.
 Check what the network device is set to (`g` means magic packet):
 
 ```bash
-sudo ethtool enp5s0 | grep Wake-on         # wired; wlan0 for Wi-Fi: iw phy phy0 wowlan show
+sudo ethtool enp5s0 | grep Wake-on         # wired: should say g
+ls -l /usr/lib/systemd/system-sleep/steamify-wowlan   # Wi-Fi: the hook that enables it before every sleep
 ```
 
-Not `g`? Restart, or reconnect the network. Wired wake from power-off also needs wake-on-LAN in the BIOS (and not an
+Wired not `g`? Restart, or reconnect the network. Wi-Fi: `iw phy phy0 wowlan show` says "disabled" while the machine is
+awake; the hook turns it on right before it sleeps, so look at it from a second ssh session during a sleep, or test with a
+magic packet for the Wi-Fi adapter's MAC address. Wired wake from power-off also needs wake-on-LAN in the BIOS (and not an
 energy-saving mode that cuts the network card's power). Wi-Fi wakes from sleep only, never from power-off. The magic
 packet must go to the MAC address of the device that is connected.
 
