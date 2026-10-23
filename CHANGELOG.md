@@ -8,6 +8,7 @@ one per merged pull request.
 ## 2.13.3 - 2026-10-23
 
 - **chore: bump VERSION to 2.13.3**
+- **fix: Steam started silently on the desktop ("Start Steam silently in desktop mode") lost the Steam Beta choice after a reboot or a switch between gaming mode and the desktop, and downloaded client updates again: the autostart entry started Steam as `steam -silent` while gaming mode uses `-steamdeck`, so the two sessions disagreed on the client branch. The entry is now `steam -steamdeck -silent` (no `-gamepadui`: the desktop UI is unchanged); existing installs get it re-applied as an update (feature version 2.13.3). Reported and fixed by a user (#109)**
 
 ## 2.13.2 - 2026-10-19
 
