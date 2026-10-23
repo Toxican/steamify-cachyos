@@ -5,19 +5,19 @@
 
 # Menu order. Components are turned on in this order and off in reverse;
 # gaming must come first (single user builds on it).
-COMPONENTS=(gaming boot silent glyphs nvidia bigpicture nvsilent theme single launcher steamgame notify extended_controller_support vram cec machine poweroff kpin hdmi bios)
+COMPONENTS=(gaming boot silent glyphs nvidia bigpicture nvsilent theme single launcher steamgame notify extended_controller_support vram cec machine poweroff wifi kpin hdmi bios)
 # One-off actions rather than on/off components: never preselected, never
 # re-applied, not listed as on or off.
 ACTIONS=(bios)
 # Sub-options, shown indented under their parent and only while it's ticked.
-declare -A PARENT=([boot]=gaming [silent]=gaming [glyphs]=gaming [bigpicture]=nvidia [nvsilent]=nvidia [steamgame]=launcher [poweroff]=machine [kpin]=machine [hdmi]=machine [bios]=machine)
+declare -A PARENT=([boot]=gaming [silent]=gaming [glyphs]=gaming [bigpicture]=nvidia [nvsilent]=nvidia [steamgame]=launcher [poweroff]=machine [wifi]=machine [kpin]=machine [hdmi]=machine [bios]=machine)
 # Never preselected on a first run: booting into the desktop is a choice,
 # gamescope is the default; HDMI-CEC is opt-in (it can wake the machine or
 # upset other devices on the TV, even on SteamOS), except on a Steam Machine,
 # which has CEC like on SteamOS. HDMI refresh boost needs someone at the
 # screen to confirm each step. Extended controller support builds kernel modules for
-# every installed kernel: opt-in.
-NO_PRESELECT=(boot silent nvsilent cec kpin hdmi extended_controller_support)
+# every installed kernel: opt-in. So is the Steam Machine's Wi-Fi firmware (a firmware from SteamOS).
+NO_PRESELECT=(boot silent nvsilent cec wifi kpin hdmi extended_controller_support)
 # Feature versions: the Steamify version in which what a component's enable
 # sets up last changed; set it to the new VERSION whenever you change one.
 # Each successful run records it (state "features"); a component that's on
@@ -28,7 +28,7 @@ FEATURE_BASELINE=2.1.0
 declare -A FEATURE_VERSION=(
     [gaming]=2.13.2 [boot]=2.12.1 [silent]=2.13.3 [nvidia]=2.12.0 [bigpicture]=2.10.0 [nvsilent]=2.11.0 [theme]=2.1.0 [glyphs]=2.1.0 [single]=2.13.0
     [launcher]=2.1.0 [cec]=2.7.0 [machine]=2.9.0 [poweroff]=2.2.0 [vram]=2.3.0 [notify]=2.5.0 [steamgame]=2.5.1 [extended_controller_support]=2.10.0
-    [kpin]=2.1.0 [hdmi]=2.1.0
+    [kpin]=2.1.0 [hdmi]=2.1.0 [wifi]=2.13.3
 )
 
 declare -A LABEL=(
@@ -49,6 +49,7 @@ declare -A LABEL=(
     [cec]="HDMI-CEC: use Steam with the TV remote, TV on/off with the PC (experimental)"
     [machine]="Steam Machine support: LED bar driver, hardware settings in Steam"
     [poweroff]="Power-off fix: the Steam Machine stays off after shutting down"
+    [wifi]="Wi-Fi firmware from SteamOS: Wake-on-WLAN works, the Steam Machine wakes on a Wi-Fi magic packet"
     [kpin]="Pin the kernel to $PINNED_KERNEL_VER (untick for CachyOS's current kernel)"
     [hdmi]="HDMI refresh boost: highest refresh your HDMI display runs"
     [bios]="Update BIOS"
@@ -61,6 +62,7 @@ component_available() {
         # and turns off "Gaming on NVIDIA" (lib/nvidia.sh), which is not offered any more (nvidia_available).
         nvidia|bigpicture|nvsilent) nvidia_available ;;
         machine|poweroff) machine_available ;;
+        wifi) wifi_available ;;
         vram) vram_available ;;
         # Steamify in the Steam library is for gaming mode's controller: not needed for Big Picture on the desktop (NVIDIA PCs;
         # shown anyway when it's already on, so it can be turned off).
@@ -325,8 +327,9 @@ toggle_component() {
     # The power-off fix is opt-out: ticked along with Steam Machine support.
     if [[ "$c" == machine ]]; then WANTED[poweroff]=${WANTED[machine]}; fi
     if [[ "$c" == poweroff && "${WANTED[poweroff]}" == 1 ]]; then WANTED[machine]=1; fi
-    if [[ "$c" == machine && "${WANTED[machine]}" == 0 ]]; then WANTED[kpin]=0; WANTED[bios]=0; fi
+    if [[ "$c" == machine && "${WANTED[machine]}" == 0 ]]; then WANTED[kpin]=0; WANTED[bios]=0; WANTED[wifi]=0; fi
     if [[ "$c" == kpin && "${WANTED[kpin]}" == 1 ]]; then WANTED[machine]=1; fi
+    if [[ "$c" == wifi && "${WANTED[wifi]}" == 1 ]]; then WANTED[machine]=1; fi
     if [[ "$c" == bios && "${WANTED[bios]}" == 1 ]]; then WANTED[machine]=1; fi
     # Steam starts Steamify through the shortcut's start script.
     # Opt-out, like the power-off fix: ticked along with the shortcut.

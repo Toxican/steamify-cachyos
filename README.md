@@ -85,6 +85,10 @@ What Steamify can do on a Valve Steam Machine:
   - **Power-off fix** - on by default: shutting down really turns the Steam
     Machine off, also with the newest CachyOS kernel
     ([details](TECHNICAL.md#power-off-fix-steam-machine)).
+  - **Wi-Fi firmware from SteamOS** - never ticked by default: Wake-on-WLAN
+    works (with CachyOS's Wi-Fi firmware the machine wakes up again right
+    away when it sleeps with it on)
+    ([details](TECHNICAL.md#wi-fi-firmware-steam-machine)).
   - **Update BIOS** - installs Valve's newest Steam Machine BIOS. Never ticked
     by default, at your own risk, and only after two warnings
     ([details](TECHNICAL.md#bios-updates-steam-machine)).
