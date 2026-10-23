@@ -8,6 +8,7 @@ one per merged pull request.
 ## 2.14.2 - 2026-10-24
 
 - **chore: bump VERSION to 2.14.2**
+- **fix: the first suspend after a boot did not wake on a Wi-Fi magic packet with Wake-on-WLAN on: the sleep hook turned it on right before the suspend, which is too late (tested on a Steam Machine: a Wi-Fi packet got no wake in 33 s, a wired packet did; the second suspend of the same boot woke on the Wi-Fi packet in 4 s). Reported with the fix by a user (#108). Wake-on-WLAN now also installs a NetworkManager dispatcher script (`/etc/NetworkManager/dispatcher.d/90-steamify-wowlan`) that enables it as soon as the Wi-Fi connects, and once right away for a Wi-Fi that is already connected when the option is turned on; the sleep hook stays as a fallback. Installs of 2.14.0 and 2.14.1 are shown as an update. Off removes both**
 
 ## 2.14.1 - 2026-10-23
 

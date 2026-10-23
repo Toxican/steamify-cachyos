@@ -325,8 +325,11 @@ gamescope and the Plasma desktop. Primary target: the Valve Steam Machine
 - Wake-on-LAN and Wake-on-WLAN (`wol`, `wowlan`, `lib/wake-on-lan.sh`, opt-in sub-options of `machine`). Wired: one
   NetworkManager drop-in (`ethernet.wake-on-lan=64` in a `connection-steamify-*` section), then `nmcli general reload
   conf` and `nmcli device reapply`. Wireless: **not** NetworkManager (with the Steam Machine's iwd backend it ignores
-  `wifi.wake-on-wlan`, tested), a systemd sleep hook (`patches/steamify-wowlan-sleep.sh` as
-  `/usr/lib/systemd/system-sleep/steamify-wowlan`) that runs `iw phy ... wowlan enable magic-packet` on `pre`. Never set
+  `wifi.wake-on-wlan`, tested), a NetworkManager dispatcher script (`patches/steamify-wowlan-dispatcher.sh` as
+  `/etc/NetworkManager/dispatcher.d/90-steamify-wowlan`, on `up` of a Wi-Fi interface) and a systemd sleep hook
+  (`patches/steamify-wowlan-sleep.sh` as `/usr/lib/systemd/system-sleep/steamify-wowlan`, on `pre`) that run
+  `iw phy ... wowlan enable magic-packet`. The dispatcher is what makes the **first suspend after a boot** wake (the hook alone
+  enables it too late: tested, #108): test that on the real machine with a fresh boot, a Wi-Fi packet and no earlier suspend. Never set
   either with a one-off `ethtool` or `iw` call: they don't survive a restart. Wake-on-WLAN works from sleep only and
   brings `wifi` along (`toggle_component`, `backend.sh`, `AppState.qml` all have the rule). Both wake from **sleep only**:
   wired wake from a power-off was tried with the BIOS's "S4/S5 WoL" on and does not work on the Steam Machine, so don't

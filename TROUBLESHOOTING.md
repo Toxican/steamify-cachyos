@@ -105,12 +105,13 @@ Check what the network device is set to (`g` means magic packet):
 
 ```bash
 sudo ethtool enp5s0 | grep Wake-on         # wired: should say g
-ls -l /usr/lib/systemd/system-sleep/steamify-wowlan   # Wi-Fi: the hook that enables it before every sleep
+ls -l /etc/NetworkManager/dispatcher.d/90-steamify-wowlan   # Wi-Fi: enables it when the Wi-Fi connects
+ls -l /usr/lib/systemd/system-sleep/steamify-wowlan         # and again right before every sleep
 ```
 
-Wired not `g`? Restart, or reconnect the network. Wi-Fi: `iw phy phy0 wowlan show` says "disabled" while the machine is
-awake; the hook turns it on right before it sleeps, so look at it from a second ssh session during a sleep, or test with a
-magic packet for the Wi-Fi adapter's MAC address. Both wake the machine from **sleep** only. A power-off doesn't work on the
+Wired not `g`? Restart, or reconnect the network. Wi-Fi: `iw phy phy0 wowlan show` should say "enabled" once the Wi-Fi is
+connected (the dispatcher script turns it on then; with only the 2.14.0 or 2.14.1 hook it said "disabled" until the first sleep,
+and that first sleep did not wake on a packet: update Steamify). Test with a magic packet for the Wi-Fi adapter's MAC address. Both wake the machine from **sleep** only. A power-off doesn't work on the
 Steam Machine (tried with the BIOS's "S4/S5 WoL" on: the machine stayed off), so after a shutdown it is started with the power button. The
 magic packet must go to the MAC address of the device that is connected.
 
