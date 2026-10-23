@@ -9,12 +9,8 @@ one per merged pull request.
 
 - **chore: bump VERSION to 2.13.3**
 - `b0437e1` **fix: Wake-on-WLAN on the Steam Machine woke it up again at once: CachyOS's Wi-Fi firmware (`amss.bin` of the Qualcomm QCA2066 adapter) is another build than SteamOS's, with the same version number. New opt-in sub-option of Steam Machine support, "Wi-Fi firmware from SteamOS" (`wifi`): installs Valve's build (`linux-firmware-holo`, holo-main, checksum verified) into `/usr/lib/firmware/updates`, so `linux-firmware` updates don't undo it; off removes the file. `fetch_holo_pkg` takes an optional repository. Reported and found by a user (#108)**
-<<<<<<< HEAD
-- **feat: the Wi-Fi firmware option shows which build is in use (SteamOS's, CachyOS's or another) in its menu row, and installs nothing when `linux-firmware` already ships Valve's build (#108)**
-- `e0afb77` **feat: new opt-in sub-options of Steam Machine support, "Wake-on-LAN" and "Wake-on-WLAN" (`wol`, `wowlan`): the Steam Machine wakes on a magic packet over the cable (from sleep, and from power-off when the BIOS allows it) or over Wi-Fi (from sleep). Each is one NetworkManager drop-in, so the setting survives a restart; off removes it. Wake-on-WLAN brings the Wi-Fi firmware item along. Not released yet: untested on the hardware (`.no-release-yet`) (#108)**
-=======
 - `274158e` **feat: the Wi-Fi firmware option shows which build is in use (SteamOS's, CachyOS's or another) in its menu row, and installs nothing when `linux-firmware` already ships Valve's build (#108)**
->>>>>>> bugfix/wifi-firmware
+- `e0afb77` **feat: new opt-in sub-options of Steam Machine support, "Wake-on-LAN" and "Wake-on-WLAN" (`wol`, `wowlan`): the Steam Machine wakes on a magic packet over the cable (from sleep, and from power-off when the BIOS allows it) or over Wi-Fi (from sleep). Each is one NetworkManager drop-in, so the setting survives a restart; off removes it. Wake-on-WLAN brings the Wi-Fi firmware item along. Not released yet: untested on the hardware (`.no-release-yet`) (#108)**
 - `5545a9c` **fix: Steam started silently on the desktop ("Start Steam silently in desktop mode") lost the Steam Beta choice after a reboot or a switch between gaming mode and the desktop, and downloaded client updates again: the autostart entry started Steam as `steam -silent` while gaming mode uses `-steamdeck`, so the two sessions disagreed on the client branch. The entry is now `steam -steamdeck -silent` (no `-gamepadui`: the desktop UI is unchanged); existing installs get it re-applied as an update (feature version 2.13.3). The Steam restart after "Add as non-Steam game" edits the shortcuts starts it with `-steamdeck` too, but only while the SteamOS conversion is on. Reported and fixed by a user (#109)**
 
 ## 2.13.2 - 2026-10-19
