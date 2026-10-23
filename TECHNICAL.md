@@ -443,6 +443,24 @@ installed when the package already ships Valve's. The new firmware is
 loaded at the next restart. Tested on a Steam Machine: after the restart
 `dmesg | grep fw_build_timestamp` shows `2025-07-16 10:46` (CachyOS's own build is `10:33`).
 
+## Wake-on-LAN and Wake-on-WLAN (Steam Machine)
+
+Two opt-in sub-options of Steam Machine support (`wol` and `wowlan`, `lib/wake-on-lan.sh`). Linux doesn't keep either
+setting: `ethtool -s ... wol g` and `iw phy ... wowlan enable magic-packet` are gone after a restart. NetworkManager
+sets both for the connections that don't have their own value (`default`), so each item is one drop-in in
+`/etc/NetworkManager/conf.d`: `90-steamify-wake-on-lan.conf` (`ethernet.wake-on-lan=64`, magic packet) and
+`90-steamify-wake-on-wlan.conf` (`wifi.wake-on-wlan=8`, magic packet), in a `connection-steamify-...` section each.
+Nothing of NetworkManager's own files is edited; off removes the drop-in. After writing it the item reloads
+NetworkManager's configuration (`nmcli general reload conf`) and re-applies the active devices of that type
+(`nmcli device reapply`), which doesn't drop the connection.
+
+- **Wired** is offered where there is an `en*` network device. Waking from sleep needs only this. Waking from power-off
+  also needs wake-on-LAN in the BIOS (and the BIOS not cutting the NIC's power in its energy-saving mode), which
+  Steamify can't read or set.
+- **Wireless** is only offered with the QCA2066 adapter and wakes from sleep only (the adapter has no power when the
+  machine is off). It needs the [SteamOS Wi-Fi firmware](#wi-fi-firmware-steam-machine): with CachyOS's own the
+  machine wakes up again at once. Ticking it ticks that item; unticking the firmware unticks it.
+
 ## Add as non-Steam game
 
 A sub-option of the Steamify shortcut (`steamgame`, `lib/steam-game.sh`, new
@@ -678,6 +696,7 @@ immediately, which can turn into a loop - see
 | `lib/steam-machine.sh` | Steam Machine support: LED driver, LED access, steamos-manager |
 | `lib/fremont-poweroff.sh` | Steam Machine support: the power-off fix (DKMS module from `patches/`) |
 | `lib/fremont-wifi.sh` | Steam Machine support: Wi-Fi firmware from SteamOS (Wake-on-WLAN) |
+| `lib/wake-on-lan.sh` | Steam Machine support: Wake-on-LAN and Wake-on-WLAN (NetworkManager drop-ins) |
 | `lib/steam-game.sh` | Add as non-Steam game: Steamify in the Steam library (`patches/steam-shortcuts.py`) |
 | `lib/update-notifier.sh` | Update notifications: the notifier from `patches/` and its user timer |
 | `lib/first-login.sh` | `--defaults` without a session (the Steam Machine ISO's installer): the one-time first-login step that sets up single user's launcher on Plasma's new layout and opens the app |

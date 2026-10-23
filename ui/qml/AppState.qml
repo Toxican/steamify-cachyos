@@ -89,8 +89,11 @@ Item {
         if (id === "glyphs" && w.glyphs) w.gaming = true;
         if (id === "machine") w.poweroff = w.machine;
         if (id === "poweroff" && w.poweroff) w.machine = true;
-        if (id === "machine" && !w.machine) { w.kpin = false; w.wifi = false; }
+        if (id === "machine" && !w.machine) { w.kpin = false; w.wifi = false; w.wol = false; w.wowlan = false; }
         if (id === "wifi" && w.wifi) w.machine = true;
+        if (id === "wol" && w.wol) w.machine = true;
+        if (id === "wowlan" && w.wowlan) { w.machine = true; w.wifi = true; }
+        if (id === "wifi" && !w.wifi) w.wowlan = false;
         if (id === "kpin" && w.kpin) w.machine = true;
         if (id === "launcher" && items.some(function (i) { return i.id === "steamgame"; })) w.steamgame = w.launcher;
         if (id === "steamgame" && w.steamgame) w.launcher = true;
