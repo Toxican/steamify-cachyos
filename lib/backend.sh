@@ -159,6 +159,8 @@ backend_apply() {
     [[ "${WANTED[nvidia]:-0}" == 0 ]] && { WANTED[bigpicture]=0; WANTED[nvsilent]=0; }
     [[ "${WANTED[silent]:-0}" == 1 || "${WANTED[glyphs]:-0}" == 1 ]] && component_available gaming && WANTED[gaming]=1
     [[ "${WANTED[gaming]:-0}" == 0 ]] && { WANTED[silent]=0; WANTED[glyphs]=0; }
+    [[ "${WANTED[cecaudio]:-0}" == 1 ]] && WANTED[cec]=1
+    [[ "${WANTED[cec]:-0}" == 0 ]] && WANTED[cecaudio]=0
     [[ "${WANTED[poweroff]:-0}" == 1 ]] && WANTED[machine]=1
     [[ "${WANTED[machine]:-0}" == 0 ]] && WANTED[poweroff]=0
     [[ "${WANTED[kpin]:-0}" == 1 ]] && WANTED[machine]=1
@@ -197,7 +199,7 @@ backend_apply() {
     done
     feature_record_unticked
     os_version_refresh
-    [[ " ${TO_DISABLE[*]} ${TO_ENABLE[*]} " =~ \ (gaming|single|boot|kpin)\  ]] && RESTART_FOR_LOGIN=true
+    [[ " ${TO_DISABLE[*]} ${TO_ENABLE[*]} " =~ \ (gaming|single|boot|kpin|cecaudio)\  ]] && RESTART_FOR_LOGIN=true
     backend_event finished "\"failed\":$(json_list "${failed[@]}"),\"restart\":$(restart_needed && echo true || echo false)"
 }
 

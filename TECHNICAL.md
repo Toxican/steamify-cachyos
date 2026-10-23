@@ -386,6 +386,54 @@ upset CEC for the TV's other devices
 Turning it off removes the packages again (`linuxconsole` only if the
 wizard installed it).
 
+## HDMI-CEC volume (Steam Machine)
+
+On SteamOS, Steam's Audio settings show **TV Volume** buttons (minus, plus, mute) and an "Enable HDMI CEC control" toggle
+when the output is the TV; on CachyOS they show a slider that doesn't reach the TV (#107). Steam only shows the buttons when
+PipeWire tells it the HDMI output's volume is handled externally, and that is something Valve patched into its own builds:
+Valve's `libspa-alsa.so` reads the sink property `api.alsa.external-volume-control` (the socket of `cec-audio-control`,
+`org.pipewire.ExternalVolume`, a varlink service) and its WirePlumber gates it with the setting
+`monitor.alsa.enable-external-volume-control`; CachyOS's PipeWire (1.6.10) and WirePlumber have neither. Found by comparing
+the two builds and by testing on a Steam Machine: with only Valve's WirePlumber Steam showed the toggle with "The connected
+device does not support HDMI CEC for volume and mute settings" (nothing ever connected to the socket); with both, the
+buttons appear. The TV doesn't have to report its volume (a Sony TV that answers Feature Abort to the audio-status queries
+showed them).
+
+The **HDMI-CEC volume** sub-option of HDMI-CEC (`cecaudio`, `lib/cec-audio.sh`, only on a Steam Machine, ticked along with
+HDMI-CEC like the power-off fix) therefore **replaces CachyOS's PipeWire and WirePlumber by Valve's builds**:
+
+- `patches/steamify-valve-audio.sh` (installed as `/usr/local/lib/steamify/steamify-valve-audio`) fills a **local pacman
+  repository**, `/var/lib/steamify/valve-audio` (`steamify-valve-audio`), with the installed `pipewire`, `libpipewire`,
+  `pipewire-audio`, `-alsa`, `-pulse`, `gst-plugin-pipewire`, `wireplumber` and `libwireplumber` (and `lib32-pipewire`,
+  `lib32-libpipewire` when installed) from Valve's newest `jupiter-X.Y` repository (64-bit) and `multilib-X.Y` (32-bit,
+  plain Arch builds at the same upstream version), each checked against the SHA-256 in Valve's package index. It copies the
+  database to `/var/lib/pacman/sync` itself (no `pacman -Sy`, which would refresh every other repository: a partial upgrade).
+- The repository is listed in `/etc/pacman.conf` **before** CachyOS's repositories (backed up with `backup_file`): the first
+  repository with a package decides which version pacman takes, so `pacman -Syu` keeps Valve's build instead of upgrading to
+  CachyOS's, and takes a newer Valve build once the repository has it. Adding Valve's own repository to the list wouldn't
+  work: pacman can't take a few packages from a repository, and its kernel, Mesa and systemd would replace CachyOS's.
+- A weekly timer (`steamify-valve-audio.timer`) runs that script, so the repository follows Valve's releases; it never
+  installs anything itself. Valve is usually a few patch releases behind Arch (1.6.8 against 1.6.10 at the time of writing)
+  and re-patches per SteamOS release: the build is "Valve's current one", not the newest PipeWire.
+- Valve's `pipewire` package has symlinks in `/etc/pipewire` (`client.conf.d` and `client-rt.conf.d`, to `/run/pipewire`) where
+  CachyOS's `libpipewire` has empty directories, and pacman doesn't turn a directory into a symlink: the two (empty)
+  directories are removed first. Valve's packages also pull in `steamdeck-dsp` and `noisetorch`; `steamdeck-dsp` owns
+  `/etc/wireplumber` (a symlink to a `/run` directory that doesn't exist), so the WirePlumber rule goes in the user's
+  `~/.config/wireplumber/wireplumber.conf.d/90-steamify-cec-volume.conf`: the HDMI sound card gets the socket as
+  `api.alsa.external-volume-control`, the description "HDMI / DisplayPort" (what Steam shows on SteamOS) and
+  `monitor.alsa.enable-external-volume-control = true`.
+- **A restart is asked for** (the same prompt as the login changes), and nothing is restarted live: PipeWire, WirePlumber and
+  everything using them (Sunshine and a Moonlight stream, games, Steam) keep running with the old libraries until then. A live
+  restart was tried first and took Moonlight's host down: Sunshine's unit rate-limits starts (five in 500 s) and a few
+  on/off rounds hit that. Not every PC has Sunshine, or another program that depends on PipeWire staying up, so the option
+  doesn't look for them. Steam shows the buttons after that restart.
+
+Turning it off removes the unit, the script, the rule, the repository and its `pacman.conf` section (the file is identical to
+its backup afterwards), reinstalls the packages it swapped from CachyOS's repositories and removes the packages Valve's
+brought along. Tested on a Steam Machine (Sony TV): on, off, and on again leave the same state; Steam shows the buttons only
+with it on; PipeWire's graph timing on the HDMI output (quantum 1024 at 48 kHz, 0 dropouts) is the same with either build.
+The 32-bit libraries are moved to Valve's version too, so all of PipeWire is one version.
+
 ## Power-off fix (Steam Machine)
 
 With recent kernels a Steam Machine starts again right after powering off:
@@ -701,6 +749,7 @@ immediately, which can turn into a loop - see
 | `lib/wizard-shortcut.sh` | Steamify shortcut: desktop icon and launcher entry that run the newest release |
 | `lib/bios.sh` | Update BIOS (Steam Machine, opt-in): current/newest version, double confirmation, fwupd |
 | `lib/cec.sh` | HDMI-CEC: Valve's `cecd` and friends from its `holo` repository |
+| `lib/cec-audio.sh` | Steam Machine: the TV's volume buttons in Steam (Valve's PipeWire and WirePlumber from a local pacman repository) |
 | `lib/steam-machine.sh` | Steam Machine support: LED driver, LED access, steamos-manager |
 | `lib/fremont-poweroff.sh` | Steam Machine support: the power-off fix (DKMS module from `patches/`) |
 | `lib/fremont-wifi.sh` | Steam Machine support: Wi-Fi firmware from SteamOS (Wake-on-WLAN) |

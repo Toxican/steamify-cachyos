@@ -87,6 +87,9 @@ Item {
         if (id === "nvidia" && !w.nvidia) w.nvsilent = false;
         if (id === "silent" && w.silent) w.gaming = true;
         if (id === "glyphs" && w.glyphs) w.gaming = true;
+        // The TV volume buttons are opt-out, ticked along with HDMI-CEC, which they need.
+        if (id === "cec" && items.some(function (i) { return i.id === "cecaudio"; })) w.cecaudio = w.cec;
+        if (id === "cecaudio" && w.cecaudio) w.cec = true;
         if (id === "machine") w.poweroff = w.machine;
         if (id === "poweroff" && w.poweroff) w.machine = true;
         if (id === "machine" && !w.machine) { w.kpin = false; w.wifi = false; w.wol = false; w.wowlan = false; }
