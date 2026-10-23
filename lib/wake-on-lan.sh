@@ -1,7 +1,7 @@
 #!/bin/bash
 # "Wake-on-LAN" (wol) and "Wake-on-WLAN" (wowlan) menu items, opt-in sub-options of Steam Machine support: the Steam
-# Machine wakes up on a magic packet, over the cable (from sleep, and from power-off when the BIOS allows it) or over
-# Wi-Fi (from sleep only: the adapter has no power when the machine is off). Linux doesn't keep either setting by
+# Machine wakes from sleep on a magic packet, over the cable or over Wi-Fi. Not from a power-off: tried on a Steam Machine
+# with the BIOS's "S4/S5 WoL" and "S4 WoWiFi" on, a packet for the wired adapter did not start it. Linux doesn't keep either setting by
 # itself (ethtool and `iw ... wowlan` are gone after a restart). Wired: NetworkManager sets it, as the default for every
 # connection that doesn't set its own (ethernet.wake-on-lan), in a drop-in of ours; nothing of NetworkManager's own
 # files is edited. Wireless: NetworkManager can't (with the iwd backend, the Steam Machine's, it ignores
@@ -54,7 +54,7 @@ wol_enable() {
     wake_nm_available || { err "NetworkManager isn't running; Wake-on-LAN can't be set up."; return 1; }
     wake_conf_write "$WOL_CONF" connection-steamify-wake-on-lan ethernet.wake-on-lan "$WOL_MAGIC" "Wake-on-LAN (magic packet) on the cable" || return 1
     wake_conf_apply ethernet
-    ok "Wake-on-LAN on: the Steam Machine wakes on a magic packet over the cable. From power-off it also needs wake-on-LAN in the BIOS."
+    ok "Wake-on-LAN on: the Steam Machine wakes from sleep on a magic packet over the cable (not from power-off)."
 }
 wol_disable() {
     [[ -e "$WOL_CONF" ]] || return 0

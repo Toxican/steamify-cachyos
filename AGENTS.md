@@ -328,9 +328,10 @@ gamescope and the Plasma desktop. Primary target: the Valve Steam Machine
   `wifi.wake-on-wlan`, tested), a systemd sleep hook (`patches/steamify-wowlan-sleep.sh` as
   `/usr/lib/systemd/system-sleep/steamify-wowlan`) that runs `iw phy ... wowlan enable magic-packet` on `pre`. Never set
   either with a one-off `ethtool` or `iw` call: they don't survive a restart. Wake-on-WLAN works from sleep only and
-  brings `wifi` along (`toggle_component`, `backend.sh`, `AppState.qml` all have the rule); wired wake from power-off
-  also needs wake-on-LAN in the BIOS. Test the wakes on the real machine (`TESTPLAN.md` W2): suspend, then a magic
-  packet for the right MAC (must wake) and one for a wrong MAC (must not), shut down and a magic packet. Ping the
+  brings `wifi` along (`toggle_component`, `backend.sh`, `AppState.qml` all have the rule). Both wake from **sleep only**:
+  wired wake from a power-off was tried with the BIOS's "S4/S5 WoL" on and does not work on the Steam Machine, so don't
+  promise it. Test the wakes on the real machine (`TESTPLAN.md` W2): suspend, then a magic
+  packet for the right MAC (must wake) and one for a wrong MAC (must not). Ping the
   address of the link under test, and read `PM: suspend entry/exit` in the journal: a wake by the keyboard controller
   (`pm_wakeup_irq` = i8042) is not the packet.
 - Add as non-Steam game (`steamgame`, `lib/steam-game.sh`, sub-option of

@@ -453,10 +453,13 @@ setting: `ethtool -s ... wol g` and `iw phy ... wowlan enable magic-packet` are 
   (`ethernet.wake-on-lan=64`, magic packet, in a `connection-steamify-wake-on-lan` section), and nothing of
   NetworkManager's own files is edited. After writing it the item reloads NetworkManager's configuration
   (`nmcli general reload conf`) and re-applies the wired devices (`nmcli device reapply`), which doesn't drop the
-  connection. Waking from sleep needs only this. Waking from power-off also needs wake-on-LAN in the BIOS (and the BIOS
-  not cutting the NIC's power in its energy-saving mode), which Steamify can't read or set. Off removes the file.
-- **Wireless** (`wowlan`) is only offered with the QCA2066 adapter and wakes from sleep only (the adapter has no power
-  when the machine is off). NetworkManager can't do it here: with the iwd backend (the Steam Machine's, in
+  connection. Off removes the file. It wakes the machine from **sleep** (s2idle); it does not wake it from a power-off:
+  tried on a Steam Machine with the BIOS's "S4/S5 WoL" and "S4 WoWiFi" both on, a magic packet for the wired adapter's MAC
+  did not start it (the machine stayed off for over two minutes, a wrong-MAC packet and no packet did nothing either), while
+  from sleep it woke 3 times out of 3. The link was not checked while off (is the port's light on?), and hibernate (S4) is
+  untested.
+- **Wireless** (`wowlan`) is only offered with the QCA2066 adapter and wakes from sleep only (the BIOS has an "S4 WoWiFi"
+  switch for hibernate, which is untested). NetworkManager can't do it here: with the iwd backend (the Steam Machine's, in
   `99-valve-wifi-backend.conf`) it ignores `wifi.wake-on-wlan`, also set on the connection itself and after a reconnect
   (tried on a Steam Machine), and with any backend it can't change it on a live connection. So a systemd sleep hook,
   `/usr/lib/systemd/system-sleep/steamify-wowlan` ([`patches/steamify-wowlan-sleep.sh`](patches/steamify-wowlan-sleep.sh)),

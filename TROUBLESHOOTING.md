@@ -110,9 +110,9 @@ ls -l /usr/lib/systemd/system-sleep/steamify-wowlan   # Wi-Fi: the hook that ena
 
 Wired not `g`? Restart, or reconnect the network. Wi-Fi: `iw phy phy0 wowlan show` says "disabled" while the machine is
 awake; the hook turns it on right before it sleeps, so look at it from a second ssh session during a sleep, or test with a
-magic packet for the Wi-Fi adapter's MAC address. Wired wake from power-off also needs wake-on-LAN in the BIOS (and not an
-energy-saving mode that cuts the network card's power). Wi-Fi wakes from sleep only, never from power-off. The magic
-packet must go to the MAC address of the device that is connected.
+magic packet for the Wi-Fi adapter's MAC address. Both wake the machine from **sleep** only. A power-off doesn't work on the
+Steam Machine (tried with the BIOS's "S4/S5 WoL" on: the machine stayed off), so after a shutdown it is started with the power button. The
+magic packet must go to the MAC address of the device that is connected.
 
 ## The kernel pin can't download or verify the kernel
 
