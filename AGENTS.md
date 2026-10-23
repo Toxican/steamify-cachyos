@@ -313,6 +313,27 @@ gamescope and the Plasma desktop. Primary target: the Valve Steam Machine
   `linux-cachyos` is clang-built, `-bore` GCC-built: let DKMS pick the
   compiler, never pass `LLVM=1`. Test shutdown on the real machine for every
   new major kernel.
+- Wi-Fi firmware (`wifi`, `lib/fremont-wifi.sh`, opt-in sub-option of `machine`, #108): CachyOS's `amss.bin` for the
+  Steam Machine's QCA2066 adapter is another build than SteamOS's (same version number); with it Wake-on-WLAN wakes the
+  machine again at once. Valve's build is `linux-firmware-holo` in the **`holo-main`** repository (not in the numbered
+  `holo-X.Y`, not in `core`): `fetch_holo_pkg <dir> <pkg> [repo]` downloads it (checksum from Valve's index) and only
+  `ath11k/QCA2066/hw2.1/amss.bin.zst` goes to `/usr/lib/firmware/updates`, which the kernel reads before
+  `/usr/lib/firmware`: never overwrite the `linux-firmware-atheros` file (a package update would undo it, and the
+  backup would be ours to keep). `wifi_build` tells which build loads (decompressed SHA-256 of Valve's and CachyOS's;
+  a newer `linux-firmware` shows "unknown"); nothing is installed when the package already has Valve's. Steamify ships
+  no firmware. If Valve moves the package to a numbered repository, prefer that over `holo-main`.
+- Wake-on-LAN and Wake-on-WLAN (`wol`, `wowlan`, `lib/wake-on-lan.sh`, opt-in sub-options of `machine`). Wired: one
+  NetworkManager drop-in (`ethernet.wake-on-lan=64` in a `connection-steamify-*` section), then `nmcli general reload
+  conf` and `nmcli device reapply`. Wireless: **not** NetworkManager (with the Steam Machine's iwd backend it ignores
+  `wifi.wake-on-wlan`, tested), a systemd sleep hook (`patches/steamify-wowlan-sleep.sh` as
+  `/usr/lib/systemd/system-sleep/steamify-wowlan`) that runs `iw phy ... wowlan enable magic-packet` on `pre`. Never set
+  either with a one-off `ethtool` or `iw` call: they don't survive a restart. Wake-on-WLAN works from sleep only and
+  brings `wifi` along (`toggle_component`, `backend.sh`, `AppState.qml` all have the rule). Both wake from **sleep only**:
+  wired wake from a power-off was tried with the BIOS's "S4/S5 WoL" on and does not work on the Steam Machine, so don't
+  promise it. Test the wakes on the real machine (`TESTPLAN.md` W2): suspend, then a magic
+  packet for the right MAC (must wake) and one for a wrong MAC (must not). Ping the
+  address of the link under test, and read `PM: suspend entry/exit` in the journal: a wake by the keyboard controller
+  (`pm_wakeup_irq` = i8042) is not the packet.
 - Add as non-Steam game (`steamgame`, `lib/steam-game.sh`, sub-option of
   `launcher`, ticked along with it, 2.5.1): edits Steam's `shortcuts.vdf`
   with `patches/steam-shortcuts.py` only while Steam is closed (Steam

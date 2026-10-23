@@ -72,6 +72,48 @@ Not running it yet? Restart. Not installed? Run the wizard and make sure
 **Pin the kernel** under Steam Machine support is ticked. If you have more
 kernels installed (e.g. the LTS kernel), pick `linux-cachyos` in the boot menu.
 
+## The Steam Machine wakes up again right after going to sleep
+
+With Wake-on-WLAN on (`iw phy phyN wowlan show`), CachyOS's Wi-Fi firmware makes the Steam Machine wake at once.
+Tick **Wi-Fi firmware from SteamOS** under Steam Machine support (Wake-on-WLAN ticks it for you) and restart. Check
+which build loads:
+
+```bash
+sudo dmesg | grep fw_build_timestamp       # 2025-07-16 10:46 is SteamOS's build, 10:33 is CachyOS's
+```
+
+Still waking? Find out what wakes it, with the kernel's own wake messages: turn them on, suspend once, and read them.
+
+```bash
+echo 1 | sudo tee /sys/power/pm_debug_messages
+systemctl suspend                          # let it wake by itself, then:
+sudo journalctl -b -g 'Triggering wakeup|Wakeup unrelated|non-EC GPE' | tail
+cat /proc/acpi/wakeup                      # what may wake the machine at all
+```
+
+`IRQ 40` with "Wakeup unrelated to ACPI SCI" is the Wi-Fi adapter itself (the firmware problem above). `IRQ 1` (the keyboard
+controller) together with `IRQ 9` and "ACPI non-EC GPE wakeup" a few seconds after suspending is an input device or something
+else on the machine: a controller or its Puck, a keyboard, a remote session sending input, the TV over HDMI-CEC. Those
+wake the machine with Wake-on-WLAN off as well, so test with it off (untick it, restart) to tell the two apart. Tested on a
+Steam Machine: a Wi-Fi magic packet woke it 10 times out of 10; in about 60 suspends without a packet one woke through the Wi-Fi
+adapter (IRQ 40), and a stretch with more going on (remote sessions, controllers) had several of the keyboard-controller wakes,
+also with Wake-on-WLAN off.
+
+## Wake-on-LAN or Wake-on-WLAN does nothing
+
+Check what the network device is set to (`g` means magic packet):
+
+```bash
+sudo ethtool enp5s0 | grep Wake-on         # wired: should say g
+ls -l /usr/lib/systemd/system-sleep/steamify-wowlan   # Wi-Fi: the hook that enables it before every sleep
+```
+
+Wired not `g`? Restart, or reconnect the network. Wi-Fi: `iw phy phy0 wowlan show` says "disabled" while the machine is
+awake; the hook turns it on right before it sleeps, so look at it from a second ssh session during a sleep, or test with a
+magic packet for the Wi-Fi adapter's MAC address. Both wake the machine from **sleep** only. A power-off doesn't work on the
+Steam Machine (tried with the BIOS's "S4/S5 WoL" on: the machine stayed off), so after a shutdown it is started with the power button. The
+magic packet must go to the MAC address of the device that is connected.
+
 ## The kernel pin can't download or verify the kernel
 
 The wizard tries this repo's `kernel-7.1.6-1` release, then the CachyOS

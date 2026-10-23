@@ -117,11 +117,12 @@ cec_driver_disable() {
 cec_repair() { cec_installed && ! cec_status; }
 
 fetch_holo_pkg() {
-    # fetch_holo_pkg <dir> <package>: download the newest <package> from
-    # Valve's newest holo repository into <dir> and print its path. The
-    # SHA-256 comes from Valve's package index and is verified.
-    local dir="$1" name="$2" repo desc file_name sha256
-    repo="$(curl -fsL "$VALVE_MIRROR/" | grep -oE 'holo-[0-9]+\.[0-9]+/' | tr -d / | sort -V | tail -n 1)"
+    # fetch_holo_pkg <dir> <package> [repo]: download the newest <package> from
+    # Valve's newest holo-X.Y repository (or [repo], e.g. holo-main) into <dir>
+    # and print its path. The SHA-256 comes from Valve's package index and is
+    # verified.
+    local dir="$1" name="$2" repo="${3:-}" desc file_name sha256
+    [[ -n "$repo" ]] || repo="$(curl -fsL "$VALVE_MIRROR/" | grep -oE 'holo-[0-9]+\.[0-9]+/' | tr -d / | sort -V | tail -n 1)"
     if [[ ! -f "$dir/holo.db" ]]; then
         [[ -n "$repo" ]] && curl -fsL "$VALVE_MIRROR/$repo/os/x86_64/$repo.db" -o "$dir/holo.db" ||
             { err "Couldn't read Valve's SteamOS package index ($VALVE_MIRROR)."; return 1; }

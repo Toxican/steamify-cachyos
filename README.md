@@ -85,6 +85,14 @@ What Steamify can do on a Valve Steam Machine:
   - **Power-off fix** - on by default: shutting down really turns the Steam
     Machine off, also with the newest CachyOS kernel
     ([details](TECHNICAL.md#power-off-fix-steam-machine)).
+  - **Wi-Fi firmware from SteamOS** - never ticked by default: Wake-on-WLAN
+    works (with CachyOS's Wi-Fi firmware the machine wakes up again right
+    away when it sleeps with it on)
+    ([details](TECHNICAL.md#wi-fi-firmware-steam-machine)).
+  - **Wake-on-LAN** and **Wake-on-WLAN** - never ticked by default: the
+    Steam Machine wakes from sleep on a magic packet over the cable, or over
+    Wi-Fi (not from a power-off: tried, it does not work). Wake-on-WLAN brings the Wi-Fi firmware item along
+    ([details](TECHNICAL.md#wake-on-lan-and-wake-on-wlan-steam-machine)).
   - **Update BIOS** - installs Valve's newest Steam Machine BIOS. Never ticked
     by default, at your own risk, and only after two warnings
     ([details](TECHNICAL.md#bios-updates-steam-machine)).
@@ -189,6 +197,12 @@ Some files in `patches/` are not MIT. They keep their own license, and each file
 | `gamescope-gbm-scanout.patch` | GBM scan-out for gamescope on NVIDIA: nine commits of [farnoy/gamescope](https://github.com/farnoy/gamescope) on [ValveSoftware/gamescope](https://github.com/ValveSoftware/gamescope). | gamescope's license (BSD-2-Clause) |
 | `gamescope-ui-native.patch` | Keeps Steam's interface at the display's size in gamescope on NVIDIA (a small patch after the one above). | gamescope's license (BSD-2-Clause) |
 | `gamescope-nvidia.PKGBUILD` | The recipe for the patched gamescope package, used only when it can't be downloaded. | MIT, like Steamify |
+
+### Downloaded, not shipped
+
+Valve's packages (the CEC daemon, the BIOS update and the Steam Machine's Wi-Fi firmware) are downloaded from Valve's own
+package mirror when you tick the option, and checked against the checksum in Valve's package index. Steamify doesn't
+contain or redistribute them; each package carries its own license (the Wi-Fi firmware's is in its `Notice.txt`).
 
 ## Disclaimer
 
