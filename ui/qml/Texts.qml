@@ -12,7 +12,7 @@ QtObject {
                 changes: ["Desktop: the Plasma session is set before login", "Gaming: the SteamOS default"] },
         silent: { label: "Start Steam silently in desktop mode", hint: "In the tray at login on the desktop, no window",
                   body: "Steam starts by itself when you log in to the Plasma desktop, in the tray without a window. Gaming mode starts its own Steam.",
-                  changes: ["Steam is started with -silent (a systemd user service, desktop only)", "Off: the service is removed again"] },
+                  changes: ["Steam is started with -steamdeck -silent (Steam's own autostart entry, desktop only)", "Off: the autostart entry is removed again"] },
         nvidia: { label: "Gaming on NVIDIA", hint: "Steam on the desktop, started at login",
                   body: "gamescope's own gaming mode shows a corrupted picture on NVIDIA graphics cards (an open NVIDIA driver bug), so it isn't offered here. This puts Steam on the Plasma desktop instead and starts it when you log in.",
                   changes: ["Steam is installed when it's missing", "Steam starts at login (a systemd user service)", "Off: the service is removed again; Steam is only removed if Steamify installed it"] },

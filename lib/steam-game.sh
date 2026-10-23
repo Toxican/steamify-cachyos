@@ -72,7 +72,11 @@ steamgame_edit() {
     fi
     "$1"; local rc=$?
     if [[ "$was_running" == true ]]; then
-        systemd-run --user --collect -q steam -silent >/dev/null 2>&1
+        # With the SteamOS conversion Steam runs as -steamdeck in both sessions (#109): a start without it
+        # would switch the client branch again. Without the conversion the flag stays off.
+        local deck=()
+        gaming_status && deck=(-steamdeck)
+        systemd-run --user --collect -q steam "${deck[@]}" -silent >/dev/null 2>&1
         info "Steam is starting again."
     fi
     return "$rc"

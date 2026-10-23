@@ -5,6 +5,11 @@ All notable changes, per version and per commit. Versions follow
 `steamify.sh`. Versions before 0.7.0 were numbered afterwards,
 one per merged pull request.
 
+## 2.14.0 - 2026-10-23
+
+- **chore: bump VERSION to 2.14.0** (the release was 2.13.3 until the GNOME release became 2.15.0)
+- `5545a9c` **fix: Steam started silently on the desktop ("Start Steam silently in desktop mode") lost the Steam Beta choice after a reboot or a switch between gaming mode and the desktop, and downloaded client updates again: the autostart entry started Steam as `steam -silent` while gaming mode uses `-steamdeck`, so the two sessions disagreed on the client branch. The entry is now `steam -steamdeck -silent` (no `-gamepadui`: the desktop UI is unchanged); existing installs get it re-applied as an update (feature version 2.14.0). The Steam restart after "Add as non-Steam game" edits the shortcuts starts it with `-steamdeck` too, but only while the SteamOS conversion is on. Reported and fixed by a user (#109)**
+
 ## 2.13.2 - 2026-10-19
 
 - `ca98c2c` **chore: bump VERSION to 2.13.2**
