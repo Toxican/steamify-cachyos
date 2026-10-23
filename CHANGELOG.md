@@ -7,8 +7,9 @@ one per merged pull request.
 
 ## 2.14.1 - 2026-10-23
 
-- **chore: bump VERSION to 2.14.1**
-- **feat: new default sub-option of HDMI-CEC on a Steam Machine, "HDMI-CEC volume" (`cecaudio`): Steam's Audio settings get SteamOS's TV Volume buttons (minus, plus, mute) and the HDMI CEC toggle instead of a slider that doesn't reach the TV (#107). They need Valve's builds of PipeWire and WirePlumber, which carry a patch CachyOS's don't have, so the option replaces CachyOS's (64-bit and 32-bit) by Valve's (checksums verified) in a local pacman repository that is listed before CachyOS's, so `pacman -Syu` keeps them, and that a weekly timer refreshes from Valve's newest `jupiter-X.Y` and `multilib-X.Y`. Audio may behave differently, and Valve's PipeWire is usually a little behind CachyOS's. Off puts CachyOS's packages back and removes what Valve's brought along (`steamdeck-dsp`, `noisetorch`), the repository and its `pacman.conf` section. The new files: `lib/cec-audio.sh`, `patches/steamify-valve-audio.sh`, `services/steamify-valve-audio.service` and `.timer`**
+- `c125dc8` **chore: bump VERSION to 2.14.1**
+- **chore: changelog hashes of the 2.14.1 commits so far**
+- `928c745` **feat: new default sub-option of HDMI-CEC on a Steam Machine, "HDMI-CEC volume" (`cecaudio`): Steam's Audio settings get SteamOS's TV Volume buttons (minus, plus, mute) and the HDMI CEC toggle instead of a slider that doesn't reach the TV (#107). They need Valve's builds of PipeWire and WirePlumber, which carry a patch CachyOS's don't have, so the option replaces CachyOS's (64-bit and 32-bit) by Valve's (checksums verified) in a local pacman repository that is listed before CachyOS's, so `pacman -Syu` keeps them, and that a weekly timer refreshes from Valve's newest `jupiter-X.Y` and `multilib-X.Y`. Audio may behave differently, and Valve's PipeWire is usually a little behind CachyOS's. Off puts CachyOS's packages back and removes what Valve's brought along (`steamdeck-dsp`, `noisetorch`), the repository and its `pacman.conf` section. The new files: `lib/cec-audio.sh`, `patches/steamify-valve-audio.sh`, `services/steamify-valve-audio.service` and `.timer`**
 
 ## 2.14.0 - 2026-10-23
 
