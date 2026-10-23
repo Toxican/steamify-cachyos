@@ -437,7 +437,9 @@ Valve's package index (`fetch_holo_pkg`) and installs only
 `ath11k/QCA2066/hw2.1/amss.bin.zst` to the same place. The kernel reads
 `/usr/lib/firmware/updates` before `/usr/lib/firmware`, so no file of
 `linux-firmware` is changed (its updates don't undo this, and there is nothing
-to back up); turning the item off removes the one file. The new firmware is
+to back up); turning the item off removes the one file. The menu row says which `amss.bin` the kernel will load (the decompressed SHA-256 against the two
+known builds: Valve's, CachyOS's, or another one, e.g. from a newer `linux-firmware`), and nothing is
+installed when the package already ships Valve's. The new firmware is
 loaded at the next restart. Tested on a Steam Machine: after the restart
 `dmesg | grep fw_build_timestamp` shows `2025-07-16 10:46` (CachyOS's own build is `10:33`).
 

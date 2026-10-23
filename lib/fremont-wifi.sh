@@ -15,6 +15,10 @@ WIFI_FW_REPO=holo-main
 WIFI_FW_PKG=linux-firmware-holo
 WIFI_FW_FILE=usr/lib/firmware/updates/ath11k/QCA2066/hw2.1/amss.bin.zst
 WIFI_FW_DEST="/$WIFI_FW_FILE"
+WIFI_FW_STOCK=/usr/lib/firmware/ath11k/QCA2066/hw2.1/amss.bin.zst
+# SHA-256 of the decompressed amss.bin (both report firmware 03926.13): CachyOS's linux-firmware-atheros 20260916, and Valve's.
+WIFI_SHA_CACHYOS=6be9c2264898c0190fb39befa5f42d07413014db772daaedd56031415d9880ae
+WIFI_SHA_VALVE=a0c75e4c784de85a0624466a87751982091c46dc85c14cf74ff7a0592e8b3c30
 
 wifi_available() {
     detect_valve_fremont || return 1
@@ -28,8 +32,39 @@ wifi_available() {
 
 wifi_status() { [[ -f "$WIFI_FW_DEST" ]]; }
 
+wifi_build() {
+    # Which amss.bin the kernel loads at the next start: ours in updates/ before the package's. Prints valve, cachyos or
+    # unknown (another build, e.g. a newer linux-firmware); nothing when there is none or zstd is missing.
+    local f sum
+    for f in "$WIFI_FW_DEST" "$WIFI_FW_STOCK"; do
+        [[ -f "$f" ]] && break
+        f=""
+    done
+    [[ -n "$f" ]] && command -v zstd >/dev/null 2>&1 || return 0
+    sum="$(zstd -dc "$f" 2>/dev/null | sha256sum | cut -d' ' -f1)"
+    case "$sum" in
+        "$WIFI_SHA_VALVE") echo valve ;;
+        "$WIFI_SHA_CACHYOS") echo cachyos ;;
+        *) echo unknown ;;
+    esac
+}
+
+wifi_label() {
+    # Menu label with the build in use; kept short enough for the row.
+    case "$(wifi_build)" in
+        valve) echo "Wi-Fi firmware from SteamOS: Wake-on-WLAN works (in use: SteamOS's)" ;;
+        cachyos) echo "Wi-Fi firmware from SteamOS: Wake-on-WLAN works (in use: CachyOS's)" ;;
+        *) echo "${LABEL[wifi]}" ;;
+    esac
+}
+
 wifi_enable() {
     local tmp pkg
+    # linux-firmware may ship Valve's build one day: then there is nothing to install.
+    if ! wifi_status && [[ "$(wifi_build)" == valve ]]; then
+        ok "The Wi-Fi firmware already is SteamOS's build; nothing to install."
+        return 0
+    fi
     tmp="$(mktemp -d)"
     info "Downloading Valve's Wi-Fi firmware for the Steam Machine..."
     pkg="$(fetch_holo_pkg "$tmp" "$WIFI_FW_PKG" "$WIFI_FW_REPO")" || { rm -rf "$tmp"; return 1; }

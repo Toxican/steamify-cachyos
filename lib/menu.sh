@@ -207,6 +207,8 @@ detect_components() {
     # The terminal-only Steamify shortcut from before 2.0.1: tick it, so a
     # normal run replaces it with the app.
     launcher_repair && WANTED[launcher]=1
+    # Shows which Wi-Fi firmware build is in use.
+    wifi_available && LABEL[wifi]="$(wifi_label)"
     # Shows the current and newest BIOS version.
     bios_available && { bios_lookup_newest; LABEL[bios]="$(bios_label)"; }
     # Greyed out with an NVIDIA card: say why, and what to do.
