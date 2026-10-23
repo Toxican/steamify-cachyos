@@ -198,6 +198,12 @@ Some files in `patches/` are not MIT. They keep their own license, and each file
 | `gamescope-ui-native.patch` | Keeps Steam's interface at the display's size in gamescope on NVIDIA (a small patch after the one above). | gamescope's license (BSD-2-Clause) |
 | `gamescope-nvidia.PKGBUILD` | The recipe for the patched gamescope package, used only when it can't be downloaded. | MIT, like Steamify |
 
+### Downloaded, not shipped
+
+Valve's packages (the CEC daemon, the BIOS update and the Steam Machine's Wi-Fi firmware) are downloaded from Valve's own
+package mirror when you tick the option, and checked against the checksum in Valve's package index. Steamify doesn't
+contain or redistribute them; each package carries its own license (the Wi-Fi firmware's is in its `Notice.txt`).
+
 ## Disclaimer
 
 Steamify CachyOS is an unofficial community project. It is not affiliated

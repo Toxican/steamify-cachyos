@@ -313,6 +313,22 @@ gamescope and the Plasma desktop. Primary target: the Valve Steam Machine
   `linux-cachyos` is clang-built, `-bore` GCC-built: let DKMS pick the
   compiler, never pass `LLVM=1`. Test shutdown on the real machine for every
   new major kernel.
+- Wi-Fi firmware (`wifi`, `lib/fremont-wifi.sh`, opt-in sub-option of `machine`, #108): CachyOS's `amss.bin` for the
+  Steam Machine's QCA2066 adapter is another build than SteamOS's (same version number); with it Wake-on-WLAN wakes the
+  machine again at once. Valve's build is `linux-firmware-holo` in the **`holo-main`** repository (not in the numbered
+  `holo-X.Y`, not in `core`): `fetch_holo_pkg <dir> <pkg> [repo]` downloads it (checksum from Valve's index) and only
+  `ath11k/QCA2066/hw2.1/amss.bin.zst` goes to `/usr/lib/firmware/updates`, which the kernel reads before
+  `/usr/lib/firmware`: never overwrite the `linux-firmware-atheros` file (a package update would undo it, and the
+  backup would be ours to keep). `wifi_build` tells which build loads (decompressed SHA-256 of Valve's and CachyOS's;
+  a newer `linux-firmware` shows "unknown"); nothing is installed when the package already has Valve's. Steamify ships
+  no firmware. If Valve moves the package to a numbered repository, prefer that over `holo-main`.
+- Wake-on-LAN and Wake-on-WLAN (`wol`, `wowlan`, `lib/wake-on-lan.sh`, opt-in sub-options of `machine`): one
+  NetworkManager drop-in each in `/etc/NetworkManager/conf.d` (`ethernet.wake-on-lan=64`, `wifi.wake-on-wlan=8`, in a
+  `connection-steamify-*` section), then `nmcli general reload conf` and `nmcli device reapply` for the devices of that
+  type. Never call `ethtool` or `iw ... wowlan` for this: they don't survive a restart. Wake-on-WLAN works from sleep
+  only and brings `wifi` along (`toggle_component`, `backend.sh`, `AppState.qml` all have the rule); wired wake from
+  power-off also needs wake-on-LAN in the BIOS. Test the wakes on the real machine (`TESTPLAN.md` W2): suspend and a
+  magic packet, shut down and a magic packet.
 - Add as non-Steam game (`steamgame`, `lib/steam-game.sh`, sub-option of
   `launcher`, ticked along with it, 2.5.1): edits Steam's `shortcuts.vdf`
   with `patches/steam-shortcuts.py` only while Steam is closed (Steam

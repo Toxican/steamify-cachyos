@@ -72,6 +72,31 @@ Not running it yet? Restart. Not installed? Run the wizard and make sure
 **Pin the kernel** under Steam Machine support is ticked. If you have more
 kernels installed (e.g. the LTS kernel), pick `linux-cachyos` in the boot menu.
 
+## The Steam Machine wakes up again right after going to sleep
+
+With Wake-on-WLAN on (`iw phy phyN wowlan show`), CachyOS's Wi-Fi firmware makes the Steam Machine wake at once.
+Tick **Wi-Fi firmware from SteamOS** under Steam Machine support (Wake-on-WLAN ticks it for you) and restart. Check
+which build loads:
+
+```bash
+sudo dmesg | grep fw_build_timestamp       # 2025-07-16 10:46 is SteamOS's build, 10:33 is CachyOS's
+```
+
+Still waking? Try with Wake-on-WLAN off (untick it, restart): some other device, for example the TV over HDMI-CEC,
+can wake the machine as well.
+
+## Wake-on-LAN or Wake-on-WLAN does nothing
+
+Check what the network device is set to (`g` means magic packet):
+
+```bash
+sudo ethtool enp5s0 | grep Wake-on         # wired; wlan0 for Wi-Fi: iw phy phy0 wowlan show
+```
+
+Not `g`? Restart, or reconnect the network. Wired wake from power-off also needs wake-on-LAN in the BIOS (and not an
+energy-saving mode that cuts the network card's power). Wi-Fi wakes from sleep only, never from power-off. The magic
+packet must go to the MAC address of the device that is connected.
+
 ## The kernel pin can't download or verify the kernel
 
 The wizard tries this repo's `kernel-7.1.6-1` release, then the CachyOS
