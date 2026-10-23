@@ -90,8 +90,8 @@ What Steamify can do on a Valve Steam Machine:
     away when it sleeps with it on)
     ([details](TECHNICAL.md#wi-fi-firmware-steam-machine)).
   - **Wake-on-LAN** and **Wake-on-WLAN** - never ticked by default: the
-    Steam Machine wakes on a magic packet over the cable, or over Wi-Fi (from
-    sleep only). Wake-on-WLAN brings the Wi-Fi firmware item along
+    Steam Machine wakes from sleep on a magic packet over the cable, or over
+    Wi-Fi (not from a power-off: tried, it does not work). Wake-on-WLAN brings the Wi-Fi firmware item along
     ([details](TECHNICAL.md#wake-on-lan-and-wake-on-wlan-steam-machine)).
   - **Update BIOS** - installs Valve's newest Steam Machine BIOS. Never ticked
     by default, at your own risk, and only after two warnings
