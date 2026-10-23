@@ -438,7 +438,8 @@ Valve's package index (`fetch_holo_pkg`) and installs only
 `/usr/lib/firmware/updates` before `/usr/lib/firmware`, so no file of
 `linux-firmware` is changed (its updates don't undo this, and there is nothing
 to back up); turning the item off removes the one file. The new firmware is
-loaded at the next restart.
+loaded at the next restart. Tested on a Steam Machine: after the restart
+`dmesg | grep fw_build_timestamp` shows `2025-07-16 10:46` (CachyOS's own build is `10:33`).
 
 ## Add as non-Steam game
 
