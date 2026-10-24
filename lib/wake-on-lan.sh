@@ -5,14 +5,17 @@
 # itself (ethtool and `iw ... wowlan` are gone after a restart). Wired: NetworkManager sets it, as the default for every
 # connection that doesn't set its own (ethernet.wake-on-lan), in a drop-in of ours; nothing of NetworkManager's own
 # files is edited. Wireless: NetworkManager can't (with the iwd backend, the Steam Machine's, it ignores
-# wifi.wake-on-wlan even set on the profile), so a systemd sleep hook enables it right before every suspend. Off removes
-# the drop-in or the hook. Wake-on-WLAN only works with the SteamOS Wi-Fi firmware (lib/fremont-wifi.sh): with CachyOS's
+# wifi.wake-on-wlan even set on the profile), so a NetworkManager dispatcher script enables it as soon as the Wi-Fi connects (enabled only
+# right before the first suspend of a boot it was too late: that suspend didn't wake on a packet), and a systemd sleep hook enables it
+# again right before every suspend. Off removes the drop-in, the script and the hook. Wake-on-WLAN only works with the SteamOS Wi-Fi firmware (lib/fremont-wifi.sh): with CachyOS's
 # the machine wakes up again at once (#108).
 # Sourced by steamify.sh; not meant to be run on its own.
 
 WOL_CONF=/etc/NetworkManager/conf.d/90-steamify-wake-on-lan.conf
 # systemd (262) only reads sleep hooks from /usr/lib/systemd/system-sleep: a new file of ours, nothing of a package.
 WOWLAN_HOOK=/usr/lib/systemd/system-sleep/steamify-wowlan
+# NetworkManager runs the scripts in dispatcher.d (root-owned, not writable by others) at every connection event.
+WOWLAN_DISPATCHER=/etc/NetworkManager/dispatcher.d/90-steamify-wowlan
 # Written by a development build of 2.14.0 to /etc, where systemd doesn't look.
 WOWLAN_OLD_HOOK=/etc/systemd/system-sleep/steamify-wowlan
 # Written by 2.14.0 while it was in development (NetworkManager ignores it with iwd): removed when found.
@@ -65,7 +68,8 @@ wol_disable() {
 
 wowlan_status() { [[ -x "$WOWLAN_HOOK" ]]; }
 wowlan_enable() {
-    # `iw` sets it; right before each suspend, see patches/steamify-wowlan-sleep.sh.
+    # `iw` sets it: when a Wi-Fi connection comes up (the dispatcher script, so it's on before the first suspend of a boot), and
+    # again right before each suspend (the sleep hook, a fallback: see patches/steamify-wowlan-sleep.sh and the dispatcher's header).
     if ! command -v iw >/dev/null 2>&1; then
         sudo pacman -S --needed --noconfirm iw || { err "Installing iw failed."; return 1; }
     fi
@@ -76,7 +80,14 @@ wowlan_enable() {
     tmp="$(mktemp)"
     patch_file steamify-wowlan-sleep.sh > "$tmp"
     sudo install -D -m 755 "$tmp" "$WOWLAN_HOOK" || { rm -f "$tmp"; err "Installing the sleep hook failed."; return 1; }
+    patch_file steamify-wowlan-dispatcher.sh > "$tmp"
+    sudo install -D -m 755 "$tmp" "$WOWLAN_DISPATCHER" || { rm -f "$tmp"; err "Installing the NetworkManager dispatcher script failed."; return 1; }
     rm -f "$tmp"
+    # On now, for the Wi-Fi that is already connected: no restart or reconnect needed.
+    local ifc
+    for ifc in /sys/class/net/*/wireless; do
+        [[ -d "$ifc" ]] && sudo "$WOWLAN_DISPATCHER" "$(basename "$(dirname "$ifc")")" up
+    done
     # What development builds wrote: a setting for NetworkManager, which does nothing here, and the hook in /etc, which systemd
     # doesn't run.
     sudo rm -f "$WOWLAN_OLD_HOOK"
@@ -88,7 +99,7 @@ wowlan_enable() {
 }
 wowlan_disable() {
     local phy
-    sudo rm -f "$WOWLAN_HOOK" "$WOWLAN_OLD_HOOK" "$WOWLAN_OLD_CONF"
+    sudo rm -f "$WOWLAN_HOOK" "$WOWLAN_DISPATCHER" "$WOWLAN_OLD_HOOK" "$WOWLAN_OLD_CONF"
     # It stays set until the next restart otherwise.
     command -v iw >/dev/null 2>&1 && for phy in /sys/class/ieee80211/*; do
         [[ -e "$phy" ]] && sudo iw phy "${phy##*/}" wowlan disable >/dev/null 2>&1

@@ -509,10 +509,17 @@ setting: `ethtool -s ... wol g` and `iw phy ... wowlan enable magic-packet` are 
 - **Wireless** (`wowlan`) is only offered with the QCA2066 adapter and wakes from sleep only (the BIOS has an "S4 WoWiFi"
   switch for hibernate, which is untested). NetworkManager can't do it here: with the iwd backend (the Steam Machine's, in
   `99-valve-wifi-backend.conf`) it ignores `wifi.wake-on-wlan`, also set on the connection itself and after a reconnect
-  (tried on a Steam Machine), and with any backend it can't change it on a live connection. So a systemd sleep hook,
-  `/usr/lib/systemd/system-sleep/steamify-wowlan` ([`patches/steamify-wowlan-sleep.sh`](patches/steamify-wowlan-sleep.sh)),
-  runs `iw phy ... wowlan enable magic-packet` for every Wi-Fi adapter right before each suspend (`pre`); the item installs
-  `iw` when it is missing. Off removes the hook and turns the setting off. It needs the
+  (tried on a Steam Machine), and with any backend it can't change it on a live connection. So two small scripts run
+  `iw phy ... wowlan enable magic-packet`: a **NetworkManager dispatcher script**,
+  `/etc/NetworkManager/dispatcher.d/90-steamify-wowlan` ([`patches/steamify-wowlan-dispatcher.sh`](patches/steamify-wowlan-dispatcher.sh)),
+  when a Wi-Fi connection comes up (and once right away for a Wi-Fi that is already connected when the item is turned on), and
+  a systemd sleep hook, `/usr/lib/systemd/system-sleep/steamify-wowlan`
+  ([`patches/steamify-wowlan-sleep.sh`](patches/steamify-wowlan-sleep.sh)), right before each suspend (`pre`). The hook alone, the
+  2.14.0 and 2.14.1 way, was too late for the **first suspend of a boot**: with WoWLAN still off before it, that suspend did not wake
+  on a Wi-Fi magic packet (tested on a Steam Machine: the packet got no wake in 33 s, a wired one did; the second suspend of the same
+  boot woke on the Wi-Fi packet in 4 s). A user found it (#108) and found that enabling it while the Wi-Fi is connected avoids it, with
+  the iwd and the wpa_supplicant backend alike. The hook stays as a fallback; both are idempotent. The item installs `iw` when it
+  is missing. Off removes both and turns the setting off. It needs the
   [SteamOS Wi-Fi firmware](#wi-fi-firmware-steam-machine): with CachyOS's own the machine wakes up again at once.
   Ticking it ticks that item; unticking the firmware unticks it. A `90-steamify-wake-on-wlan.conf` of a development
   build of 2.14.0 is removed when found.
