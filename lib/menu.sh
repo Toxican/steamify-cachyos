@@ -539,12 +539,32 @@ plan_changes() {
     done
 }
 
+component_has_failed_descendant() {
+    # component_has_failed_descendant <parent> <failed>...: a failed child
+    # keeps every ancestor in place during the reverse-order disable plan.
+    local parent="$1" failed cursor
+    shift
+    for failed in "$@"; do
+        cursor="$failed"
+        while [[ -n "${PARENT[$cursor]:-}" ]]; do
+            cursor="${PARENT[$cursor]}"
+            [[ "$cursor" == "$parent" ]] && return 0
+        done
+    done
+    return 1
+}
+
 apply_changes() {
     local c failed=()
 
     for c in "${TO_DISABLE[@]}"; do
         if [[ "$c" == boot ]]; then echo; echo -e "${c_bold}Boot into: gamescope${c_reset}"
         else echo; echo -e "${c_bold}Turning off: ${LABEL[$c]}${c_reset}"; fi
+        if component_has_failed_descendant "$c" "${failed[@]}"; then
+            warn "Skipping ${LABEL[$c]%%:*}: a sub-option could not be turned off."
+            failed+=("$c")
+            continue
+        fi
         if "${c}_disable"; then feature_record "$c" disable; else failed+=("$c"); fi
     done
     for c in "${TO_ENABLE[@]}"; do

@@ -46,8 +46,11 @@ steamdeck_reconcile_interrupted_install() {
     fi
     if [[ "$(state_get "$STEAMDECK_OWNERSHIP_COMPONENT" jupiter_origin)" == none ]] &&
         pacman -Q "$STEAMDECK_JUPITER_PACKAGE" >/dev/null 2>&1; then
-        steamdeck_ownership_jupiter_is_official || return 1
-        steamdeck_ownership_set_jupiter_origin installed || return 1
+        if steamdeck_ownership_jupiter_is_official; then
+            steamdeck_ownership_set_jupiter_origin installed || return 1
+        else
+            steamdeck_ownership_set_jupiter_origin preexisting || return 1
+        fi
     fi
 }
 
@@ -183,7 +186,7 @@ steamdeck_retained_package_needs_block() {
         mfd_state="$STEAMDECK_PROVIDER_STATE"
         steamdeck_detect_provider "$kernel" hwmon || return 0
         hwmon_state="$STEAMDECK_PROVIDER_STATE"
-        [[ "$mfd_state" == native-builtin && "$hwmon_state" == native-builtin ]] || return 0
+        [[ "$mfd_state" == native-* && "$hwmon_state" == native-* ]] || return 0
     done
     return 1
 }
