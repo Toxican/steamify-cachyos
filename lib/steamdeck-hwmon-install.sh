@@ -34,6 +34,17 @@ steamdeck_service_active_state() {
     esac
 }
 
+steamdeck_jupiter_vendor_wants_valid() {
+    local vendor_dir="${STEAMDECK_SYSTEMD_VENDOR_DIR:-/usr/lib/systemd/system}"
+    local unit="$vendor_dir/$STEAMDECK_JUPITER_UNIT"
+    local wants="$vendor_dir/multi-user.target.wants/$STEAMDECK_JUPITER_UNIT"
+
+    [[ -f "$unit" && -L "$wants" ]] || return 1
+    [[ "$(readlink -f "$wants" 2>/dev/null)" == "$(readlink -f "$unit" 2>/dev/null)" ]] || return 1
+    [[ "$(pacman -Qqo "$unit" 2>/dev/null)" == "$STEAMDECK_JUPITER_PACKAGE" ]] || return 1
+    [[ "$(pacman -Qqo "$wants" 2>/dev/null)" == "$STEAMDECK_JUPITER_PACKAGE" ]]
+}
+
 steamdeck_installed_kernels() {
     local directory
     for directory in "$STEAMDECK_MODULES_ROOT"/*; do
@@ -192,9 +203,11 @@ steamdeck_verify_managed_jupiter_service() {
     # managed package, including a retry after pacman already completed.
     current_enabled="$(steamdeck_service_enabled_state)"
     case "$current_enabled" in
-        enabled|enabled-runtime|linked|linked-runtime|alias|static|indirect|generated) ;;
-        *) return 1 ;;
+        enabled|enabled-runtime|linked|linked-runtime|alias|static|indirect|generated) return 0 ;;
     esac
+    # CachyOS ships this unit through a package-owned vendor wants link.
+    # systemctl still reports that valid package layout as "disabled".
+    steamdeck_jupiter_vendor_wants_valid
 }
 
 steamdeck_install_jupiter_package() {
