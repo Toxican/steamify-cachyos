@@ -186,7 +186,16 @@ detect_components() {
     for c in "${COMPONENTS[@]}"; do CURRENT[$c]=0; WANTED[$c]=0; done
     for c in "${COMPONENTS[@]}"; do
         component_available "$c" || continue
-        if "${c}_status"; then CURRENT[$c]=1; any=true; else CURRENT[$c]=0; fi
+        if "${c}_status"; then
+            CURRENT[$c]=1; any=true
+        elif [[ "$c" == fancontrol ]] && steamdeck_ownership_inconsistent_artifacts; then
+            # Keep an inconsistent installation actionable: showing it as
+            # present lets an explicit off request reach the existing
+            # fail-closed remover instead of becoming a successful no-op.
+            CURRENT[$c]=1; any=true
+        else
+            CURRENT[$c]=0
+        fi
         WANTED[$c]=${CURRENT[$c]}
     done
     # HDMI-CEC set up by an older version: tick it, so a normal run fixes it.
