@@ -83,7 +83,9 @@ steamdeck_install_prepare_state() {
             # Only the official package may be adopted. Unknown DKMS and
             # autoload artifacts stay unowned and stop this enable run.
             [[ "$package_installed" == yes ]] || return 1
-            steamdeck_ownership_initialize adopted || return 1
+            origin=preexisting
+            steamdeck_ownership_jupiter_is_official && origin=adopted
+            steamdeck_ownership_initialize "$origin" || return 1
             STEAMDECK_INSTALL_UNRESOLVED=1
             return 0
             ;;
@@ -181,39 +183,49 @@ steamdeck_build_for_kernel() {
     [[ "$STEAMDECK_DKMS_PLAN" == reuse ]]
 }
 
+steamdeck_verify_managed_jupiter_service() {
+    local origin current_enabled
+    origin="$(state_get "$STEAMDECK_OWNERSHIP_COMPONENT" jupiter_origin)"
+    case "$origin" in installed|adopted) ;; *) return 0 ;; esac
+
+    # The official package is vendor-enabled. Check this on every run for a
+    # managed package, including a retry after pacman already completed.
+    current_enabled="$(steamdeck_service_enabled_state)"
+    case "$current_enabled" in
+        enabled|enabled-runtime|linked|linked-runtime|alias|static|indirect|generated) ;;
+        *) return 1 ;;
+    esac
+}
+
 steamdeck_install_jupiter_package() {
-    local origin newly_installed=0 current_enabled
+    local origin
     origin="$(state_get "$STEAMDECK_OWNERSHIP_COMPONENT" jupiter_origin)"
     if pacman -Q "$STEAMDECK_JUPITER_PACKAGE" >/dev/null 2>&1; then
-        steamdeck_ownership_jupiter_is_official || return 1
         if [[ "$origin" == none ]]; then
             [[ "$(state_get "$STEAMDECK_OWNERSHIP_COMPONENT" operation)" == install ]] || return 1
             # The package was absent when operation=install was recorded. Its
             # presence now proves pacman completed before an interruption.
-            steamdeck_ownership_set_jupiter_origin installed || return 1
+            if steamdeck_ownership_jupiter_is_official; then
+                steamdeck_ownership_set_jupiter_origin installed || return 1
+            else
+                steamdeck_ownership_set_jupiter_origin preexisting || return 1
+            fi
             steamdeck_note_system_change
         fi
-        return 0
-    fi
-
-    [[ "$origin" != preexisting ]] || return 1
-    steamdeck_ownership_jupiter_sync_is_official || return 1
-    steamdeck_run_root pacman -S --needed --noconfirm \
-        "$STEAMDECK_JUPITER_SYNC_REPOSITORY/$STEAMDECK_JUPITER_PACKAGE" || return 1
-    steamdeck_note_system_change
-    newly_installed=1
-    steamdeck_ownership_jupiter_is_official || return 1
-    [[ "$origin" != none ]] || steamdeck_ownership_set_jupiter_origin installed || return 1
-
-    if [[ $newly_installed -eq 1 ]]; then
-        # The package is vendor-enabled. Verify that contract but never enable
-        # or start it here.
-        current_enabled="$(steamdeck_service_enabled_state)"
-        case "$current_enabled" in
-            enabled|enabled-runtime|linked|linked-runtime|alias|static|indirect|generated) ;;
-            *) return 1 ;;
+        origin="$(state_get "$STEAMDECK_OWNERSHIP_COMPONENT" jupiter_origin)"
+        case "$origin" in
+            installed|adopted) steamdeck_ownership_jupiter_is_official || return 1 ;;
         esac
+    else
+        [[ "$origin" != preexisting ]] || return 1
+        steamdeck_ownership_jupiter_sync_is_official || return 1
+        steamdeck_run_root pacman -S --needed --noconfirm \
+            "$STEAMDECK_JUPITER_SYNC_REPOSITORY/$STEAMDECK_JUPITER_PACKAGE" || return 1
+        steamdeck_note_system_change
+        steamdeck_ownership_jupiter_is_official || return 1
+        [[ "$origin" != none ]] || steamdeck_ownership_set_jupiter_origin installed || return 1
     fi
+    steamdeck_verify_managed_jupiter_service
 }
 
 steamdeck_install_autoload() {
@@ -283,12 +295,7 @@ steamdeck_fancontrol_install() {
     STEAMDECK_SYSTEM_CHANGED=0
 
     pacman -Q "$STEAMDECK_JUPITER_PACKAGE" >/dev/null 2>&1 && package_installed=yes
-    if [[ "$package_installed" == yes ]]; then
-        steamdeck_ownership_jupiter_is_official || {
-            steamdeck_install_fail "The installed jupiter-fan-control package is not the official CachyOS package."
-            return 1
-        }
-    else
+    if [[ "$package_installed" == no ]]; then
         steamdeck_ownership_jupiter_sync_is_official || {
             steamdeck_install_fail "The official CachyOS jupiter-fan-control package is unavailable."
             return 1

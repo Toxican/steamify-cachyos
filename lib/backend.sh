@@ -191,6 +191,11 @@ backend_apply() {
 
     local -a failed=()
     for c in "${TO_DISABLE[@]}"; do
+        if component_has_failed_descendant "$c" "${failed[@]}"; then
+            backend_event log "\"id\":$(json_str "$c"),\"line\":$(json_str "Skipped: a sub-option could not be turned off.")"
+            failed+=("$c")
+            continue
+        fi
         if backend_run_component "$c" disable; then feature_record "$c" disable; else failed+=("$c"); fi
     done
     for c in "${TO_ENABLE[@]}"; do

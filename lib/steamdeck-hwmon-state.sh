@@ -202,8 +202,19 @@ steamdeck_ownership_jupiter_sync_is_official() {
 }
 
 steamdeck_ownership_jupiter_is_official() {
-    pacman -Qn "$STEAMDECK_JUPITER_PACKAGE" >/dev/null 2>&1 &&
-        steamdeck_ownership_jupiter_sync_is_official
+    # pacman -Qn only proves that a package of this name exists in a sync
+    # database. Adoption also requires the installed package to plausibly be
+    # the exact CachyOS build currently described by that database.
+    local installed_info sync_info repo field installed_value sync_value
+    installed_info="$(LC_ALL=C pacman -Qi "$STEAMDECK_JUPITER_PACKAGE" 2>/dev/null)" || return 1
+    sync_info="$(LC_ALL=C pacman -Si "$STEAMDECK_JUPITER_PACKAGE" 2>/dev/null)" || return 1
+    repo="$(sed -n 's/^Repository[[:space:]]*:[[:space:]]*//p' <<< "$sync_info" | head -n 1)"
+    [[ "$repo" == cachyos* ]] || return 1
+    for field in Name Version Architecture Packager 'Build Date'; do
+        installed_value="$(sed -n "s/^${field}[[:space:]]*:[[:space:]]*//p" <<< "$installed_info" | head -n 1)"
+        sync_value="$(sed -n "s/^${field}[[:space:]]*:[[:space:]]*//p" <<< "$sync_info" | head -n 1)"
+        [[ -n "$installed_value" && "$installed_value" == "$sync_value" ]] || return 1
+    done
 }
 
 steamdeck_ownership_set_jupiter_origin() {
@@ -213,6 +224,7 @@ steamdeck_ownership_set_jupiter_origin() {
 }
 
 steamdeck_ownership_jupiter_adoption_notice() {
+    steamdeck_ownership_status >/dev/null 2>&1 || return 1
     [[ "$(state_get "$STEAMDECK_OWNERSHIP_COMPONENT" jupiter_origin)" == adopted ]]
 }
 
