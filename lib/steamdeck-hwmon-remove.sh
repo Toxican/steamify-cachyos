@@ -276,9 +276,11 @@ steamdeck_remove_finish() {
 }
 
 steamdeck_fancontrol_remove() {
+    local ownership_detail=""
     STEAMDECK_SYSTEM_CHANGED=0
     if ! steamdeck_removal_prepare_state; then
-        steamdeck_remove_fail "Cannot establish safe ownership state for Fremont fan-control removal."
+        [[ -z "${STEAMDECK_OWNERSHIP_REASON:-}" ]] || ownership_detail=": $STEAMDECK_OWNERSHIP_REASON"
+        steamdeck_remove_fail "Cannot establish safe ownership state for Fremont fan-control removal${ownership_detail}."
         return 1
     fi
     [[ "$STEAMDECK_REMOVE_NOOP" == 0 ]] || return 0

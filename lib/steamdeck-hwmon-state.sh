@@ -126,6 +126,17 @@ steamdeck_ownership_status() {
     STEAMDECK_OWNERSHIP_STATUS=valid
 }
 
+steamdeck_ownership_inconsistent_artifacts() {
+    # A missing state without system markers is the normal never-installed
+    # case. Lost or damaged state beside Steamify artifacts must instead be
+    # routed through the fail-closed remove path when the user asks for off.
+    steamdeck_ownership_status >/dev/null 2>&1 && return 1
+    case "$STEAMDECK_OWNERSHIP_STATUS" in
+        lost|damaged) steamdeck_ownership_system_markers_exist ;;
+        *) return 1 ;;
+    esac
+}
+
 steamdeck_ownership_initialize() {
     local origin="${1:-none}" file temporary key value
     steamdeck_ownership_origin_valid "$origin" || return 1
