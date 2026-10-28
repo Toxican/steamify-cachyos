@@ -49,16 +49,25 @@ valve_name_ok() {
     return 0
 }
 
+valve_conf_write() {
+    # valve_conf_write <work dir> <repository>[,<repository>...]: <work dir>/pacman.conf, only those Valve repositories.
+    local work="$1" r
+    mkdir -p "$work"
+    {
+        printf '[options]\nArchitecture = x86_64\nSigLevel = Required DatabaseOptional\nLocalFileSigLevel = Required\nGPGDir = %s\n' "$VALVE_GPGDIR"
+        for r in ${2//,/ }; do printf '\n[%s]\nServer = %s/%s/os/$arch\n' "$r" "$VALVE_MIRROR" "$r"; done
+    } > "$work/pacman.conf"
+}
+
 valve_pacman() {
-    # valve_pacman <work dir> <repository>[,<repository>...] <pacman arguments...>: pacman with only those Valve repositories.
-    local work="$1" repos="$2" r; shift 2
+    # valve_pacman <work dir> <repository>[,<repository>...] <pacman arguments...>: pacman with only those Valve repositories,
+    # for downloads: a private database folder (the system's sync databases stay as they are; its `local` is the system's,
+    # which is only read, never written: installs go through valve_install_files).
+    local work="$1" repos="$2"; shift 2
     valve_key_ensure || return 1
     mkdir -p "$work/db/sync" "$work/cache"
     ln -sfn /var/lib/pacman/local "$work/db/local"
-    {
-        printf '[options]\nArchitecture = x86_64\nSigLevel = Required DatabaseOptional\nLocalFileSigLevel = Optional\nGPGDir = %s\n' "$VALVE_GPGDIR"
-        for r in ${repos//,/ }; do printf '\n[%s]\nServer = %s/%s/os/$arch\n' "$r" "$VALVE_MIRROR" "$r"; done
-    } > "$work/pacman.conf"
+    valve_conf_write "$work" "$repos"
     sudo pacman --config "$work/pacman.conf" --dbpath "$work/db" --cachedir "$work/cache" "$@"
 }
 
@@ -80,4 +89,14 @@ valve_fetch_pkg() {
     done
     [[ -n "$f" ]] || { err "No $pkg in Valve's $repo repository."; return 1; }
     echo "$f"
+}
+
+valve_install_files() {
+    # valve_install_files <work dir> <package file>...: installs packages valve_fetch_pkg downloaded. The system's own database
+    # (installs must be recorded there), with Valve's keyring for the signature check: the system's pacman doesn't trust
+    # Valve's key and would stop to ask whether to import it.
+    local work="$1"; shift
+    valve_key_ensure || return 1
+    valve_conf_write "$work" ""
+    sudo pacman --config "$work/pacman.conf" -U --noconfirm --needed "$@"
 }
