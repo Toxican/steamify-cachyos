@@ -304,7 +304,7 @@ and installs the generic build instead if it doesn't start. Nothing else changes
 the gamescope repository into signed databases, so new builds come with `pacman -Syu`, no Steamify needed. No `pacman -Sy` is run
 here (a refresh without the upgrade is a partial update). A PC that has the package but not the repository yet (set up before
 2.14.3) shows the conversion as an update once (`gsn_update_pending`); a build made here (state `variant` = `local`) stays out.
-Turning the conversion off removes the section and the key; the package stays.
+The section and the key (`steamify_repo_enable`/`steamify_repo_disable`, `lib/packages.sh`) are shared with the other packages from the repository: the DKMS drivers of the Steam Machine items (`steamify_dkms_install`: dependencies, kernel headers, the key, the newest file read from the repository's database, removal of a copy in `/usr/src` that pacman doesn't own, `pacman -U --ask 4`, then a DKMS build for the kernels the hook missed; the old install from the sources or the AUR is the fallback) and the python-hid placeholder. Turning an option off removes its DKMS package; the section and the key go when none of the repository's packages (`STEAMIFY_REPO_PKGS`) is installed, so what stays installed keeps updating.
 A new pin = the release's tag and each variant's sha256 in `GSN_VERSION` and `GSN_SHA256` plus the PKGBUILD's pkgver/pkgrel; the patches in `patches/` must
 stay identical to that repository's. New gamescope versions: the repository's daily check bumps the version when the patch still
 applies, or opens an issue when it needs a rebase; a person merges and tags the release.

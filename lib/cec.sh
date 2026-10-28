@@ -63,6 +63,9 @@ cec_reload_driver() {
 
 cec_driver_enable() {
     detect_valve_fremont || return 0
+    # Steamify's pacman repository: the driver as a package (DKMS hook, updates with pacman -Syu); the sources below are the fallback.
+    if steamify_dkms_install steamify-cros-ec-cec-dkms "$CEC_DKMS_NAME" "$CEC_DKMS_VER"; then cec_reload_driver; return 0; fi
+    warn "The CEC driver package couldn't be installed from Steamify's repository: building it from the sources Steamify carries."
     local tmp k
     if ! pacman -Q dkms patch >/dev/null 2>&1; then
         sudo pacman -S --needed --noconfirm dkms patch || { err "Installing dkms failed."; return 1; }
@@ -109,6 +112,7 @@ cec_driver_enable() {
 }
 
 cec_driver_disable() {
+    if pacman -Q steamify-cros-ec-cec-dkms >/dev/null 2>&1; then steamify_dkms_remove steamify-cros-ec-cec-dkms "$CEC_DKMS_NAME" "$CEC_DKMS_VER"; cec_reload_driver; return 0; fi
     [[ -d "$CEC_DKMS_SRC" ]] || return 0
     sudo dkms remove "$CEC_DKMS_NAME/$CEC_DKMS_VER" --all >/dev/null 2>&1
     sudo rm -rf "$CEC_DKMS_SRC"

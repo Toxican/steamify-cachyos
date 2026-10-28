@@ -20,6 +20,13 @@ poweroff_fix_installed() { [[ -f "$POWEROFF_DKMS_SRC/dkms.conf" && -f "$POWEROFF
 
 poweroff_fix_enable() {
     detect_valve_fremont || return 0
+    # Steamify's pacman repository: the module as a package; the sources below are the fallback.
+    if steamify_dkms_install steamify-fremont-poweroff-dkms "$POWEROFF_DKMS_NAME" "$POWEROFF_DKMS_VER"; then
+        echo "$POWEROFF_DKMS_NAME" | sudo tee "$POWEROFF_MODULES_LOAD" >/dev/null
+        sudo modprobe "$POWEROFF_DKMS_NAME" 2>/dev/null
+        return 0
+    fi
+    warn "The power-off package couldn't be installed from Steamify's repository: building it from the sources Steamify carries."
     local tmp k
     if ! pacman -Q dkms >/dev/null 2>&1; then
         sudo pacman -S --needed --noconfirm dkms || { err "Installing dkms failed."; return 1; }
@@ -50,6 +57,7 @@ poweroff_fix_enable() {
 poweroff_fix_disable() {
     sudo rm -f "$POWEROFF_MODULES_LOAD"
     sudo modprobe -r "$POWEROFF_DKMS_NAME" 2>/dev/null
+    if pacman -Q steamify-fremont-poweroff-dkms >/dev/null 2>&1; then steamify_dkms_remove steamify-fremont-poweroff-dkms "$POWEROFF_DKMS_NAME" "$POWEROFF_DKMS_VER"; return 0; fi
     [[ -d "$POWEROFF_DKMS_SRC" ]] || return 0
     sudo dkms remove "$POWEROFF_DKMS_NAME/$POWEROFF_DKMS_VER" --all >/dev/null 2>&1
     sudo rm -rf "$POWEROFF_DKMS_SRC"

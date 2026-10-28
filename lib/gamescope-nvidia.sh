@@ -31,9 +31,7 @@ declare -A GSN_SHA256=(
 )
 # Where the ISO leaves a copy of the pinned package, for installs without GitHub.
 GSN_BACKUP_DIR="${GSN_BACKUP_DIR:-/usr/local/share/steamify/gamescope}"
-# The pacman repository (steamify-pacman-repo; STEAMIFY_REPO_URL and _KEY, lib/packages.sh): a database per CPU level.
-GSN_REPO_MARKER='# Steamify: patched gamescope, updated by pacman -Syu'
-GSN_PACMAN_CONF="${GSN_PACMAN_CONF:-/etc/pacman.conf}"
+# The pacman repository (steamify-pacman-repo): STEAMIFY_REPO_* and steamify_repo_* in lib/packages.sh.
 GSN_ENV_LINE='gamescope_drm_gbm_scanout=1'
 GSN_ENV_D="${GSN_ENV_D:-$HOME/.config/environment.d/99-steamify-gamescope-nvidia.conf}"
 GSN_SESSION_ENV="${GSN_SESSION_ENV:-$HOME/.config/gamescope-session/environment}"
@@ -61,15 +59,13 @@ gsn_latest_tag() {
     echo "$url"
 }
 
-gsn_repo_section() { grep -oE '^\[steamify-(generic|v3|v4|znver4)\]' "$GSN_PACMAN_CONF" 2>/dev/null | head -n 1 | tr -d '[]'; }
-
 gsn_update_pending() {
     # The patched gamescope is installed but pacman doesn't know the repository yet (a PC set up before 2.14.3): a normal run
     # adds it. After that new builds come with `pacman -Syu`, so there is nothing to show for them. A build made here
     # (variant "local") stays out of the repository: its binary is not one the repository carries.
     gsn_package_installed || return 1
     [[ "$(state_get gamescope_nvidia variant)" == local ]] && return 1
-    [[ -z "$(gsn_repo_section)" ]]
+    [[ -z "$(steamify_repo_section)" ]]
 }
 
 gsn_cpu_variant() {
@@ -208,49 +204,6 @@ gsn_variant_of() {
     case "$v" in generic|v3|v4|znver4) echo "$v" ;; *) echo local ;; esac
 }
 
-gsn_repo_conf_remove() {
-    local tmp; tmp="$(mktemp)"
-    awk -v marker="$GSN_REPO_MARKER" '
-        $0 == marker { skip = 1; next }
-        /^\[steamify-(generic|v3|v4|znver4)\]/ { skip = 1; next }
-        skip && /^(SigLevel|Server) *=/ { next }
-        skip { skip = 0; if ($0 == "") next }
-        { print }
-    ' "$GSN_PACMAN_CONF" > "$tmp"
-    if ! cmp -s "$tmp" "$GSN_PACMAN_CONF"; then
-        backup_file "$GSN_PACMAN_CONF"
-        sudo install -m644 "$tmp" "$GSN_PACMAN_CONF"
-    fi
-    rm -f "$tmp"
-}
-
-gsn_repo_enable() {
-    # gsn_repo_enable [variant]: pacman trusts the repository's key and lists the repository of this PC's CPU level (the
-    # one the installed build is from) below CachyOS's own, so it never takes a package from them. Only the key and the
-    # section: no `pacman -Sy` here (a database refresh without the upgrade is the partial update pacman warns about); the
-    # next `pacman -Syu` reads it. A build made here stays out. Idempotent.
-    local v="${1:-$(state_get gamescope_nvidia variant)}"
-    [[ -n "$v" ]] || v="$(gsn_cpu_variant)"
-    if [[ "$v" == local ]]; then gsn_repo_disable; return 0; fi
-    steamify_repo_key_ensure || return 1
-    if [[ "$(gsn_repo_section)" == "steamify-$v" ]] && grep -qxF "Server = $STEAMIFY_REPO_URL" "$GSN_PACMAN_CONF"; then return 0; fi
-    gsn_repo_conf_remove
-    local tmp; tmp="$(mktemp)"
-    { cat "$GSN_PACMAN_CONF"; printf '\n%s\n[steamify-%s]\nSigLevel = Required DatabaseRequired\nServer = %s\n' "$GSN_REPO_MARKER" "$v" "$STEAMIFY_REPO_URL"; } > "$tmp"
-    backup_file "$GSN_PACMAN_CONF"
-    sudo install -m644 "$tmp" "$GSN_PACMAN_CONF"
-    rm -f "$tmp"
-    state_set gamescope_nvidia variant "$v"
-    return 0
-}
-
-gsn_repo_disable() {
-    gsn_repo_conf_remove
-    sudo rm -f /var/lib/pacman/sync/steamify-{generic,v3,v4,znver4}.db* 2>/dev/null
-    sudo pacman-key --delete "$STEAMIFY_REPO_KEY" >/dev/null 2>&1
-    return 0
-}
-
 gsn_env_enable() {
     mkdir -p "$(dirname "$GSN_ENV_D")" "$(dirname "$GSN_SESSION_ENV")"
     echo "$GSN_ENV_LINE" > "$GSN_ENV_D"
@@ -341,7 +294,7 @@ gsn_enable() {
     nvidia_extras_enable || return 1
     gsn_install_package || { gsn_fail_mark "the patched gamescope couldn't be installed"; return 1; }
     state_set gamescope_nvidia failed ""
-    gsn_repo_enable || warn "Couldn't add Steamify's pacman repository: new builds of the patched gamescope won't come with pacman -Syu."
+    steamify_repo_enable || warn "Couldn't add Steamify's pacman repository: new builds of the patched gamescope won't come with pacman -Syu."
     gsn_env_enable
     gsn_display_enable || warn "Couldn't set up the display mode for gaming mode: gamescope takes the display's preferred mode."
     ok "gamescope draws NVIDIA's picture through GBM (gamescope_drm_gbm_scanout=1) from the next gaming mode start."
@@ -352,7 +305,7 @@ gsn_disable() {
     # the other packages of the conversion (steam, gamescope-session-cachyos).
     gsn_env_disable
     gsn_display_disable
-    gsn_repo_disable
+    steamify_repo_disable
     nvidia_present || return 0
     nvidia_extras_disable
     nvidia_kernel_disable
