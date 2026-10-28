@@ -142,6 +142,14 @@ if [[ "${1:-}" == --add-repo ]]; then
     err "Couldn't list Steamify's pacman repository (offline?)."; exit 1
 fi
 
+if [[ "${1:-}" == --repair-repo ]]; then
+    steamify_repo_repair && ok "Steamify's pacman repository works." && exit 0
+    err "Couldn't repair it (offline? a changed signing key needs a newer Steamify): steamify.sh --remove-repo takes it out."; exit 1
+fi
+
+# A listed repository that pacman would refuse blocks every pacman run of the system: repair it, else take it out (lib/packages.sh).
+if [[ "$BACKEND" == false && "$LIST" == false ]]; then steamify_repo_selfheal; fi
+
 if [[ "$LIST" == true ]]; then
     defaults_list
     exit 0
