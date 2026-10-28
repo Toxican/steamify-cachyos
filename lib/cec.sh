@@ -141,7 +141,7 @@ cec_enable() {
         files+=("$f")
     done
     info "Installing Valve's CEC daemon..."
-    if ! sudo pacman -U --needed --noconfirm "${files[@]}"; then
+    if ! valve_install_files "$tmp/valve" "${files[@]}"; then
         rm -rf "$tmp"
         err "Installing ${CEC_PKGS[*]} failed."
         return 1
