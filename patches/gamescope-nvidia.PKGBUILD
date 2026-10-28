@@ -5,11 +5,12 @@
 # The patches are gamescope-gbm-scanout.patch and gamescope-ui-native.patch (next to this file, applied in this order); see the
 # README for where they come from.
 # UPSTREAM_VERSION (next to this file) names the gamescope tag the patches are made for.
+# The source is pinned to an upstream master commit after that tag (d175688ad4ec490dc7b0695c5c62f8807684a1f1, 2 commits after 3.17.0), so pkgver stays 3.17.0.
 
 pkgname=steamify-gamescope-nvidia
 _srcname=gamescope
-pkgver=3.16.31
-pkgrel=3
+pkgver=3.17.0
+pkgrel=1
 pkgdesc='SteamOS session compositing window manager, with GBM scan-out for NVIDIA (opt-in: gamescope_drm_gbm_scanout=1)'
 arch=(x86_64)
 url=https://github.com/theupriser/steamify-gamescope-nvidia
@@ -71,7 +72,7 @@ makedepends=(
   catch2
 )
 source=(
-  gamescope::git+https://github.com/ValveSoftware/gamescope.git#commit=${pkgver}
+  gamescope::git+https://github.com/ValveSoftware/gamescope.git#commit=d175688ad4ec490dc7b0695c5c62f8807684a1f1
   gamescope-gbm-scanout.patch
   gamescope-ui-native.patch
   git+https://gitlab.freedesktop.org/emersion/libdisplay-info.git
