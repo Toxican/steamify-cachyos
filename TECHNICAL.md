@@ -291,15 +291,20 @@ fails, `gsn_fail_mark` records it (state `gamescope_nvidia`, key `failed`) and s
 **Getting the package, and keeping it current.** gamescope changes every few weeks, so the package is downloaded, not carried.
 CI builds it in CachyOS's container, once per CPU level like CachyOS's repositories: generic, x86-64-v3, v4 and znver4, each with an
 explicit `-march` (a `-march=native` build died with SIGILL on a Ryzen) and checked for instructions beyond its level and for both
-patches. A release is `<gamescope version>-<package release>` (for example `3.16.31-3`) with `SHA256SUMS`. `gsn_cpu_variant`
+patches. A release is `<gamescope version>-<package release>` (for example `3.17.0-1`) with `SHA256SUMS`. `gsn_cpu_variant`
 picks the build for this CPU (the dynamic loader's x86-64 level; AMD with `avx512_bf16` is znver4) and generic is the fallback.
 `gsn_fetch_package` tries, for the CPU's variant and then generic: the newest release on GitHub (if newer than the pin), the release
 Steamify was tested with (`GSN_VERSION`, hashes in `GSN_SHA256`: from GitHub, the cache, or the copy the ISO leaves in
 `/usr/local/share/steamify/gamescope`); only files with the expected sha256 count (newer releases: their `.sha256`). If nothing is
 reachable, `gsn_build_package` builds from `patches/gamescope-nvidia.PKGBUILD` and the two patches (`makepkg` as the user in
 `~/.cache/steamify`). `gsn_install_package` installs with `pacman -U --ask 4`; `gsn_smoke_test` then starts gamescope headless
-and installs the generic build instead if it doesn't start. Nothing else changes before a package is installed. A newer release than
-the installed package shows the conversion as an update (`gsn_update_pending`, looked up at most every six hours, quiet offline).
+and installs the generic build instead if it doesn't start. Nothing else changes before a package is installed. The conversion also puts
+`[steamify-<variant>]` (the installed build's CPU level) into `/etc/pacman.conf`, below CachyOS's repositories, and trusts its key
+(`patches/steamify-pacman-repo.pub.asc`, signed locally; `gsn_repo_enable`): theupriser/steamify-pacman-repo copies every release of
+the gamescope repository into signed databases, so new builds come with `pacman -Syu`, no Steamify needed. No `pacman -Sy` is run
+here (a refresh without the upgrade is a partial update). A PC that has the package but not the repository yet (set up before
+2.14.3) shows the conversion as an update once (`gsn_update_pending`); a build made here (state `variant` = `local`) stays out.
+Turning the conversion off removes the section and the key; the package stays.
 A new pin = the release's tag and each variant's sha256 in `GSN_VERSION` and `GSN_SHA256` plus the PKGBUILD's pkgver/pkgrel; the patches in `patches/` must
 stay identical to that repository's. New gamescope versions: the repository's daily check bumps the version when the patch still
 applies, or opens an issue when it needs a rebase; a person merges and tags the release.

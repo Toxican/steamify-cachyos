@@ -58,6 +58,19 @@ bootstrap_yay() {
     fi
 }
 
+# Steamify's own pacman repository (https://github.com/theupriser/steamify-pacman-repo): packages and databases are signed with
+# this key (patches/steamify-pacman-repo.pub.asc).
+STEAMIFY_REPO_URL="${STEAMIFY_REPO_URL:-https://github.com/theupriser/steamify-pacman-repo/releases/download/repo}"
+STEAMIFY_REPO_KEY=767F317AC4F06C54700EC832854F60918B8BC40C
+
+steamify_repo_key_ensure() {
+    # pacman trusts the repository's key (added and signed locally); nothing changes when it already does.
+    if ! sudo pacman-key --list-keys "$STEAMIFY_REPO_KEY" >/dev/null 2>&1; then
+        patch_file steamify-pacman-repo.pub.asc | sudo pacman-key --add - >/dev/null 2>&1 || return 1
+    fi
+    sudo pacman-key --lsign-key "$STEAMIFY_REPO_KEY" >/dev/null 2>&1
+}
+
 python_hid_shim_ensure() {
     # jupiter-hw-support (a dependency of gamescope-session-cachyos) wants python-hid, which conflicts with python-hidapi, and
     # a PC can need python-hidapi (liquidctl does). Only Valve's Steam Deck controller firmware updater uses python-hid, which
@@ -68,6 +81,12 @@ python_hid_shim_ensure() {
     pacman -Q python-hid steamify-python-hid-shim >/dev/null 2>&1 && return 0
     local dir pkg cache="${XDG_CACHE_HOME:-$HOME/.cache}/steamify"
     warn "python-hidapi is installed (liquidctl and others need it) and conflicts with python-hid, which Steam Deck's tools ask for: keeping python-hidapi, with a small placeholder package for python-hid."
+    # The signed package from Steamify's repository (pacman checks its signature against the key); built here when that fails.
+    if steamify_repo_key_ensure && sudo pacman -U --noconfirm "$STEAMIFY_REPO_URL/steamify-python-hid-shim-1-1-any.pkg.tar.zst"; then
+        ok "python-hidapi kept; python-hid is covered by a placeholder."
+        return 0
+    fi
+    warn "The placeholder package couldn't be downloaded: building it here."
     sudo pacman -S --needed --noconfirm base-devel >/dev/null || { err "Installing the build tools failed."; return 1; }
     mkdir -p "$cache" && dir="$(mktemp -d -p "$cache" hid-shim.XXXXXX)" || return 1
     patch_file python-hid-shim.PKGBUILD > "$dir/PKGBUILD" || { rm -rf "$dir"; return 1; }

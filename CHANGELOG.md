@@ -8,6 +8,8 @@ one per merged pull request.
 ## 2.14.3 - 2026-10-28
 
 - **chore: bump VERSION to 2.14.3**
+- **feat: the patched gamescope on NVIDIA updates with the system: the SteamOS conversion adds Steamify's signed pacman repository (`steamify-pacman-repo`, one database per CPU level, listed below CachyOS's) to `/etc/pacman.conf` and trusts its key, so a new build of `steamify-gamescope-nvidia` arrives with `pacman -Syu` (or Discover) and Steamify is not needed to update it. No more "(update)" for each new gamescope build; PCs that have the package but not the repository yet get one "(update)" that adds it. Turning the conversion off removes the repository and the key. Pin moved to `3.17.0-1` (gamescope 3.17.0 plus upstream master d175688), the 3.16.31 GBM patch was rebased**
+- **feat: the `python-hid` placeholder (`steamify-python-hid-shim`, for PCs that keep `python-hidapi`) is installed from Steamify's signed pacman repository (pacman checks the signature against the repository's key) instead of being built with `makepkg` on the PC; it is built there if the download fails. `steamify_repo_key_ensure` (`lib/packages.sh`) is shared with the patched gamescope**
 
 ## 2.14.2 - 2026-10-24
 
