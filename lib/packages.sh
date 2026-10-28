@@ -138,6 +138,67 @@ steamify_repo_keyring_install() {
     sudo pacman -U --noconfirm --needed "$url" >/dev/null 2>&1
 }
 
+steamify_repo_conf_stripped() {
+    # steamify_repo_conf_stripped <out>: pacman.conf without Steamify's section, for the steps that must work while that section is the
+    # problem (pacman refuses every transaction as long as a configured database is invalid).
+    awk -v m="$STEAMIFY_REPO_MARKER" '$0 == m { skip = 1; next } skip && /^\[steamify-/ { next } skip && /^(SigLevel|Server) *=/ { next } { skip = 0; print }' "$STEAMIFY_PACMAN_CONF" > "$1"
+}
+
+steamify_repo_check() {
+    # Does Steamify's pacman repository work? 0 yes (or not listed), 1 listed but pacman would refuse it, 2 can't tell (no connection).
+    # Local first (a key that is gone from the keyring makes pacman reject the database it has), then a database refresh into a
+    # private folder with a config of only this repository, which is what the next `pacman -Syu` would do.
+    local sec; sec="$(steamify_repo_section)"
+    [[ -n "$sec" ]] || return 0
+    pacman --config "$STEAMIFY_PACMAN_CONF" -Sl "$sec" >/dev/null 2>&1 || return 1
+    local code; code="$(curl -s -o /dev/null -w '%{http_code}' --connect-timeout 6 --max-time 15 "$STEAMIFY_REPO_URL/$sec.db" 2>/dev/null)"
+    [[ "$code" == 000 || -z "$code" ]] && return 2
+    local t rc; t="$(mktemp -d)" || return 2
+    mkdir -p "$t/db/sync"
+    printf '[options]\nSigLevel = Required DatabaseRequired\n\n[%s]\nServer = %s\n' "$sec" "$STEAMIFY_REPO_URL" > "$t/pacman.conf"
+    pacman --config "$t/pacman.conf" --dbpath "$t/db" --cachedir "$t/db" -Sy >/dev/null 2>&1 < /dev/null
+    rc=$?
+    rm -rf "$t"
+    [[ $rc -eq 0 ]] && return 0 || return 1
+}
+
+steamify_repo_repair() {
+    # Repair before giving up: the pinned key back in the keyring, the newest steamify-keyring (a changed signing key arrives with it),
+    # the repository's database again, then check. The package steps run with a config that has no Steamify section, since pacman
+    # refuses every transaction while that section's database is invalid.
+    local sec v url conf; sec="$(steamify_repo_section)"; v="${sec#steamify-}"
+    [[ -n "$sec" ]] || return 0
+    steamify_repo_key_ensure || return 1
+    conf="$(mktemp)" || return 1
+    steamify_repo_conf_stripped "$conf"
+    if url="$(steamify_repo_pkg_url steamify-keyring)"; then
+        sudo pacman --config "$conf" -U --noconfirm "$url" >/dev/null 2>&1 < /dev/null || true
+    fi
+    rm -f "$conf"
+    steamify_repo_fetch_db "$v" || return 1
+    steamify_repo_check
+    [[ $? -ne 1 ]]
+}
+
+steamify_repo_selfheal() {
+    # At the start of a run: listed but not working -> repair; not repairable although the repository can be reached -> take it out, so
+    # pacman works again (steamify.sh --add-repo lists it again). Without a connection nothing is touched.
+    local rc
+    [[ -n "$(steamify_repo_section)" ]] || return 0
+    # The look at the server at most every six hours; a repository that is already broken on disk is always looked at.
+    local now last; now="$(date +%s)"; last="$(state_get repo checked 0)"
+    if pacman --config "$STEAMIFY_PACMAN_CONF" -Sl "$(steamify_repo_section)" >/dev/null 2>&1 && (( now - ${last:-0} < 21600 )); then return 0; fi
+    steamify_repo_check; rc=$?
+    state_set repo checked "$now"
+    case $rc in
+        0|2) return 0 ;;
+    esac
+    warn "Steamify's pacman repository doesn't work (pacman would refuse it): repairing its key and keyring..."
+    if steamify_repo_repair; then ok "Steamify's pacman repository works again."; return 0; fi
+    warn "It couldn't be repaired: taking it out of pacman.conf so pacman keeps working (steamify.sh --add-repo lists it again)."
+    steamify_repo_remove_force
+}
+
 steamify_repo_remove_force() {
     # steamify.sh --remove-repo: for a PC whose pacman stops because of this repository (unreachable, or its key unknown): the section,
     # the downloaded databases, the keyring package and the key go. The packages stay installed; they update again once a run lists

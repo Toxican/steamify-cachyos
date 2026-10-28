@@ -125,6 +125,10 @@ Machine's drivers update with the system. Like any extra repository, when it can
 - `key "767F317A..." is unknown` / `database 'steamify-...' is not valid (invalid or corrupted database (PGP signature))`: the PC doesn't trust the repository's
   signing key. The `steamify-keyring` package normally keeps that current; it can fall behind when the PC missed an update of it.
 
+Steamify repairs this by itself: every run first checks the repository (what the next `pacman -Syu` would do), and when it doesn't verify it puts the pinned key
+back, installs the newest `steamify-keyring` and fetches the database again (`steamify.sh --repair-repo` does just that). Only when the repository can be reached but
+still can't be used, it takes the repository out of `pacman.conf` so pacman keeps working. With no connection it changes nothing.
+
 To get pacman working again at once, take the repository out (what it installed stays installed, it just stops updating):
 
     steamify.sh --remove-repo
