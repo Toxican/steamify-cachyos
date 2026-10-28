@@ -104,9 +104,11 @@ steamify_repo_enable() {
     if [[ "$v" == local ]]; then steamify_repo_conf_remove; return 0; fi
     steamify_repo_key_ensure || return 1
     if [[ "$(steamify_repo_section)" == "steamify-$v" ]] && grep -qxF "Server = $STEAMIFY_REPO_URL" "$STEAMIFY_PACMAN_CONF"; then
-        [[ -f "/var/lib/pacman/sync/steamify-$v.db" ]] && return 0
-        # Listed, but its database never arrived (offline at the time): try again now, else take the section out again.
-        steamify_repo_fetch_db "$v" && return 0
+        if [[ -f "/var/lib/pacman/sync/steamify-$v.db" ]] || steamify_repo_fetch_db "$v"; then
+            steamify_repo_keyring_install || true
+            return 0
+        fi
+        # Listed, but its database never arrived (offline at the time) and still doesn't: take the section out again.
         steamify_repo_conf_remove
         return 1
     fi
@@ -124,7 +126,29 @@ steamify_repo_enable() {
         warn "Couldn't download Steamify's package database (offline?): the repository is not listed yet; it is added the next time Steamify runs with a connection."
         return 1
     fi
+    steamify_repo_keyring_install || warn "Couldn't install steamify-keyring: a change of the repository's signing key would then need a Steamify update."
     return 0
+}
+
+steamify_repo_keyring_install() {
+    # The repository's signing keys as a pacman keyring (steamify-keyring): a later change of the key arrives with `pacman -Syu`.
+    # Without the key pacman refuses the repository's database, and then every `pacman -Syu` and `pacman -S` of the whole system fails.
+    pacman -Q steamify-keyring >/dev/null 2>&1 && return 0
+    local url; url="$(steamify_repo_pkg_url steamify-keyring)" || return 1
+    sudo pacman -U --noconfirm --needed "$url" >/dev/null 2>&1
+}
+
+steamify_repo_remove_force() {
+    # steamify.sh --remove-repo: for a PC whose pacman stops because of this repository (unreachable, or its key unknown): the section,
+    # the downloaded databases, the keyring package and the key go. The packages stay installed; they update again once a run lists
+    # the repository again (steamify.sh --add-repo, or the conversion / a driver option).
+    info "Taking Steamify's pacman repository out of pacman.conf..."
+    steamify_repo_conf_remove
+    sudo rm -f /var/lib/pacman/sync/steamify-{generic,v3,v4,znver4}.db*
+    pacman -Q steamify-keyring >/dev/null 2>&1 && sudo pacman -Rdd --noconfirm steamify-keyring >/dev/null 2>&1
+    sudo pacman-key --delete "$STEAMIFY_REPO_KEY" >/dev/null 2>&1
+    if [[ -z "$(steamify_repo_section)" ]]; then ok "Done: pacman no longer uses Steamify's repository (what it installed stays)."; return 0; fi
+    err "The repository section is still in $STEAMIFY_PACMAN_CONF."; return 1
 }
 
 steamify_repo_fetch_db() {
@@ -152,6 +176,7 @@ steamify_repo_disable() {
     for p in "${STEAMIFY_REPO_PKGS[@]}"; do pacman -Q "$p" >/dev/null 2>&1 && return 0; done
     steamify_repo_conf_remove
     sudo rm -f /var/lib/pacman/sync/steamify-{generic,v3,v4,znver4}.db* 2>/dev/null
+    pacman -Q steamify-keyring >/dev/null 2>&1 && sudo pacman -Rns --noconfirm steamify-keyring >/dev/null 2>&1
     sudo pacman-key --delete "$STEAMIFY_REPO_KEY" >/dev/null 2>&1
     return 0
 }
