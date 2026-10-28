@@ -22,7 +22,7 @@ tracked() {
 }
 
 refresh() {
-    local work rel p f repos found=() kept=() mirrored=()
+    local work rel p f c repos found=() kept=() mirrored=()
     work="$(mktemp -d)" || die "no temporary directory"
     trap 'rm -rf "$work"' RETURN
     [[ -d "$VALVE_GPGDIR" ]] || die "Valve's package key is missing ($VALVE_GPGDIR): turn HDMI-CEC volume off and on again"
@@ -46,7 +46,11 @@ refresh() {
     # Only what is installed here is fetched, no dependencies (-dd); pacman checks each package's signature.
     pm -Sw --noconfirm -dd "${found[@]}" >/dev/null 2>&1 || die "downloading Valve's packages failed (or a signature didn't check out)"
     for p in "${found[@]}"; do
-        f="$(ls -t "$work/cache/$p"-[0-9]*.pkg.tar.* 2>/dev/null | grep -v '\.sig$' | head -n 1)"
+        f=""
+        for c in "$work/cache/$p"-[0-9]*.pkg.tar.*; do
+            [[ "$c" == *.sig || ! -e "$c" ]] && continue
+            [[ -z "$f" || "$c" -nt "$f" ]] && f="$c"
+        done
         [[ -n "$f" ]] || die "no file for $p after the download"
         [[ -f "$REPO_DIR/${f##*/}" ]] || install -m644 "$f" "$REPO_DIR/${f##*/}"
         mirrored+=("${f##*/}")
