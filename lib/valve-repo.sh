@@ -72,7 +72,12 @@ valve_fetch_pkg() {
     valve_pacman "$dir/valve" "$repo" -Sy --noconfirm >/dev/null 2>&1 &&
         valve_pacman "$dir/valve" "$repo" -Sw --noconfirm -dd "$repo/$pkg" >/dev/null 2>&1 ||
         { err "Downloading $pkg from Valve's $repo failed (or its signature didn't check out)."; return 1; }
-    f="$(ls -t "$dir/valve/cache/$pkg"-[0-9]*.pkg.tar.* 2>/dev/null | grep -v '\.sig$' | head -n 1)"
+    f=""
+    local c
+    for c in "$dir/valve/cache/$pkg"-[0-9]*.pkg.tar.*; do
+        [[ "$c" == *.sig || ! -e "$c" ]] && continue
+        [[ -z "$f" || "$c" -nt "$f" ]] && f="$c"
+    done
     [[ -n "$f" ]] || { err "No $pkg in Valve's $repo repository."; return 1; }
     echo "$f"
 }
