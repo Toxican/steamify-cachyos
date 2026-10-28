@@ -132,6 +132,16 @@ if [[ "${1:-}" == --first-login ]]; then
     exit 0
 fi
 
+# --remove-repo / --add-repo: Steamify's pacman repository (lib/packages.sh) out of / back into pacman.conf, for when pacman stops because of it.
+if [[ "${1:-}" == --remove-repo ]]; then
+    steamify_repo_remove_force
+    exit $?
+fi
+if [[ "${1:-}" == --add-repo ]]; then
+    steamify_repo_enable && ok "Steamify's pacman repository is listed again." && exit 0
+    err "Couldn't list Steamify's pacman repository (offline?)."; exit 1
+fi
+
 if [[ "$LIST" == true ]]; then
     defaults_list
     exit 0
