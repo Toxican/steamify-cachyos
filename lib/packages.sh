@@ -139,7 +139,7 @@ steamify_repo_fetch_db() {
             sudo install -m644 "$tmp/db" "/var/lib/pacman/sync/steamify-$v.db" &&
             sudo install -m644 "$tmp/db.sig" "/var/lib/pacman/sync/steamify-$v.db.sig" &&
             # pacman checks the signature when it loads the database: a bad one must not stay
-            { pacman -Sl "steamify-$v" >/dev/null 2>&1 && ok=1 || sudo rm -f "/var/lib/pacman/sync/steamify-$v.db" "/var/lib/pacman/sync/steamify-$v.db.sig"; }
+            { pacman --config "$STEAMIFY_PACMAN_CONF" -Sl "steamify-$v" >/dev/null 2>&1 && ok=1 || sudo rm -f "/var/lib/pacman/sync/steamify-$v.db" "/var/lib/pacman/sync/steamify-$v.db.sig"; }
     fi
     rm -rf "$tmp"
     [[ $ok == 1 ]]
