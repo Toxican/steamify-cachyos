@@ -63,12 +63,127 @@ bootstrap_yay() {
 STEAMIFY_REPO_URL="${STEAMIFY_REPO_URL:-https://github.com/theupriser/steamify-pacman-repo/releases/download/repo}"
 STEAMIFY_REPO_KEY=767F317AC4F06C54700EC832854F60918B8BC40C
 
+STEAMIFY_PACMAN_CONF="${STEAMIFY_PACMAN_CONF:-/etc/pacman.conf}"
+STEAMIFY_REPO_MARKER='# Steamify: packages from steamify-pacman-repo, updated by pacman -Syu'
+# What the repository carries and Steamify installs (it stays while one of them is installed).
+STEAMIFY_REPO_PKGS=(steamify-gamescope-nvidia steamify-python-hid-shim steamify-cros-ec-cec-dkms steamify-fremont-poweroff-dkms steamify-leds-valve-dkms)
+
 steamify_repo_key_ensure() {
     # pacman trusts the repository's key (added and signed locally); nothing changes when it already does.
     if ! sudo pacman-key --list-keys "$STEAMIFY_REPO_KEY" >/dev/null 2>&1; then
         patch_file steamify-pacman-repo.pub.asc | sudo pacman-key --add - >/dev/null 2>&1 || return 1
     fi
     sudo pacman-key --lsign-key "$STEAMIFY_REPO_KEY" >/dev/null 2>&1
+}
+
+steamify_repo_section() { grep -oE '^\[steamify-(generic|v3|v4|znver4)\]' "$STEAMIFY_PACMAN_CONF" 2>/dev/null | head -n 1 | tr -d '[]'; }
+
+steamify_repo_conf_remove() {
+    local tmp; tmp="$(mktemp)"
+    awk -v marker="$STEAMIFY_REPO_MARKER" '
+        $0 == marker { skip = 1; next }
+        /^\[steamify-(generic|v3|v4|znver4)\]/ { skip = 1; next }
+        skip && /^(SigLevel|Server) *=/ { next }
+        skip { skip = 0; if ($0 == "") next }
+        { print }
+    ' "$STEAMIFY_PACMAN_CONF" > "$tmp"
+    if ! cmp -s "$tmp" "$STEAMIFY_PACMAN_CONF"; then
+        backup_file "$STEAMIFY_PACMAN_CONF"
+        sudo install -m644 "$tmp" "$STEAMIFY_PACMAN_CONF"
+    fi
+    rm -f "$tmp"
+}
+
+steamify_repo_enable() {
+    # steamify_repo_enable [variant]: pacman trusts the repository's key and lists the repository of this PC's CPU level (the
+    # one the installed build is from) below CachyOS's own, so it never takes a package from them. Only the key and the
+    # section: no `pacman -Sy` here (a database refresh without the upgrade is the partial update pacman warns about); the
+    # next `pacman -Syu` reads it. A build made here stays out. Idempotent.
+    local v="${1:-$(state_get gamescope_nvidia variant)}"
+    [[ -n "$v" ]] || v="$(gsn_cpu_variant)"
+    if [[ "$v" == local ]]; then steamify_repo_conf_remove; return 0; fi
+    steamify_repo_key_ensure || return 1
+    if [[ "$(steamify_repo_section)" == "steamify-$v" ]] && grep -qxF "Server = $STEAMIFY_REPO_URL" "$STEAMIFY_PACMAN_CONF"; then return 0; fi
+    steamify_repo_conf_remove
+    local tmp; tmp="$(mktemp)"
+    { cat "$STEAMIFY_PACMAN_CONF"; printf '\n%s\n[steamify-%s]\nSigLevel = Required DatabaseRequired\nServer = %s\n' "$STEAMIFY_REPO_MARKER" "$v" "$STEAMIFY_REPO_URL"; } > "$tmp"
+    backup_file "$STEAMIFY_PACMAN_CONF"
+    sudo install -m644 "$tmp" "$STEAMIFY_PACMAN_CONF"
+    rm -f "$tmp"
+    state_set gamescope_nvidia variant "$v"
+    return 0
+}
+
+steamify_repo_disable() {
+    # Back to no repository, but only when nothing from it is installed: those packages stay when an option goes off (like
+    # the other packages of the conversion) and keep updating with pacman -Syu.
+    local p
+    for p in "${STEAMIFY_REPO_PKGS[@]}"; do pacman -Q "$p" >/dev/null 2>&1 && return 0; done
+    steamify_repo_conf_remove
+    sudo rm -f /var/lib/pacman/sync/steamify-{generic,v3,v4,znver4}.db* 2>/dev/null
+    sudo pacman-key --delete "$STEAMIFY_REPO_KEY" >/dev/null 2>&1
+    return 0
+}
+
+steamify_repo_pkg_url() {
+    # steamify_repo_pkg_url <package>: the URL of the newest file of an architecture-independent package, read from the
+    # repository's database (every variant has them).
+    local pkg="$1" tmp d f
+    tmp="$(mktemp)" || return 1
+    curl -fsL --connect-timeout 10 --max-time 30 -o "$tmp" "$STEAMIFY_REPO_URL/steamify-generic.db" || { rm -f "$tmp"; return 1; }
+    d="$(tar -I unzstd -tf "$tmp" 2>/dev/null | grep -E "^$pkg-[0-9][^/]*/desc$" | head -n 1)"
+    f="$([[ -n "$d" ]] && tar -I unzstd -xOf "$tmp" "$d" | awk '/^%FILENAME%$/ { getline; print }')"
+    rm -f "$tmp"
+    [[ -n "$f" ]] || return 1
+    echo "$STEAMIFY_REPO_URL/$f"
+}
+
+steamify_dkms_install() {
+    # steamify_dkms_install <package> <dkms name> <dkms version>: a DKMS driver as a signed package from the repository,
+    # for every kernel that has headers. A copy that Steamify put into /usr/src earlier (or another package's, like the AUR
+    # leds-valve-dkms-git, which the new package replaces) is removed first, since pacman refuses to overwrite files it doesn't own.
+    # Returns 1 when the repository can't be used: the caller falls back to what it did before.
+    local pkg="$1" name="$2" ver="$3" url src="/usr/src/$2-$3" k
+    if ! pacman -Q "$pkg" >/dev/null 2>&1; then
+        pacman -Q dkms >/dev/null 2>&1 || sudo pacman -S --needed --noconfirm dkms >/dev/null || return 1
+        install_kernel_headers || return 1
+        steamify_repo_key_ensure || return 1
+        url="$(steamify_repo_pkg_url "$pkg")" || return 1
+        if [[ -d "$src" ]] && ! pacman -Qo "$src" >/dev/null 2>&1; then
+            sudo dkms remove "$name/$ver" --all >/dev/null 2>&1
+            sudo rm -rf "$src"
+        fi
+        info "Installing $pkg from Steamify's repository..."
+        sudo pacman -U --noconfirm --needed --ask 4 "$url" >/dev/null || return 1
+    fi
+    steamify_repo_enable "$(steamify_repo_variant)" || warn "Couldn't list Steamify's pacman repository: $pkg won't update with pacman -Syu."
+    # pacman's DKMS hook builds it for the kernels that have headers; the ones it missed, here.
+    for k in /usr/lib/modules/*/build; do
+        [[ -d "$k" ]] || continue
+        k="$(basename "$(dirname "$k")")"
+        dkms status -k "$k" "$name" 2>/dev/null | grep -q installed && continue
+        sudo dkms install "$name/$ver" -k "$k" >/dev/null 2>&1 || warn "Building $name for $k failed."
+    done
+    return 0
+}
+
+steamify_dkms_remove() {
+    # steamify_dkms_remove <package> <dkms name> <dkms version>: the package, or the copy an older Steamify put there.
+    local pkg="$1" name="$2" ver="$3"
+    if pacman -Q "$pkg" >/dev/null 2>&1; then
+        sudo pacman -Rns --noconfirm "$pkg" >/dev/null
+    else
+        sudo dkms remove "$name/$ver" --all >/dev/null 2>&1
+        sudo rm -rf "/usr/src/$name-$ver"
+    fi
+    steamify_repo_disable
+}
+
+steamify_repo_variant() {
+    # The CPU level the repository section uses: the installed patched gamescope's (its build decides), else this CPU's.
+    local v; v="$(state_get gamescope_nvidia variant)"
+    [[ "$v" =~ ^(generic|v3|v4|znver4)$ ]] || v="$(gsn_cpu_variant)"
+    echo "$v"
 }
 
 python_hid_shim_ensure() {
