@@ -103,7 +103,13 @@ steamify_repo_enable() {
     [[ -n "$v" ]] || v="$(gsn_cpu_variant)"
     if [[ "$v" == local ]]; then steamify_repo_conf_remove; return 0; fi
     steamify_repo_key_ensure || return 1
-    if [[ "$(steamify_repo_section)" == "steamify-$v" ]] && grep -qxF "Server = $STEAMIFY_REPO_URL" "$STEAMIFY_PACMAN_CONF"; then return 0; fi
+    if [[ "$(steamify_repo_section)" == "steamify-$v" ]] && grep -qxF "Server = $STEAMIFY_REPO_URL" "$STEAMIFY_PACMAN_CONF"; then
+        [[ -f "/var/lib/pacman/sync/steamify-$v.db" ]] && return 0
+        # Listed, but its database never arrived (offline at the time): try again now, else take the section out again.
+        steamify_repo_fetch_db "$v" && return 0
+        steamify_repo_conf_remove
+        return 1
+    fi
     steamify_repo_conf_remove
     local tmp; tmp="$(mktemp)"
     { cat "$STEAMIFY_PACMAN_CONF"; printf '\n%s\n[steamify-%s]\nSigLevel = Required DatabaseRequired\nServer = %s\n' "$STEAMIFY_REPO_MARKER" "$v" "$STEAMIFY_REPO_URL"; } > "$tmp"
@@ -111,7 +117,13 @@ steamify_repo_enable() {
     sudo install -m644 "$tmp" "$STEAMIFY_PACMAN_CONF"
     rm -f "$tmp"
     state_set gamescope_nvidia variant "$v"
-    steamify_repo_fetch_db "$v" || warn "Couldn't download Steamify's package database: run  sudo pacman -Sy  before installing packages, or pacman stops with \"could not find database\"."
+    # No database, no section: pacman stops with "could not find database" for every `pacman -S` while a configured repository has
+    # none. Offline now: the next run (the conversion shows as an update while the package has no section) adds it.
+    if ! steamify_repo_fetch_db "$v"; then
+        steamify_repo_conf_remove
+        warn "Couldn't download Steamify's package database (offline?): the repository is not listed yet; it is added the next time Steamify runs with a connection."
+        return 1
+    fi
     return 0
 }
 
