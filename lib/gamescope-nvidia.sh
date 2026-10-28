@@ -31,9 +31,7 @@ declare -A GSN_SHA256=(
 )
 # Where the ISO leaves a copy of the pinned package, for installs without GitHub.
 GSN_BACKUP_DIR="${GSN_BACKUP_DIR:-/usr/local/share/steamify/gamescope}"
-# The pacman repository (steamify-pacman-repo): a database per CPU level, signed with this key (patches/steamify-pacman-repo.pub.asc).
-GSN_REPO_URL="${GSN_REPO_URL:-https://github.com/theupriser/steamify-pacman-repo/releases/download/repo}"
-GSN_REPO_KEY=767F317AC4F06C54700EC832854F60918B8BC40C
+# The pacman repository (steamify-pacman-repo; STEAMIFY_REPO_URL and _KEY, lib/packages.sh): a database per CPU level.
 GSN_REPO_MARKER='# Steamify: patched gamescope, updated by pacman -Syu'
 GSN_PACMAN_CONF="${GSN_PACMAN_CONF:-/etc/pacman.conf}"
 GSN_ENV_LINE='gamescope_drm_gbm_scanout=1'
@@ -234,14 +232,11 @@ gsn_repo_enable() {
     local v="${1:-$(state_get gamescope_nvidia variant)}"
     [[ -n "$v" ]] || v="$(gsn_cpu_variant)"
     if [[ "$v" == local ]]; then gsn_repo_disable; return 0; fi
-    if ! sudo pacman-key --list-keys "$GSN_REPO_KEY" >/dev/null 2>&1; then
-        patch_file steamify-pacman-repo.pub.asc | sudo pacman-key --add - >/dev/null 2>&1 || return 1
-    fi
-    sudo pacman-key --lsign-key "$GSN_REPO_KEY" >/dev/null 2>&1 || return 1
-    if [[ "$(gsn_repo_section)" == "steamify-$v" ]] && grep -qxF "Server = $GSN_REPO_URL" "$GSN_PACMAN_CONF"; then return 0; fi
+    steamify_repo_key_ensure || return 1
+    if [[ "$(gsn_repo_section)" == "steamify-$v" ]] && grep -qxF "Server = $STEAMIFY_REPO_URL" "$GSN_PACMAN_CONF"; then return 0; fi
     gsn_repo_conf_remove
     local tmp; tmp="$(mktemp)"
-    { cat "$GSN_PACMAN_CONF"; printf '\n%s\n[steamify-%s]\nSigLevel = Required DatabaseRequired\nServer = %s\n' "$GSN_REPO_MARKER" "$v" "$GSN_REPO_URL"; } > "$tmp"
+    { cat "$GSN_PACMAN_CONF"; printf '\n%s\n[steamify-%s]\nSigLevel = Required DatabaseRequired\nServer = %s\n' "$GSN_REPO_MARKER" "$v" "$STEAMIFY_REPO_URL"; } > "$tmp"
     backup_file "$GSN_PACMAN_CONF"
     sudo install -m644 "$tmp" "$GSN_PACMAN_CONF"
     rm -f "$tmp"
@@ -252,7 +247,7 @@ gsn_repo_enable() {
 gsn_repo_disable() {
     gsn_repo_conf_remove
     sudo rm -f /var/lib/pacman/sync/steamify-{generic,v3,v4,znver4}.db* 2>/dev/null
-    sudo pacman-key --delete "$GSN_REPO_KEY" >/dev/null 2>&1
+    sudo pacman-key --delete "$STEAMIFY_REPO_KEY" >/dev/null 2>&1
     return 0
 }
 
