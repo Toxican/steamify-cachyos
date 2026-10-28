@@ -111,7 +111,26 @@ steamify_repo_enable() {
     sudo install -m644 "$tmp" "$STEAMIFY_PACMAN_CONF"
     rm -f "$tmp"
     state_set gamescope_nvidia variant "$v"
+    steamify_repo_fetch_db "$v" || warn "Couldn't download Steamify's package database: run  sudo pacman -Sy  before installing packages, or pacman stops with \"could not find database\"."
     return 0
+}
+
+steamify_repo_fetch_db() {
+    # steamify_repo_fetch_db <level>: the repository's database and its signature into pacman's sync folder, as `pacman -Sy`
+    # would for this one repository. A section in pacman.conf without its database file makes every later `pacman -S <package>`
+    # stop with "could not find database" until the next -Sy; a full -Sy here would be the partial update pacman warns about.
+    local v="$1" tmp ok=0
+    tmp="$(mktemp -d)" || return 1
+    if curl -fsL --connect-timeout 10 --max-time 60 -o "$tmp/db" "$STEAMIFY_REPO_URL/steamify-$v.db" &&
+        curl -fsL --connect-timeout 10 --max-time 60 -o "$tmp/db.sig" "$STEAMIFY_REPO_URL/steamify-$v.db.sig"; then
+        sudo install -d /var/lib/pacman/sync &&
+            sudo install -m644 "$tmp/db" "/var/lib/pacman/sync/steamify-$v.db" &&
+            sudo install -m644 "$tmp/db.sig" "/var/lib/pacman/sync/steamify-$v.db.sig" &&
+            # pacman checks the signature when it loads the database: a bad one must not stay
+            { pacman -Sl "steamify-$v" >/dev/null 2>&1 && ok=1 || sudo rm -f "/var/lib/pacman/sync/steamify-$v.db" "/var/lib/pacman/sync/steamify-$v.db.sig"; }
+    fi
+    rm -rf "$tmp"
+    [[ $ok == 1 ]]
 }
 
 steamify_repo_disable() {
