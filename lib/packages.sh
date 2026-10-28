@@ -156,9 +156,10 @@ steamify_repo_check() {
     local t rc; t="$(mktemp -d)" || return 2
     mkdir -p "$t/db/sync"
     printf '[options]\nSigLevel = Required DatabaseRequired\n\n[%s]\nServer = %s\n' "$sec" "$STEAMIFY_REPO_URL" > "$t/pacman.conf"
-    pacman --config "$t/pacman.conf" --dbpath "$t/db" --cachedir "$t/db" -Sy >/dev/null 2>&1 < /dev/null
+    # -Sy needs root even for a private database folder
+    sudo pacman --config "$t/pacman.conf" --dbpath "$t/db" --cachedir "$t/db" -Sy >/dev/null 2>&1 < /dev/null
     rc=$?
-    rm -rf "$t"
+    sudo rm -rf "$t"
     [[ $rc -eq 0 ]] && return 0 || return 1
 }
 
