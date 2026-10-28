@@ -756,12 +756,13 @@ immediately, which can turn into a loop - see
 | `lib/steam-desktop.sh` | Steam in the Plasma session; Steam Deck/Machine icons |
 | `lib/desktop-shortcut.sh` | Return to Gaming Mode shortcut and its sudoers rule |
 | `lib/vapor-theme.sh` | SteamOS theme: installs and switches to `cachyos-vapor` |
+| `lib/valve-repo.sh` | Packages from Valve's SteamOS repositories (HDMI-CEC, Wi-Fi firmware, desktop extras, HDMI-CEC volume): a throw-away pacman config with only the repositories needed, Valve's package-builder key as the only trusted one (`/etc/steamify/valve-gnupg`), names a CachyOS repository also has refused unless an option replaces them on purpose; nothing of Valve's is ever in `/etc/pacman.conf` |
 | `lib/steamos-extras.sh` | SteamOS desktop extras from Valve's package (Add to Steam, Nested Desktop, icon, keyboard rule, KWallet) |
 | `lib/single-user.sh` | Single user mode: no lock screen, user switching or log out |
 | `lib/wizard-shortcut.sh` | Steamify shortcut: desktop icon and launcher entry that run the newest release |
 | `lib/bios.sh` | Update BIOS (Steam Machine, opt-in): current/newest version, double confirmation, fwupd |
 | `lib/cec.sh` | HDMI-CEC: Valve's `cecd` and friends from its `holo` repository |
-| `lib/cec-audio.sh` | Steam Machine: the TV's volume buttons in Steam (Valve's PipeWire and WirePlumber from a local pacman repository) |
+| `lib/cec-audio.sh` | Steam Machine: the TV's volume buttons in Steam (Valve's PipeWire and WirePlumber, signature checked through pacman, kept in a local pacman repository that is listed before CachyOS's) |
 | `lib/steam-machine.sh` | Steam Machine support: LED driver, LED access, steamos-manager |
 | `lib/fremont-poweroff.sh` | Steam Machine support: the power-off fix (DKMS module from `patches/`) |
 | `lib/fremont-wifi.sh` | Steam Machine support: Wi-Fi firmware from SteamOS (Wake-on-WLAN) |
