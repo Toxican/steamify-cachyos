@@ -1,6 +1,6 @@
 GBM-allocated scan-out buffers for gamescope's DRM backend on NVIDIA (opt-in: gamescope_drm_gbm_scanout=1).
 Nine commits from https://github.com/farnoy/gamescope (branch nvidia-gbm-wayland: 5cf847274, ffb525cf7, 211f4ca26,
-117b593ea, 8da9459ff, cb0378edc, 4e879fbf7, 0c7fddbf3, ae7b99df3), as one diff against gamescope 3.16.31.
+117b593ea, 8da9459ff, cb0378edc, 4e879fbf7, 0c7fddbf3, ae7b99df3), as one diff against gamescope 3.17.0 (also applies to upstream master d175688).
 Upstream issue: https://github.com/ValveSoftware/gamescope/issues/2309.
 Tested on an RTX 5080 (driver 615.78.08): Steam's gaming UI is clean with it and shows artifacts without it.
 Applies with `git apply` (it ignores these lines); newer gamescope versions need a rebase.
@@ -19,11 +19,11 @@ index 0f53c60..7de4241 100644
  
  Build with:
 diff --git a/src/Backends/DRMBackend.cpp b/src/Backends/DRMBackend.cpp
-index 9aaab7b..9b40f02 100644
+index c9034b7..56d5fd5 100644
 --- a/src/Backends/DRMBackend.cpp
 +++ b/src/Backends/DRMBackend.cpp
-@@ -56,6 +56,10 @@
- #include "libdisplay-info/cta.h"
+@@ -55,6 +55,10 @@
+ #include "libdisplay-info/edid.h"
  #include "wlr_end.hpp"
  
 +#if HAVE_GBM
@@ -33,7 +33,7 @@ index 9aaab7b..9b40f02 100644
  #include "gamescope-control-protocol.h"
  
  extern int g_nPreferredOutputWidth;
-@@ -75,6 +79,19 @@ gamescope::ConVar<bool> cv_drm_debug_disable_color_range( "drm_debug_disable_col
+@@ -74,6 +78,19 @@ gamescope::ConVar<bool> cv_drm_debug_disable_color_range( "drm_debug_disable_col
  gamescope::ConVar<bool> cv_drm_debug_disable_explicit_sync( "drm_debug_disable_explicit_sync", false, "Force disable explicit sync on the DRM backend." );
  gamescope::ConVar<bool> cv_drm_debug_disable_in_fence_fd( "drm_debug_disable_in_fence_fd", false, "Force disable IN_FENCE_FD being set to avoid over-synchronization on the DRM backend." );
  
@@ -53,7 +53,7 @@ index 9aaab7b..9b40f02 100644
  gamescope::ConVar<bool> cv_drm_allow_dynamic_modes_for_external_display( "drm_allow_dynamic_modes_for_external_display", false, "Allow dynamic mode/refresh rate switching for external displays." );
  
  int HackyDRMPresent( const FrameInfo_t *pFrameInfo, bool bAsync );
-@@ -113,6 +130,13 @@ struct drm_t {
+@@ -112,6 +129,13 @@ struct drm_t {
  	bool allow_modifiers;
  	struct wlr_drm_format_set formats;
  
@@ -67,7 +67,7 @@ index 9aaab7b..9b40f02 100644
  	std::vector< std::unique_ptr< gamescope::CDRMPlane > > planes;
  	std::vector< std::unique_ptr< gamescope::CDRMCRTC > > crtcs;
  	std::unordered_map< uint32_t, gamescope::CDRMConnector > connectors;
-@@ -547,10 +571,11 @@ namespace gamescope
+@@ -546,10 +570,11 @@ namespace gamescope
  		~CDRMFb();
  
  		uint32_t GetFbId() const { return m_uFbId; }
@@ -80,7 +80,7 @@ index 9aaab7b..9b40f02 100644
  }
  
  uint32_t g_nDRMFormat = DRM_FORMAT_INVALID;
-@@ -1546,6 +1571,28 @@ bool init_drm(struct drm_t *drm, int width, int height, int refresh)
+@@ -1562,6 +1587,28 @@ bool init_drm(struct drm_t *drm, int width, int height, int refresh)
  		drm->allow_modifiers = true;
  	}
  
@@ -109,7 +109,7 @@ index 9aaab7b..9b40f02 100644
  	g_bSupportsAsyncFlips = drmGetCap(drm->fd, DRM_CAP_ATOMIC_ASYNC_PAGE_FLIP, &cap) == 0 && cap != 0;
  	if (!g_bSupportsAsyncFlips)
  		drm_log.errorf("Immediate flips are not supported by the KMS driver");
-@@ -1842,6 +1889,12 @@ void finish_drm(struct drm_t *drm)
+@@ -1858,6 +1905,12 @@ void finish_drm(struct drm_t *drm)
  	drm->crtcs.clear();
  	drm->connectors.clear();
  
@@ -122,7 +122,7 @@ index 9aaab7b..9b40f02 100644
  
  	// Signal the page-flip handler thread to exit and join it so it won't be
  	// using the DRM fd while we clean it up. Closing the pipe write end
-@@ -4227,6 +4280,27 @@ namespace gamescope
+@@ -4223,6 +4276,27 @@ namespace gamescope
  			return drm_fbid_from_dmabuf( &g_DRM, pDmaBuf );
  		}
  
@@ -151,7 +151,7 @@ index 9aaab7b..9b40f02 100644
  		{
  			return g_DRM.allow_modifiers;
 diff --git a/src/Backends/DeferredBackend.h b/src/Backends/DeferredBackend.h
-index 7f76122..a7385b3 100644
+index 2829fdf..04242bb 100644
 --- a/src/Backends/DeferredBackend.h
 +++ b/src/Backends/DeferredBackend.h
 @@ -163,6 +163,25 @@ namespace gamescope
@@ -371,7 +371,7 @@ index 0000000..9dbf3b2
 +    std::shared_ptr<IBackendScanoutBuffer> CreateGbmScanoutBuffer( const std::shared_ptr<gbm_device> &pDevice, uint32_t uWidth, uint32_t uHeight, uint32_t uDrmFormat, std::span<const uint64_t> ulModifiers, bool bLinear );
 +}
 diff --git a/src/backend.h b/src/backend.h
-index bd57c42..12e4361 100644
+index a1546c1..fc4d919 100644
 --- a/src/backend.h
 +++ b/src/backend.h
 @@ -290,6 +290,17 @@ namespace gamescope
@@ -413,7 +413,7 @@ index bd57c42..12e4361 100644
          virtual std::span<const uint64_t> GetSupportedModifiers( uint32_t uDrmFormat ) const = 0;
  		inline bool SupportsFormat( uint32_t uDrmFormat ) const
 diff --git a/src/meson.build b/src/meson.build
-index ae3ac16..12fe4ae 100644
+index 498bca6..46c82f4 100644
 --- a/src/meson.build
 +++ b/src/meson.build
 @@ -11,6 +11,8 @@ dep_xmu = dependency('xmu')
@@ -425,7 +425,7 @@ index ae3ac16..12fe4ae 100644
  eis_dep = dependency('libeis-1.0', required : get_option('input_emulation'))
  
  wayland_server = dependency('wayland-server', version: '>=1.21')
-@@ -149,6 +151,11 @@ if sdl2_dep.found()
+@@ -151,6 +153,11 @@ if sdl2_dep.found()
  endif
  
  gamescope_cpp_args += '-DHAVE_DRM=@0@'.format(drm_dep.found().to_int())
@@ -437,7 +437,7 @@ index ae3ac16..12fe4ae 100644
  gamescope_cpp_args += '-DHAVE_SDL2=@0@'.format(sdl2_dep.found().to_int())
  gamescope_cpp_args += '-DHAVE_AVIF=@0@'.format(avif_dep.found().to_int())
  gamescope_cpp_args += '-DHAVE_LIBCAP=@0@'.format(cap_dep.found().to_int())
-@@ -196,7 +203,7 @@ gamescope_version = configure_file(
+@@ -198,7 +205,7 @@ gamescope_version = configure_file(
      include_directories : [reshade_include, sol2_include],
      dependencies: [
        dep_wayland, dep_x11, dep_xdamage, dep_xcomposite, dep_xrender, dep_xext, dep_xfixes,
@@ -447,10 +447,10 @@ index ae3ac16..12fe4ae 100644
        vulkan_dep, liftoff_dep, dep_xtst, dep_xmu, cap_dep, epoll_dep, pipewire_dep, librt_dep,
        stb_dep, displayinfo_dep, openvr_dep, dep_xcursor, avif_dep, dep_xi,
 diff --git a/src/rendervulkan.cpp b/src/rendervulkan.cpp
-index 54e4efc..cd5769c 100644
+index 77134f2..4574782 100644
 --- a/src/rendervulkan.cpp
 +++ b/src/rendervulkan.cpp
-@@ -2080,44 +2080,109 @@ static VkImageViewType VulkanImageTypeToViewType(VkImageType type)
+@@ -2117,44 +2117,109 @@ static VkImageViewType VulkanImageTypeToViewType(VkImageType type)
  	}
  }
  
@@ -580,7 +580,7 @@ index 54e4efc..cd5769c 100644
  	}
  
  	if ( flags.bMappable == true )
-@@ -2320,7 +2385,8 @@ bool CVulkanTexture::BInit( uint32_t width, uint32_t height, uint32_t depth, uin
+@@ -2392,7 +2457,8 @@ bool CVulkanTexture::BInit( uint32_t width, uint32_t height, uint32_t depth, uin
  		vk_errorf( res, "vkCreateImage failed" );
  		return false;
  	}
@@ -590,7 +590,7 @@ index 54e4efc..cd5769c 100644
  	VkMemoryRequirements memRequirements;
  	g_device.vk.GetImageMemoryRequirements(g_device.device(), m_vkImage, &memRequirements);
  
-@@ -2383,6 +2449,37 @@ bool CVulkanTexture::BInit( uint32_t width, uint32_t height, uint32_t depth, uin
+@@ -2455,6 +2521,37 @@ bool CVulkanTexture::BInit( uint32_t width, uint32_t height, uint32_t depth, uin
  				return false;
  			}
  
@@ -628,7 +628,7 @@ index 54e4efc..cd5769c 100644
  			// Memory already provided by pDMA
  			importMemoryInfo = {
  					.sType = VK_STRUCTURE_TYPE_IMPORT_MEMORY_FD_INFO_KHR,
-@@ -2547,13 +2644,43 @@ bool CVulkanTexture::BInit( uint32_t width, uint32_t height, uint32_t depth, uin
+@@ -2619,13 +2716,43 @@ bool CVulkanTexture::BInit( uint32_t width, uint32_t height, uint32_t depth, uin
  
  		m_dmabuf = dmabuf;
  	}
@@ -674,7 +674,7 @@ index 54e4efc..cd5769c 100644
  
  	if (!bHasAlpha )
  	{
-@@ -2742,9 +2869,10 @@ CVulkanTexture::CVulkanTexture( void )
+@@ -2814,9 +2941,10 @@ CVulkanTexture::CVulkanTexture( void )
  {
  }
  
@@ -686,7 +686,7 @@ index 54e4efc..cd5769c 100644
  
  	if ( m_pMappedData != nullptr && m_vkImageMemory )
  	{
-@@ -2764,24 +2892,47 @@ CVulkanTexture::~CVulkanTexture( void )
+@@ -2836,24 +2964,47 @@ CVulkanTexture::~CVulkanTexture( void )
  		m_linearView = VK_NULL_HANDLE;
  	}
  
@@ -740,7 +740,7 @@ index 54e4efc..cd5769c 100644
  int CVulkanTexture::memoryFence()
  {
  	const VkMemoryGetFdInfoKHR memory_get_fd_info = {
-@@ -3341,6 +3492,139 @@ bool vulkan_remake_swapchain( void )
+@@ -3428,6 +3579,139 @@ bool vulkan_remake_swapchain( void )
  	return bRet;
  }
  
@@ -880,7 +880,7 @@ index 54e4efc..cd5769c 100644
  static bool vulkan_make_output_images( VulkanOutput_t *pOutput )
  {
  	CVulkanTexture::createFlags outputImageflags;
-@@ -3360,14 +3644,30 @@ static bool vulkan_make_output_images( VulkanOutput_t *pOutput )
+@@ -3447,14 +3731,30 @@ static bool vulkan_make_output_images( VulkanOutput_t *pOutput )
  	pOutput->outputImagesPartialOverlay[1] = nullptr;
  	pOutput->outputImagesPartialOverlay[2] = nullptr;
  
@@ -914,10 +914,10 @@ index 54e4efc..cd5769c 100644
  	bool bSuccess = pOutput->outputImages[0]->BInit( uOutputWidth, uOutputHeight, 1u, uDRMFormat, outputImageflags );
  	if ( bSuccess != true )
 diff --git a/src/rendervulkan.hpp b/src/rendervulkan.hpp
-index fa519db..4f0bff0 100644
+index 3566b3f..5e2d4a0 100644
 --- a/src/rendervulkan.hpp
 +++ b/src/rendervulkan.hpp
-@@ -161,7 +161,7 @@ public:
+@@ -162,7 +162,7 @@ public:
  		VkImageType imageType;
  	};
  
@@ -926,7 +926,7 @@ index fa519db..4f0bff0 100644
  	bool BInitFromSwapchain( VkImage image, uint32_t width, uint32_t height, VkFormat format );
  
  	uint32_t IncRef();
-@@ -211,9 +211,17 @@ public:
+@@ -213,10 +213,18 @@ public:
  	uint32_t queueFamily = VK_QUEUE_FAMILY_IGNORED;
  
  private:
@@ -937,6 +937,7 @@ index fa519db..4f0bff0 100644
 +
  	bool m_bInitialized = false;
  	bool m_bExternal = false;
+ 	bool m_bTransferSrc = false;
  	bool m_bOutputImage = false;
 +	// False for swapchain images: those are owned by the swapchain and must
 +	// never be passed to vkDestroyImage.
@@ -944,7 +945,7 @@ index fa519db..4f0bff0 100644
  
  	uint32_t m_drmFormat = DRM_FORMAT_INVALID;
  
-@@ -251,6 +259,12 @@ private:
+@@ -254,6 +262,12 @@ private:
  	EStreamColorspace m_streamColorspace = k_EStreamColorspace_Unknown;
  
  	struct wlr_dmabuf_attributes m_dmabuf = {};
@@ -957,7 +958,7 @@ index fa519db..4f0bff0 100644
  };
  
  struct vec2_t
-@@ -788,6 +802,7 @@ static inline uint32_t div_roundup(uint32_t x, uint32_t y)
+@@ -795,6 +809,7 @@ static inline uint32_t div_roundup(uint32_t x, uint32_t y)
  	VK_FUNC(GetImageMemoryRequirements) \
  	VK_FUNC(GetImageSubresourceLayout) \
  	VK_FUNC(GetMemoryFdKHR) \
@@ -966,10 +967,10 @@ index fa519db..4f0bff0 100644
  	VK_FUNC(GetSemaphoreCounterValue) \
  	VK_FUNC(GetSwapchainImagesKHR) \
 diff --git a/src/steamcompmgr.cpp b/src/steamcompmgr.cpp
-index 2ff296b..2cb5eb5 100644
+index 0c2a768..b18af1a 100644
 --- a/src/steamcompmgr.cpp
 +++ b/src/steamcompmgr.cpp
-@@ -161,6 +161,7 @@ static lut3d_t g_tmpLut3d;
+@@ -164,6 +164,7 @@ static lut3d_t g_tmpLut3d;
  extern int g_nDynamicRefreshHz;
  
  bool g_bForceHDRSupportDebug = false;
@@ -977,7 +978,7 @@ index 2ff296b..2cb5eb5 100644
  extern float g_flInternalDisplayBrightnessNits;
  extern float g_flHDRItmSdrNits;
  extern float g_flHDRItmTargetNits;
-@@ -10255,13 +10256,21 @@ steamcompmgr_main(int argc, char **argv)
+@@ -10465,13 +10466,21 @@ steamcompmgr_main(int argc, char **argv)
  		// Pick our width/height for this potential frame, regardless of how it might change later
  		// At some point we might even add proper locking so we get real updates atomically instead
  		// of whatever jumble of races the below might cause over a couple of frames

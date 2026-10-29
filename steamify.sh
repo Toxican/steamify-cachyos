@@ -15,11 +15,11 @@
 set -uo pipefail
 
 # Release version, see CHANGELOG.md.
-VERSION=2.14.2
+VERSION=2.14.3
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
-for lib in common state packages login-manager single-user steam-desktop steam-machine fremont-poweroff fremont-wifi wake-on-lan vram-booster hdmi-refresh nvidia gamescope-nvidia controllers cec cec-audio boot-session vapor-theme steamos-extras bios desktop-shortcut wizard-shortcut steam-game update-notifier first-login menu backend; do
+for lib in common state packages valve-repo login-manager single-user steam-desktop steam-machine fremont-poweroff fremont-wifi wake-on-lan vram-booster hdmi-refresh nvidia gamescope-nvidia controllers cec cec-audio boot-session vapor-theme steamos-extras bios desktop-shortcut wizard-shortcut steam-game update-notifier first-login menu backend; do
     # shellcheck source=/dev/null
     source "$SCRIPT_DIR/lib/$lib.sh"
 done
@@ -131,6 +131,24 @@ if [[ "${1:-}" == --first-login ]]; then
     first_login_run
     exit 0
 fi
+
+# --remove-repo / --add-repo: Steamify's pacman repository (lib/packages.sh) out of / back into pacman.conf, for when pacman stops because of it.
+if [[ "${1:-}" == --remove-repo ]]; then
+    steamify_repo_remove_force
+    exit $?
+fi
+if [[ "${1:-}" == --add-repo ]]; then
+    steamify_repo_enable && ok "Steamify's pacman repository is listed again." && exit 0
+    err "Couldn't list Steamify's pacman repository (offline?)."; exit 1
+fi
+
+if [[ "${1:-}" == --repair-repo ]]; then
+    steamify_repo_repair && ok "Steamify's pacman repository works." && exit 0
+    err "Couldn't repair it (offline? a changed signing key needs a newer Steamify): steamify.sh --remove-repo takes it out."; exit 1
+fi
+
+# A listed repository that pacman would refuse blocks every pacman run of the system: repair it, else take it out (lib/packages.sh).
+if [[ "$BACKEND" == false && "$LIST" == false ]]; then steamify_repo_selfheal; fi
 
 if [[ "$LIST" == true ]]; then
     defaults_list

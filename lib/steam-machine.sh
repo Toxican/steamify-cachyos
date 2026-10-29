@@ -159,7 +159,7 @@ kpin_status() {
 kpin_enable() {
     install_pinned_kernel || return 1
     # The DKMS pacman hook built leds-valve for the new headers; make sure.
-    if pacman -Qi leds-valve-dkms-git >/dev/null 2>&1 &&
+    if led_pkg_installed &&
         ! dkms status -k "$PINNED_KERNEL_KVER" leds-valve-dkms 2>/dev/null | grep -q installed; then
         sudo dkms install leds-valve-dkms/0.1 -k "$PINNED_KERNEL_KVER" ||
             warn "Building the LED driver for $PINNED_KERNEL_KVER failed."
@@ -200,9 +200,8 @@ install_kernel_headers() {
     sudo pacman -S --needed --noconfirm "${headers[@]}"
 }
 
-install_valve_led_driver() {
-    # Installs the leds-valve DKMS driver from the AUR so the front LED
-    # bar is exposed under /sys/class/leds/valve-leds[N].
+install_valve_led_driver_aur() {
+    # The fallback: the leds-valve DKMS driver from the AUR (leds-valve-dkms-git).
     local aur_helper
     aur_helper="$(find_aur_helper)"
     if [[ -z "$aur_helper" ]]; then
@@ -233,7 +232,7 @@ install_valve_led_driver() {
         return 1
     fi
 
-    if ! pacman -Qi leds-valve-dkms-git >/dev/null 2>&1; then
+    if ! led_pkg_installed; then
         info "Installing leds-valve-dkms-git from the AUR via $aur_helper (non-interactive)..."
         if ! "$aur_helper" -S "${flags[@]}" leds-valve-dkms-git; then
             err "Installing leds-valve-dkms-git failed."
@@ -241,6 +240,17 @@ install_valve_led_driver() {
         fi
     else
         ok "leds-valve-dkms-git already installed."
+    fi
+    return 0
+}
+
+install_valve_led_driver() {
+    # Installs the leds-valve DKMS driver so the front LED bar is exposed under
+    # /sys/class/leds/valve-leds[N]: the package from Steamify's pacman repository
+    # (it replaces the AUR package, same source), else the AUR package.
+    if ! steamify_dkms_install steamify-leds-valve-dkms leds-valve-dkms 0.1; then
+        warn "The LED driver package couldn't be installed from Steamify's repository: trying the AUR."
+        install_valve_led_driver_aur || return 1
     fi
 
     # Build for every installed kernel that has headers, so booting another
@@ -284,6 +294,8 @@ install_valve_led_driver() {
     fi
 
 }
+
+led_pkg_installed() { pacman -Q steamify-leds-valve-dkms >/dev/null 2>&1 || pacman -Q leds-valve-dkms-git >/dev/null 2>&1; }
 
 LED_UDEV_RULE="/etc/udev/rules.d/70-valve-leds-user.rules"
 LED_DKMS_OVERRIDE="/etc/dkms/leds-valve-dkms.conf"
@@ -375,7 +387,7 @@ kernel_overview() {
 machine_available() { detect_valve_fremont; }
 
 machine_status() {
-    pacman -Qi leds-valve-dkms-git >/dev/null 2>&1 && pacman -Qi steamos-manager >/dev/null 2>&1
+    led_pkg_installed && pacman -Qi steamos-manager >/dev/null 2>&1
 }
 
 # Steam (steamwebhelper) reads the serial number for its System settings
@@ -476,6 +488,7 @@ machine_disable() {
     sudo rm -f "$LED_UDEV_RULE" /etc/modules-load.d/leds-valve.conf
     sudo udevadm control --reload
     sudo modprobe -r leds-valve 2>/dev/null
+    sudo pacman -Rns --noconfirm steamify-leds-valve-dkms 2>/dev/null
     sudo pacman -Rns --noconfirm leds-valve-dkms-git 2>/dev/null
     krevert machine
     reload_powerdevil

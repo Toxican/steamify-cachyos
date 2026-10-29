@@ -291,15 +291,20 @@ fails, `gsn_fail_mark` records it (state `gamescope_nvidia`, key `failed`) and s
 **Getting the package, and keeping it current.** gamescope changes every few weeks, so the package is downloaded, not carried.
 CI builds it in CachyOS's container, once per CPU level like CachyOS's repositories: generic, x86-64-v3, v4 and znver4, each with an
 explicit `-march` (a `-march=native` build died with SIGILL on a Ryzen) and checked for instructions beyond its level and for both
-patches. A release is `<gamescope version>-<package release>` (for example `3.16.31-3`) with `SHA256SUMS`. `gsn_cpu_variant`
+patches. A release is `<gamescope version>-<package release>` (for example `3.17.0-1`) with `SHA256SUMS`. `gsn_cpu_variant`
 picks the build for this CPU (the dynamic loader's x86-64 level; AMD with `avx512_bf16` is znver4) and generic is the fallback.
 `gsn_fetch_package` tries, for the CPU's variant and then generic: the newest release on GitHub (if newer than the pin), the release
 Steamify was tested with (`GSN_VERSION`, hashes in `GSN_SHA256`: from GitHub, the cache, or the copy the ISO leaves in
 `/usr/local/share/steamify/gamescope`); only files with the expected sha256 count (newer releases: their `.sha256`). If nothing is
 reachable, `gsn_build_package` builds from `patches/gamescope-nvidia.PKGBUILD` and the two patches (`makepkg` as the user in
 `~/.cache/steamify`). `gsn_install_package` installs with `pacman -U --ask 4`; `gsn_smoke_test` then starts gamescope headless
-and installs the generic build instead if it doesn't start. Nothing else changes before a package is installed. A newer release than
-the installed package shows the conversion as an update (`gsn_update_pending`, looked up at most every six hours, quiet offline).
+and installs the generic build instead if it doesn't start. Nothing else changes before a package is installed. The conversion also puts
+`[steamify-<variant>]` (the installed build's CPU level) into `/etc/pacman.conf`, below CachyOS's repositories, and trusts its key
+(`patches/steamify-pacman-repo.pub.asc`, signed locally; `gsn_repo_enable`): theupriser/steamify-pacman-repo copies every release of
+the gamescope repository into signed databases, so new builds come with `pacman -Syu`, no Steamify needed. No `pacman -Sy` is run
+here (a refresh without the upgrade is a partial update). A PC that has the package but not the repository yet (set up before
+2.14.3) shows the conversion as an update once (`gsn_update_pending`); a build made here (state `variant` = `local`) stays out.
+The section and the key (`steamify_repo_enable`/`steamify_repo_disable`, `lib/packages.sh`) are shared with the other packages from the repository: the DKMS drivers of the Steam Machine items (`steamify_dkms_install`: dependencies, kernel headers, the key, the newest file read from the repository's database, removal of a copy in `/usr/src` that pacman doesn't own, `pacman -U --ask 4`, then a DKMS build for the kernels the hook missed; the old install from the sources or the AUR is the fallback) and the python-hid placeholder. Turning an option off removes its DKMS package; the section and the key go when none of the repository's packages (`STEAMIFY_REPO_PKGS`) is installed, so what stays installed keeps updating. `steamify-keyring` (the repository's signing keys as a pacman keyring) is installed with the section so that a change of the signing key arrives with `pacman -Syu`; it goes with the section. Every run (not `--backend` / `--defaults --list`) starts with `steamify_repo_selfheal`: listed but refused by pacman (`steamify_repo_check`: the local database no longer loads, or a refresh of just this repository into a private folder fails while the server answers) -> `steamify_repo_repair` (the pinned key, the newest `steamify-keyring` installed with a config that has no Steamify section, since pacman refuses every transaction while that section's database is invalid, the database again, then check) -> only if that fails, `steamify_repo_remove_force`. No connection: untouched. The server is looked at most every six hours (state `repo checked`); a database that is already broken on disk is always looked at. `steamify.sh --repair-repo` runs the repair on its own. A repository pacman can't use (unreachable, key unknown) stops `pacman -Syu` and every `pacman -S` of the whole system: `steamify.sh --remove-repo` (`steamify_repo_remove_force`) takes section, databases, keyring package and key out and leaves the packages; `--add-repo` lists it again. Without a database file the section isn't kept (offline), so a missing connection never leaves a broken `pacman.conf`.
 A new pin = the release's tag and each variant's sha256 in `GSN_VERSION` and `GSN_SHA256` plus the PKGBUILD's pkgver/pkgrel; the patches in `patches/` must
 stay identical to that repository's. New gamescope versions: the repository's daily check bumps the version when the patch still
 applies, or opens an issue when it needs a rebase; a person merges and tags the release.
@@ -751,12 +756,13 @@ immediately, which can turn into a loop - see
 | `lib/steam-desktop.sh` | Steam in the Plasma session; Steam Deck/Machine icons |
 | `lib/desktop-shortcut.sh` | Return to Gaming Mode shortcut and its sudoers rule |
 | `lib/vapor-theme.sh` | SteamOS theme: installs and switches to `cachyos-vapor` |
+| `lib/valve-repo.sh` | Packages from Valve's SteamOS repositories (HDMI-CEC, Wi-Fi firmware, desktop extras, HDMI-CEC volume): a throw-away pacman config with only the repositories needed, Valve's package-builder key as the only trusted one (`/etc/steamify/valve-gnupg`), names a CachyOS repository also has refused unless an option replaces them on purpose; nothing of Valve's is ever in `/etc/pacman.conf` |
 | `lib/steamos-extras.sh` | SteamOS desktop extras from Valve's package (Add to Steam, Nested Desktop, icon, keyboard rule, KWallet) |
 | `lib/single-user.sh` | Single user mode: no lock screen, user switching or log out |
 | `lib/wizard-shortcut.sh` | Steamify shortcut: desktop icon and launcher entry that run the newest release |
 | `lib/bios.sh` | Update BIOS (Steam Machine, opt-in): current/newest version, double confirmation, fwupd |
 | `lib/cec.sh` | HDMI-CEC: Valve's `cecd` and friends from its `holo` repository |
-| `lib/cec-audio.sh` | Steam Machine: the TV's volume buttons in Steam (Valve's PipeWire and WirePlumber from a local pacman repository) |
+| `lib/cec-audio.sh` | Steam Machine: the TV's volume buttons in Steam (Valve's PipeWire and WirePlumber, signature checked through pacman, kept in a local pacman repository that is listed before CachyOS's) |
 | `lib/steam-machine.sh` | Steam Machine support: LED driver, LED access, steamos-manager |
 | `lib/fremont-poweroff.sh` | Steam Machine support: the power-off fix (DKMS module from `patches/`) |
 | `lib/fremont-wifi.sh` | Steam Machine support: Wi-Fi firmware from SteamOS (Wake-on-WLAN) |

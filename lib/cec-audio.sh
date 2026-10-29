@@ -9,7 +9,7 @@
 # Valve's builds replace CachyOS's (a different version, 1.6.8 against 1.6.10 at the time). So that `pacman -Syu`
 # doesn't undo it, and still keeps them up to date, they live in a local pacman repository that is listed before
 # CachyOS's repositories; patches/steamify-valve-audio.sh fills it from Valve's newest jupiter-X.Y (64-bit) and
-# multilib-X.Y (32-bit) repositories, weekly by a timer and when the option is turned on.
+# multilib-X.Y (32-bit) repositories (through pacman, signature checked: lib/valve-repo.sh), weekly by a timer and when the option is turned on.
 # Sourced by steamify.sh; not meant to be run on its own.
 
 VALVE_AUDIO_REPO=steamify-valve-audio
@@ -102,10 +102,12 @@ cecaudio_enable() {
     local before after p pkgs=() extras=() known
     command -v repo-add >/dev/null 2>&1 || { err "repo-add (part of pacman) is missing."; return 1; }
     cec_installed || { err "HDMI-CEC has to be on first."; return 1; }
+    # Valve's package key in the keyring the script uses (lib/valve-repo.sh): Valve's packages are signature checked.
+    valve_key_ensure || { err "Setting up Valve's package key failed."; return 1; }
     sudo install -d "$(dirname "$VALVE_AUDIO_SCRIPT")"
     patch_file steamify-valve-audio.sh | sudo tee "$VALVE_AUDIO_SCRIPT" >/dev/null
     sudo chmod 755 "$VALVE_AUDIO_SCRIPT"
-    info "Fetching Valve's PipeWire and WirePlumber (checksums from Valve's package index)..."
+    info "Fetching Valve's PipeWire and WirePlumber from Valve's repositories (signatures checked)..."
     sudo "$VALVE_AUDIO_SCRIPT" refresh || { err "Fetching Valve's audio packages failed."; return 1; }
     cecaudio_conf_add
     for p in "${CECAUDIO_PW_DIRS[@]}"; do

@@ -63,6 +63,9 @@ cec_reload_driver() {
 
 cec_driver_enable() {
     detect_valve_fremont || return 0
+    # Steamify's pacman repository: the driver as a package (DKMS hook, updates with pacman -Syu); the sources below are the fallback.
+    if steamify_dkms_install steamify-cros-ec-cec-dkms "$CEC_DKMS_NAME" "$CEC_DKMS_VER"; then cec_reload_driver; return 0; fi
+    warn "The CEC driver package couldn't be installed from Steamify's repository: building it from the sources Steamify carries."
     local tmp k
     if ! pacman -Q dkms patch >/dev/null 2>&1; then
         sudo pacman -S --needed --noconfirm dkms patch || { err "Installing dkms failed."; return 1; }
@@ -109,6 +112,7 @@ cec_driver_enable() {
 }
 
 cec_driver_disable() {
+    if pacman -Q steamify-cros-ec-cec-dkms >/dev/null 2>&1; then steamify_dkms_remove steamify-cros-ec-cec-dkms "$CEC_DKMS_NAME" "$CEC_DKMS_VER"; cec_reload_driver; return 0; fi
     [[ -d "$CEC_DKMS_SRC" ]] || return 0
     sudo dkms remove "$CEC_DKMS_NAME/$CEC_DKMS_VER" --all >/dev/null 2>&1
     sudo rm -rf "$CEC_DKMS_SRC"
@@ -117,26 +121,11 @@ cec_driver_disable() {
 cec_repair() { cec_installed && ! cec_status; }
 
 fetch_holo_pkg() {
-    # fetch_holo_pkg <dir> <package> [repo]: download the newest <package> from
-    # Valve's newest holo-X.Y repository (or [repo], e.g. holo-main) into <dir>
-    # and print its path. The SHA-256 comes from Valve's package index and is
-    # verified.
-    local dir="$1" name="$2" repo="${3:-}" desc file_name sha256
-    [[ -n "$repo" ]] || repo="$(curl -fsL "$VALVE_MIRROR/" | grep -oE 'holo-[0-9]+\.[0-9]+/' | tr -d / | sort -V | tail -n 1)"
-    if [[ ! -f "$dir/holo.db" ]]; then
-        [[ -n "$repo" ]] && curl -fsL "$VALVE_MIRROR/$repo/os/x86_64/$repo.db" -o "$dir/holo.db" ||
-            { err "Couldn't read Valve's SteamOS package index ($VALVE_MIRROR)."; return 1; }
-    fi
-    desc="$(tar -tf "$dir/holo.db" 2>/dev/null | grep -E "^$name-[0-9][^/]*/desc$" | head -n 1)"
-    [[ -n "$desc" ]] || { err "No $name in Valve's $repo repository."; return 1; }
-    file_name="$(tar -xOf "$dir/holo.db" "$desc" | awk '/^%FILENAME%$/ { getline; print }')"
-    sha256="$(tar -xOf "$dir/holo.db" "$desc" | awk '/^%SHA256SUM%$/ { getline; print }')"
-    info "Downloading $file_name ($repo)..." >&2
-    curl -fsL "$VALVE_MIRROR/$repo/os/x86_64/$file_name" -o "$dir/$file_name" ||
-        { err "Downloading $file_name failed."; return 1; }
-    echo "$sha256  $dir/$file_name" | sha256sum -c --quiet - >&2 ||
-        { err "Checksum mismatch for $file_name; not using it."; return 1; }
-    echo "$dir/$file_name"
+    # fetch_holo_pkg <dir> <package> [repo]: the newest <package> from Valve's newest holo-X.Y repository (or [repo], e.g.
+    # holo-main) into <dir>; prints its path. Signature checked (lib/valve-repo.sh).
+    local dir="$1" name="$2" repo="${3:-}"
+    [[ -n "$repo" ]] || repo="$(valve_newest holo)"
+    valve_fetch_pkg "$dir" "$name" "$repo"
 }
 
 cec_enable() {
@@ -152,7 +141,7 @@ cec_enable() {
         files+=("$f")
     done
     info "Installing Valve's CEC daemon..."
-    if ! sudo pacman -U --needed --noconfirm "${files[@]}"; then
+    if ! valve_install_files "$tmp/valve" "${files[@]}"; then
         rm -rf "$tmp"
         err "Installing ${CEC_PKGS[*]} failed."
         return 1

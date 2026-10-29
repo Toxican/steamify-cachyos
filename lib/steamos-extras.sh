@@ -8,7 +8,6 @@
 # package-owned); per-user settings go through the undo journal.
 # Sourced by steamify.sh; not meant to be run on its own.
 
-VALVE_MIRROR="https://steamdeck-packages.steamos.cloud/archlinux-mirror"
 NESTED_DIR=/usr/local/share/applications/steam/holo-nested-desktop
 EXTRAS_FILES=(
     /usr/local/bin/holo-add-to-steam
@@ -22,26 +21,12 @@ EXTRAS_FILES=(
 STEAM_KEYBOARD_RULE=cachyos-gamescope-boot-steam-keyboard
 
 fetch_valve_presets() {
-    # fetch_valve_presets <dir>: download and extract the newest
-    # steamdeck-kde-presets into <dir>. The newest SteamOS release repo
-    # (jupiter-3.9, jupiter-3.10, ...) is found on the mirror; its pacman
-    # database gives the exact file name and SHA-256, which is verified.
-    local dir="$1" repo desc file_name sha256
-    repo="$(curl -fsL "$VALVE_MIRROR/" | grep -oE 'jupiter-[0-9]+\.[0-9]+/' | tr -d / | sort -V | tail -n 1)"
-    [[ -n "$repo" ]] && curl -fsL "$VALVE_MIRROR/$repo/os/x86_64/$repo.db" -o "$dir/repo.db" ||
-        { err "Couldn't read Valve's SteamOS package index ($VALVE_MIRROR)."; return 1; }
-    desc="$(tar -tf "$dir/repo.db" 2>/dev/null | grep -E '^steamdeck-kde-presets-[0-9][^/]*/desc$' | head -n 1)"
-    [[ -n "$desc" ]] || { err "No steamdeck-kde-presets in Valve's $repo repository."; return 1; }
-    file_name="$(tar -xOf "$dir/repo.db" "$desc" | awk '/^%FILENAME%$/ { getline; print }')"
-    sha256="$(tar -xOf "$dir/repo.db" "$desc" | awk '/^%SHA256SUM%$/ { getline; print }')"
-
-    info "Downloading $file_name ($repo)..."
-    curl -fsL "$VALVE_MIRROR/$repo/os/x86_64/$file_name" -o "$dir/presets.pkg.tar.zst" ||
-        { err "Downloading $file_name failed."; return 1; }
-    echo "$sha256  $dir/presets.pkg.tar.zst" | sha256sum -c --quiet - ||
-        { err "Checksum mismatch for $file_name; not using it."; return 1; }
-    tar -I unzstd -xf "$dir/presets.pkg.tar.zst" -C "$dir" usr/bin usr/share ||
-        { err "Extracting $file_name failed."; return 1; }
+    # fetch_valve_presets <dir>: download (signature checked, lib/valve-repo.sh) and extract the newest steamdeck-kde-presets
+    # of Valve's newest SteamOS release repository (jupiter-3.9, jupiter-3.10, ...) into <dir>.
+    local dir="$1" pkg
+    pkg="$(valve_fetch_pkg "$dir" steamdeck-kde-presets "$(valve_newest jupiter)")" || return 1
+    tar -I unzstd -xf "$pkg" -C "$dir" usr/bin usr/share ||
+        { err "Extracting $(basename "$pkg") failed."; return 1; }
 }
 
 extras_enable() {

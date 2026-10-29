@@ -115,6 +115,27 @@ and that first sleep did not wake on a packet: update Steamify). Test with a mag
 Steam Machine (tried with the BIOS's "S4/S5 WoL" on: the machine stayed off), so after a shutdown it is started with the power button. The
 magic packet must go to the MAC address of the device that is connected.
 
+## `pacman -Syu` (or every `pacman -S`) fails and mentions `steamify-...`
+
+Steamify lists its own package repository (`[steamify-znver4]`, `[steamify-v3]`, ... at the end of `/etc/pacman.conf`) so the patched gamescope and the Steam
+Machine's drivers update with the system. Like any extra repository, when it can't be used pacman stops for the whole system:
+
+- `error: failed retrieving file 'steamify-....db' ... failed to synchronize all databases`: GitHub (where the repository is hosted) is unreachable or the file is
+  missing. Usually gone by itself in minutes; try again later.
+- `key "767F317A..." is unknown` / `database 'steamify-...' is not valid (invalid or corrupted database (PGP signature))`: the PC doesn't trust the repository's
+  signing key. The `steamify-keyring` package normally keeps that current; it can fall behind when the PC missed an update of it.
+
+Steamify repairs this by itself: every run first checks the repository (what the next `pacman -Syu` would do), and when it doesn't verify it puts the pinned key
+back, installs the newest `steamify-keyring` and fetches the database again (`steamify.sh --repair-repo` does just that). Only when the repository can be reached but
+still can't be used, it takes the repository out of `pacman.conf` so pacman keeps working. With no connection it changes nothing.
+
+To get pacman working again at once, take the repository out (what it installed stays installed, it just stops updating):
+
+    steamify.sh --remove-repo
+
+or, without Steamify, `sudo sed -i '/^# Steamify: packages from steamify-pacman-repo/,+3d' /etc/pacman.conf`. To list it again later: `steamify.sh --add-repo`
+(it also comes back by itself the next time an option that uses it is applied). If the key was the problem, a newer Steamify has the new one.
+
 ## The kernel pin can't download or verify the kernel
 
 The wizard tries this repo's `kernel-7.1.6-1` release, then the CachyOS
