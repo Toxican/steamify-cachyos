@@ -54,7 +54,7 @@ QtObject {
         machine: { label: "Steam Machine support", hint: "LED bar, fan and performance settings in Steam",
                    body: "The front LED bar works, Steam's hardware settings work, and the power button puts it to sleep like a console.",
                    changes: ["leds-valve driver for every kernel (DKMS)", "steamos-manager for Steam's settings", "Console-like power handling"] },
-        fancontrol: { label: "Fan monitoring / control (DKMS)", hint: "Sensors and Steam's OS fan curve",
+        fancontrol: { label: "Fan control / monitoring", hint: "Sensors and Steam's OS fan curve",
                       body: "Adds the Fremont sensor modules and CachyOS's jupiter-fan-control package. Steam's existing switch still chooses between the OS fan curve and firmware control; the package can be installed while its service is inactive.",
                       changes: ["Missing steamdeck and steamdeck_hwmon providers for each installed kernel (DKMS)", "jupiter-fan-control from the official CachyOS repositories when it is missing", "Modules are loaded at the next boot; nothing is loaded or started while Steamify runs", "Off: the service hands control back to firmware before Steamify-owned files are removed"] },
         poweroff: { label: "Power-off fix", hint: "Stays off after shutting down",

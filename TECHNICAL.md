@@ -230,7 +230,7 @@ The **Steam Machine support** component, only shown on Fremont hardware
 
 Turning it off removes all of that again (the AUR helper is kept).
 
-The opt-in **Fan monitoring / control (DKMS)** subcomponent is shown only
+The opt-in **Fan control / monitoring** subcomponent is shown only
 below Steam Machine support on Fremont hardware. It stays off when the parent
 is first enabled, and turning the parent off turns this child off first. The
 terminal menu, `--defaults`, backend and QML use the same relationship. Its

@@ -427,5 +427,5 @@ fancontrol_adoption_notice() {
 fancontrol_enable() {
     info "Preparing Fremont fan monitoring and control for the next boot..."
     steamdeck_fancontrol_install || return 1
-    ok "Fan monitoring and control ready."
+    ok "Fan control / monitoring ready."
 }
