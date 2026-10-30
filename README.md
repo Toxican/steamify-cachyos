@@ -92,18 +92,17 @@ What Steamify can do on a Valve Steam Machine:
   **hardware settings** (fan, performance) work, and the power button puts
   it to sleep like a console. Steam's System settings show the serial
   number, and Steam's **Wi-Fi backend** setting works.
-  - **Fan control / monitoring** - optional: adds missing
-    `steamdeck` and `steamdeck_hwmon` module providers for installed standard
-    and LTS kernels, while reusing native providers such as Deckify's. It
-    installs `jupiter-fan-control` from the official CachyOS repository;
-    Steam's existing switch chooses between its OS fan curve and firmware
-    control. Module changes take effect after a restart. On Fremont,
-    `fan1_fault=1` and some Steam-Deck-specific sensor attributes are not
-    meaningful, while fan RPM and control still work
-    ([details](https://github.com/theupriser/steamify-cachyos-dev/blob/main/fan-control/FREMONT-FANCONTROL.md)). Special thanks to
-    [@Toxican](https://github.com/Toxican), who built and tested this on a real
-    Steam Machine and contributed it (#140, #141), and to Valve for the
-    `steamdeck` and `steamdeck_hwmon` drivers it uses.
+  - **Fan control / monitoring** - optional: Steam shows the fan speed and
+    its switch between Steam's own fan curve and the firmware's works. Steamify
+    installs what that needs: Valve's fan drivers, for kernels that don't have
+    them yet, and CachyOS's `jupiter-fan-control` (the fan curve itself). Turning
+    it on or off takes effect after a restart. `fan1_fault=1` in the sensor
+    readings is normal on the Steam Machine and no sign of a fault
+    ([how it works](TECHNICAL.md#fan-control--monitoring-steam-machine),
+    [when it doesn't work](TROUBLESHOOTING.md#fan-control--monitoring-doesnt-seem-to-work-steam-machine)).
+    Special thanks to [@Toxican](https://github.com/Toxican), who built and
+    tested this on a real Steam Machine and contributed it (#140, #141), and to
+    Valve for the `steamdeck` and `steamdeck_hwmon` drivers it uses.
   - **Power-off fix** - on by default: shutting down really turns the Steam
     Machine off, also with the newest CachyOS kernel
     ([details](TECHNICAL.md#power-off-fix-steam-machine)).

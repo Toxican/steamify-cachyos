@@ -58,6 +58,28 @@ works. See [CEC.md](CEC.md). The Steam Machine wakes up again right after going
 to sleep, or other devices lose CEC? That happens on SteamOS too; turn
 HDMI-CEC off in the wizard.
 
+## Fan control / monitoring doesn't seem to work (Steam Machine)
+
+Turning it on installs the drivers and `jupiter-fan-control`, but nothing changes until the restart Steamify asks for: the modules are never loaded while the
+PC runs. After the restart:
+
+```bash
+dkms status | grep steamify-fancontrol                 # installed for every kernel
+lsmod | grep steamdeck                                 # steamdeck and steamdeck_hwmon
+readlink /sys/bus/acpi/devices/VLV0100:00/physical_node/driver
+for h in /sys/class/hwmon/hwmon*; do [ "$(cat $h/name)" = steamdeck_hwmon ] && cat $h/fan1_input $h/fan1_target; done
+systemctl status jupiter-fan-control.service
+```
+
+- No `steamdeck` modules after the restart: you booted a kernel Steamify has no build for. `dkms status` shows which kernels have it; a build that failed says why
+  in `/var/lib/dkms/steamify-fancontrol/1/build/make.log` (most often missing kernel headers: `ensure-kernel-headers.service` installs them at boot). A
+  `linux-neptune` or Deckify kernel has both modules itself and Steamify builds nothing for it.
+- Steam's own switch chooses: OS fan control means `jupiter-fan-control` is active and the target is above 0; firmware control means it is inactive and the
+  target is 0 (the firmware runs the fan).
+- `fan1_fault` shows 1: that attribute comes from the Steam Deck and isn't meaningful on the Steam Machine. The RPM and the control work.
+- Turning it off removes the package, the drivers and the autoload file, but the loaded modules stay until the next restart. Don't `modprobe -r` them or remove
+  the DKMS entry by hand.
+
 ## The Steam Machine still reboots when I shut it down
 
 Check that the pinned kernel is installed and running:

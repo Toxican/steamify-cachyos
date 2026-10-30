@@ -230,82 +230,6 @@ The **Steam Machine support** component, only shown on Fremont hardware
 
 Turning it off removes all of that again (the AUR helper is kept).
 
-The opt-in **Fan control / monitoring** subcomponent is shown only
-below Steam Machine support on Fremont hardware. It stays off when the parent
-is first enabled, and turning the parent off turns this child off first. The
-terminal menu, `--defaults`, backend and QML use the same relationship. Its
-ownership and transaction state lives in `lib/steamdeck-hwmon-state.sh` in
-Steamify's per-user `STATE_DIR` and stores only eight values: schema, the
-current `none|install|remove`
-operation, ownership of DKMS and autoload, `jupiter_origin`, its adoption
-notice derived from that origin, ownership and previous state of a service
-mask, and a restart boot ID. Initial state creation is atomic. System artifacts are marked owned only
-after their exact marker, content or registration has been verified; an
-interrupted operation is resumed by observing the real system rather than by
-maintaining per-step intent/done flags. A missing or invalid state next to
-Steamify-specific DKMS or autoload markers remains fail-closed. The one
-deliberate recovery exception is the official `jupiter-fan-control` package:
-during an explicit enable after lost state, an installed native package
-(`pacman -Qn`) with matching metadata from a `cachyos*` sync repository
-(`pacman -Si`) becomes `jupiter_origin=adopted`, which also drives the later
-UI notice. A normal first enable records an existing package as
-`preexisting`, so Steamify will not remove it.
-
-`lib/steamdeck-hwmon-install.sh` implements the component's enable
-transaction. It records package ownership before the first system change,
-ensures headers for every installed kernel, then runs the provider plan
-independently for each target kernel. Only kernels with missing safe providers
-are passed to DKMS; blocked or partially foreign providers stop the whole operation before
-the DKMS source is installed. The source is registered under
-`steamify-fancontrol/1`, and every successful build is re-checked through the
-same provider plan. Missing `jupiter-fan-control` is installed by addressing
-the verified `cachyos*` repository explicitly. A fresh package must expose
-its vendor-enabled unit, but Steamify never calls `systemctl enable`, `start`
-or `restart`, so an inactive service still counts as installed. A user-owned
-service mask is left alone; a mask previously created and recorded by
-Steamify during removal is unmasked after the drivers and autoload are ready,
-without starting the service. The owned modules-load file lists `steamdeck` before
-`steamdeck_hwmon`; neither module is loaded during installation. The compact
-`operation=install` marker proves that a package was absent before
-Pacman ran. If Pacman completed immediately before an interruption, the next
-run can therefore attribute only that official package to Steamify. A
-no-change re-apply performs no system writes. The current boot ID itself is
-the restart-pending marker.
-
-`lib/steamdeck-hwmon-remove.sh` implements the matching reboot-based removal
-transaction. It verifies ownership and all target-kernel providers before
-changing anything. It also parses each target kernel's `modules.dep` and fails
-closed when an unrelated module depends on either owned provider, or when the
-dependency metadata is unavailable. An active `jupiter-fan-control.service`
-is stopped normally first so its packaged `ExecStopPost=... --stop` firmware
-handoff runs; a stop failure aborts before package, autoload or DKMS removal.
-Steamify removes the package only when it installed or explicitly adopted it,
-and uses `pacman -R` so user configuration is not purged. A retained package
-is persistently masked before Steamify removes a provider on which its
-vendor-enabled unit could depend. Mask ownership and the previously observed
-enabled state are recorded so a later enable can restore only Steamify's own
-change. Only the exact owned modules-load file and the verified
-`steamify-fancontrol/1` DKMS tree are removed. Loaded modules are deliberately
-left alone until reboot: removal never calls `modprobe -r` or unbinds devices.
-
-Installation and removal checkpoints include the current kernel boot ID from
-`/proc/sys/kernel/random/boot_id`. A matching ID keeps the restart request
-pending in the terminal and graphical restart displays; a changed ID clears
-the displayed request. This avoids separate installed/removed
-phases and does not rely on uptime. Repeated application reconciles the real
-package, DKMS and file state idempotently.
-
-The CachyOS `jupiter-fan-control` package currently installs a vendor enable
-symlink under `multi-user.target.wants`. Its unit has normal service
-dependencies and no explicit `After=systemd-modules-load.service`;
-`systemd-modules-load.service` itself has `DefaultDependencies=no`, is wanted
-by `sysinit.target`, and is ordered before `sysinit.target`. This gives the
-expected indirect boot order on the development host, but the VM acceptance
-test must still verify the resolved transaction (`systemctl show` or
-`systemd-analyze critical-chain`) and that the module providers exist before
-fan control starts. If that proof fails, a narrow ordering drop-in belongs in
-the later service-integration phase.
-
 The LEDs appear as `/sys/class/leds/valve-leds*`. The driver's Makefile
 builds against the running kernel (`uname -r`) instead of the kernel DKMS
 builds for, so the wizard adds a DKMS override
@@ -314,6 +238,117 @@ it, DKMS rebuilds the driver whenever a kernel or its headers are installed
 or upgraded. A newly added kernel doesn't come with its headers, so
 `ensure-kernel-headers.service` checks at every boot and installs any
 missing `-headers` package, which makes DKMS build the driver for it.
+
+## Fan control / monitoring (Steam Machine)
+
+`fancontrol` (`lib/steamdeck-hwmon*.sh`, an opt-in sub-option of `machine`, 2.15.0, contributed by Toxican in #140 and #141) makes the Steam Machine's fan
+readable and, with CachyOS's `jupiter-fan-control`, controllable by Steam's OS fan-control switch.
+
+Why it exists, the full design notes and how it is tested: steamify-cachyos-dev, `fan-control/` and `TESTPLAN.md` (F2.15.0).
+
+### The drivers
+
+Two of Valve's drivers do the work:
+
+- `steamdeck`: the embedded controller's MFD driver. It binds the ACPI device `VLV0100:00`.
+- `steamdeck_hwmon`: the fan speed and target, through hwmon.
+
+Valve's own kernels (`linux-neptune`) and Deckify kernels have both. CachyOS's standard and LTS kernels don't, so Steamify builds them with DKMS.
+
+### Package or sources
+
+- **The package.** The modules come as `steamify-fancontrol-dkms` from Steamify's signed pacman repository (`steamify_dkms_package_install`, like the CEC and
+  power-off drivers). Pacman owns `/usr/src/steamify-fancontrol-1`, registers it with DKMS (its hook builds it for the kernels that have headers) and removes it
+  with the package.
+- **The fallback.** Only when the repository can't be used does Steamify stage the same files from `patches/`: `steamdeck.c`, `steamdeck_hwmon.c`,
+  `steamify-fancontrol.Makefile` and `steamify-fancontrol.dkms.conf`. The two `.c` files are Valve's, unmodified, the snapshot of firlin123/steamdeck-dkms
+  `99737c4`, and SHA-256 pinned in `lib/steamdeck-hwmon.sh`. Ownership is then the marker file `.steamify-owner`.
+- **Keeping them in step.** A change to these files has to be mirrored in the package (steamify-pacman-repo, `packages/steamify-fancontrol-dkms`, with a new
+  `pkgver`).
+
+### Per kernel, per module
+
+- The Makefile and `dkms.conf` build only the modules the target kernel doesn't have (`CONFIG_MFD_STEAMDECK`, `CONFIG_SENSORS_STEAMDECK`).
+- A kernel that has both gets no build: DKMS answers status 77, which Steamify accepts only after it confirmed both providers independently.
+- `dkms.conf` leaves `BUILD_EXCLUSIVE_KERNEL` unset when it is sourced without a kernel. Pacman's DKMS hook does that, and a pattern that matches nothing
+  would make it skip every kernel, so a kernel update would never rebuild the modules. DKMS decides per kernel when it builds.
+
+### In the menu
+
+- The item is shown only below Steam Machine support, on Fremont hardware.
+- It stays off when the parent is first turned on, and turning the parent off turns it off first.
+- The terminal menu, `--defaults`, the backend and the QML app all use the same parent and child rule.
+
+### State and ownership
+
+The state lives in `lib/steamdeck-hwmon-state.sh`, in Steamify's per-user `STATE_DIR`, and holds eight values only:
+
+- the schema;
+- the current operation, `none`, `install` or `remove`;
+- who owns the DKMS tree and the autoload file;
+- `jupiter_origin`, and from it the notice shown when Steamify took over an existing `jupiter-fan-control`;
+- who owns a service mask, and the previous state of the unit;
+- the restart boot ID.
+
+The rules:
+
+- The state file is created atomically.
+- A system artifact is marked owned only after its exact marker, content or registration has been verified.
+- An interrupted operation is resumed by looking at the real system, not by keeping per-step flags.
+- A missing or invalid state next to Steamify's own DKMS or autoload markers stays fail-closed.
+- One deliberate exception, the official `jupiter-fan-control` package: on an explicit enable after the state was lost, an installed native package (`pacman -Qn`)
+  with matching metadata from a `cachyos*` sync repository (`pacman -Si`) becomes `jupiter_origin=adopted`, which drives the later UI notice. A normal first
+  enable records an existing package as `preexisting`, so Steamify never removes it.
+
+### Turning it on
+
+`lib/steamdeck-hwmon-install.sh` runs the enable transaction:
+
+1. It records the package ownership before the first system change.
+2. It makes sure every installed kernel has its headers, then runs the provider plan for each kernel on its own.
+3. Only kernels with missing, safe providers go to DKMS. Blocked or partly foreign providers stop the whole operation before the DKMS source is installed.
+4. The source is registered as `steamify-fancontrol/1`, and every successful build is checked again with the same provider plan.
+5. A missing `jupiter-fan-control` is installed from the verified `cachyos*` repository, addressed explicitly.
+6. The modules-load file lists `steamdeck` before `steamdeck_hwmon`. Neither module is loaded during the installation.
+
+Details worth knowing:
+
+- Steamify never calls `systemctl enable`, `start` or `restart` for the service. A fresh package brings its own vendor-enabled unit, and an inactive service
+  still counts as installed.
+- A service mask that is the user's own is left alone. A mask Steamify made during an earlier removal is lifted after the drivers and the autoload file are
+  ready, without starting the service.
+- The `operation=install` marker proves the package was absent before pacman ran. If pacman finished just before an interruption, the next run attributes
+  only that official package to Steamify.
+- A re-apply that changes nothing writes nothing to the system.
+
+### Turning it off
+
+`lib/steamdeck-hwmon-remove.sh` runs the matching removal. It never loads or unloads anything live.
+
+1. It checks the ownership and all providers of every target kernel before it changes anything.
+2. It reads each target kernel's `modules.dep`. If an unrelated module depends on one of the owned providers, or the metadata isn't there, it stops.
+3. An active `jupiter-fan-control.service` is stopped the normal way first, so its packaged `ExecStopPost=... --stop` hands the fan back to the firmware. If the
+   stop fails, nothing is removed.
+4. It removes the `jupiter-fan-control` package only when Steamify installed or explicitly adopted it, with `pacman -R`, so the user's configuration is kept.
+5. A package that stays is persistently masked before a provider its unit might need is removed. Who owns the mask, and the unit's earlier state, are recorded, so a
+   later enable undoes only Steamify's own change.
+6. The drivers go with `pacman -Rns steamify-fancontrol-dkms` (pacman's hook removes the DKMS registration and the built modules), or, for the fallback copy, the
+   verified `steamify-fancontrol/1` tree. The modules-load file is removed only when it is exactly the one Steamify wrote.
+
+Loaded modules stay until the next restart: removal never calls `modprobe -r` and never unbinds the device.
+
+### The restart marker
+
+- Every checkpoint of an installation or removal includes the kernel boot ID (`/proc/sys/kernel/random/boot_id`).
+- The same ID means the restart request is still pending, in the terminal and in the app. A changed ID clears it.
+- So there are no separate "installed" and "removed" phases, and nothing relies on the uptime. Applying again reconciles the real package, DKMS and file state.
+
+### Start order
+
+CachyOS's `jupiter-fan-control` installs a vendor enable link under `multi-user.target.wants`. Its unit has normal service dependencies and no explicit
+`After=systemd-modules-load.service`. `systemd-modules-load.service` has `DefaultDependencies=no`, is wanted by `sysinit.target` and ordered before it, which
+gives the expected indirect order (modules first, then the fan service). Seen on a real Steam Machine: after the restart both modules are loaded and the service is active.
+If that ever fails, a narrow ordering drop-in for the unit is the fix.
 
 ## Extended controller support
 
