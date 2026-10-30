@@ -40,9 +40,19 @@ mirror; Steamify carries the tested snapshot from
 before staging the sources for DKMS. See [`patches/README.md`](patches/README.md)
 for the source inventory and hashes in `lib/steamdeck-hwmon.sh`.
 
-Installation does not download or clone kernel sources. The two reviewed files,
-the Makefile, and the DKMS template are part of the Steamify checkout and are
-copied from the local checkout or release bundle into `/usr/src`.
+The sources come as the package `steamify-steamdeck-dkms` of Steamify's signed
+pacman repository ([steamify-pacman-repo](https://github.com/theupriser/steamify-pacman-repo)):
+pacman owns `/usr/src/steamify-steamdeck-1`, registers it with DKMS and builds it for the
+kernels with headers, and it updates with `pacman -Syu`. Removing the feature removes the
+package (`pacman -Rns`), and pacman's DKMS hook removes the registration and the built modules.
+Only when the repository can't be used does Steamify fall back to what it did before: the two
+reviewed files, the Makefile and the DKMS template are part of the Steamify checkout and are
+copied from the local checkout or release bundle into `/usr/src` (the files in `patches/`, the
+same bytes, pinned by SHA-256 either way). Installation never downloads or clones kernel sources.
+The per-kernel provider rules below apply to both.
+
+Special thanks to [@Toxican](https://github.com/Toxican), who found out what Fremont needs, built
+and tested all of this on a real Steam Machine, and contributed it (#140, #141).
 
 ### Provider handling
 

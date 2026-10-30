@@ -135,6 +135,17 @@ steamdeck_source_repair_allowed() {
     [[ -z "$(find "$STEAMDECK_DKMS_SOURCE" -mindepth 1 -maxdepth 1 -print -quit 2>/dev/null)" ]]
 }
 
+steamdeck_install_repo_package() {
+    # The sources as the package of Steamify's repository (signed, updated with pacman -Syu). Not for a tree that is neither the
+    # package's nor one Steamify staged: that fails closed below, as before. A tree Steamify staged itself (an earlier run, or the
+    # fallback) is replaced by the package.
+    [[ "$(state_get "$STEAMDECK_OWNERSHIP_COMPONENT" dkms_owned)" == 0 ]] || return 1
+    if [[ -e "$STEAMDECK_DKMS_SOURCE" || -L "$STEAMDECK_DKMS_SOURCE" ]]; then
+        steamdeck_package_owns_source || steamdeck_source_repair_allowed || return 1
+    fi
+    steamify_dkms_package_install "$STEAMDECK_REPO_PACKAGE" "$STEAMDECK_OWN_DKMS_PACKAGE" "$STEAMDECK_DKMS_VERSION"
+}
+
 steamdeck_install_dkms_source() {
     local staging marker_file registration source_exists=0 recovered=0
     registration="$STEAMDECK_DKMS_ROOT/$STEAMDECK_OWN_DKMS_PACKAGE/$STEAMDECK_DKMS_VERSION/source"
@@ -143,6 +154,9 @@ steamdeck_install_dkms_source() {
     if steamdeck_ownership_dkms_tree_matches; then
         steamdeck_ownership_source_marker_matches || return 1
         [[ "$(state_get "$STEAMDECK_OWNERSHIP_COMPONENT" dkms_owned)" == 1 ]] || recovered=1
+    elif steamdeck_install_repo_package; then
+        steamdeck_note_system_change
+        steamdeck_ownership_dkms_tree_matches && steamdeck_package_owns_source || return 1
     else
         [[ "$(state_get "$STEAMDECK_OWNERSHIP_COMPONENT" dkms_owned)" == 0 ]] || return 1
         [[ -e "$STEAMDECK_DKMS_SOURCE" ]] && source_exists=1

@@ -66,7 +66,7 @@ STEAMIFY_REPO_KEY=767F317AC4F06C54700EC832854F60918B8BC40C
 STEAMIFY_PACMAN_CONF="${STEAMIFY_PACMAN_CONF:-/etc/pacman.conf}"
 STEAMIFY_REPO_MARKER='# Steamify: packages from steamify-pacman-repo, updated by pacman -Syu'
 # What the repository carries and Steamify installs (it stays while one of them is installed).
-STEAMIFY_REPO_PKGS=(steamify-gamescope-nvidia steamify-python-hid-shim steamify-cros-ec-cec-dkms steamify-fremont-poweroff-dkms steamify-leds-valve-dkms)
+STEAMIFY_REPO_PKGS=(steamify-gamescope-nvidia steamify-python-hid-shim steamify-cros-ec-cec-dkms steamify-fremont-poweroff-dkms steamify-leds-valve-dkms steamify-steamdeck-dkms)
 
 steamify_repo_key_ensure() {
     # pacman trusts the repository's key (added and signed locally); nothing changes when it already does.
@@ -256,12 +256,12 @@ steamify_repo_pkg_url() {
     echo "$STEAMIFY_REPO_URL/$f"
 }
 
-steamify_dkms_install() {
-    # steamify_dkms_install <package> <dkms name> <dkms version>: a DKMS driver as a signed package from the repository,
-    # for every kernel that has headers. A copy that Steamify put into /usr/src earlier (or another package's, like the AUR
-    # leds-valve-dkms-git, which the new package replaces) is removed first, since pacman refuses to overwrite files it doesn't own.
-    # Returns 1 when the repository can't be used: the caller falls back to what it did before.
-    local pkg="$1" name="$2" ver="$3" url src="/usr/src/$2-$3" k
+steamify_dkms_package_install() {
+    # steamify_dkms_package_install <package> <dkms name> <dkms version>: a DKMS driver as a signed package from the repository.
+    # A copy that Steamify put into /usr/src earlier (or another package's, like the AUR leds-valve-dkms-git, which the new
+    # package replaces) is removed first, since pacman refuses to overwrite files it doesn't own. The caller builds it for
+    # the kernels pacman's DKMS hook missed. Returns 1 when the repository can't be used: the caller falls back to what it did before.
+    local pkg="$1" name="$2" ver="$3" url src="/usr/src/$2-$3"
     if ! pacman -Q "$pkg" >/dev/null 2>&1; then
         pacman -Q dkms >/dev/null 2>&1 || sudo pacman -S --needed --noconfirm dkms >/dev/null || return 1
         install_kernel_headers || return 1
@@ -275,6 +275,12 @@ steamify_dkms_install() {
         sudo pacman -U --noconfirm --needed --ask 4 "$url" >/dev/null || return 1
     fi
     steamify_repo_enable "$(steamify_repo_variant)" || warn "Couldn't list Steamify's pacman repository: $pkg won't update with pacman -Syu."
+}
+
+steamify_dkms_install() {
+    # steamify_dkms_install <package> <dkms name> <dkms version>: the package (above), built for every kernel that has headers.
+    local pkg="$1" name="$2" ver="$3" k
+    steamify_dkms_package_install "$pkg" "$name" "$ver" || return 1
     # pacman's DKMS hook builds it for the kernels that have headers; the ones it missed, here.
     for k in /usr/lib/modules/*/build; do
         [[ -d "$k" ]] || continue

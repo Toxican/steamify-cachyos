@@ -10,6 +10,8 @@ STEAMDECK_BOOT_ID_FILE="${STEAMDECK_BOOT_ID_FILE:-/proc/sys/kernel/random/boot_i
 STEAMDECK_DKMS_SOURCE="${STEAMDECK_DKMS_SOURCE:-/usr/src/$STEAMDECK_OWN_DKMS_PACKAGE-$STEAMDECK_DKMS_VERSION}"
 STEAMDECK_AUTOLOAD_FILE="${STEAMDECK_AUTOLOAD_FILE:-/etc/modules-load.d/steamify-steamdeck.conf}"
 STEAMDECK_JUPITER_PACKAGE=jupiter-fan-control
+# Steamify's pacman repository carries the DKMS sources as this package; the files below /usr/src are then pacman's.
+STEAMDECK_REPO_PACKAGE=steamify-steamdeck-dkms
 # Used by the install/remove modules sourced after this state module.
 # shellcheck disable=SC2034
 STEAMDECK_JUPITER_UNIT=jupiter-fan-control.service
@@ -184,7 +186,14 @@ steamdeck_ownership_dkms_tree_matches() {
     echo "$STEAMDECK_HWMON_SOURCE_SHA256  $STEAMDECK_DKMS_SOURCE/steamdeck_hwmon.c" | sha256sum -c --quiet - >/dev/null 2>&1
 }
 
+steamdeck_package_owns_source() {
+    [[ -d "$STEAMDECK_DKMS_SOURCE" && ! -L "$STEAMDECK_DKMS_SOURCE" ]] || return 1
+    [[ "$(pacman -Qqo "$STEAMDECK_DKMS_SOURCE/dkms.conf" 2>/dev/null)" == "$STEAMDECK_REPO_PACKAGE" ]]
+}
+
 steamdeck_ownership_source_marker_matches() {
+    # The repository's package owns the tree, or the tree is the one Steamify staged itself (the fallback), with its marker.
+    steamdeck_package_owns_source && return 0
     [[ -d "$STEAMDECK_DKMS_SOURCE" && ! -L "$STEAMDECK_DKMS_SOURCE" &&
        -f "$STEAMDECK_DKMS_SOURCE/.steamify-owner" ]] || return 1
     [[ "$(cat "$STEAMDECK_DKMS_SOURCE/.steamify-owner")" == "$STEAMDECK_SOURCE_MARKER_TEXT" ]]

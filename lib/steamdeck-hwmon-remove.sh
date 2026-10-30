@@ -246,6 +246,16 @@ steamdeck_remove_dkms() {
     local registration
     registration="$STEAMDECK_DKMS_ROOT/$STEAMDECK_OWN_DKMS_PACKAGE/$STEAMDECK_DKMS_VERSION/source"
     [[ "$(state_get "$STEAMDECK_OWNERSHIP_COMPONENT" dkms_owned)" == 1 ]] || return 0
+    if pacman -Q "$STEAMDECK_REPO_PACKAGE" >/dev/null 2>&1; then
+        # pacman's DKMS hook removes the registration and the built modules with the package.
+        steamdeck_package_owns_source || return 1
+        steamdeck_run_root pacman -Rns --noconfirm "$STEAMDECK_REPO_PACKAGE" >/dev/null || return 1
+        [[ ! -e "$registration" && ! -L "$registration" && ! -e "$STEAMDECK_DKMS_SOURCE" ]] || return 1
+        steamdeck_note_system_change
+        steamify_repo_disable
+        steamdeck_ownership_write dkms_owned 0
+        return
+    fi
     if [[ -e "$registration" || -L "$registration" ]]; then
         steamdeck_ownership_source_marker_matches || return 1
         steamdeck_ownership_dkms_registration_matches || return 1
