@@ -8,7 +8,7 @@ one per merged pull request.
 ## 2.15.1 - 2026-10-30
 
 - `7c7c866` **chore: bump VERSION to 2.15.1**
-- `TBD` **fix: the SteamOS conversion showed as off, and was never repaired, on a PC whose login manager had fallen back to SDDM (the `display-manager` link pointed at `sddm.service` while the plasma-login-manager files of the conversion were still there): gaming mode did not stay on after a boot. The conversion is now detected by its plasma-login-manager files whichever login manager is active, and shows as an "(update)" while another one is active; a normal run switches to plasma-login-manager again**
+- `02a6889` **fix: the SteamOS conversion showed as off, and was never repaired, on a PC whose login manager had fallen back to SDDM (the `display-manager` link pointed at `sddm.service` while the plasma-login-manager files of the conversion were still there): gaming mode did not stay on after a boot. The conversion is now detected by its plasma-login-manager files whichever login manager is active, and shows as an "(update)" while another one is active; a normal run switches to plasma-login-manager again**
 
 ## 2.15.0 - 2026-10-30
 
