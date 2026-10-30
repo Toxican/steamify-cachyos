@@ -52,9 +52,7 @@ same bytes, pinned by SHA-256 either way). Installation never downloads or clone
 The per-kernel provider rules below apply to both.
 
 Special thanks to [@Toxican](https://github.com/Toxican), who found out what Fremont needs, built
-and tested all of this on a real Steam Machine, and contributed it (#140, #141), and to
-[firlin123](https://github.com/firlin123), whose [steamdeck-dkms](https://github.com/firlin123/steamdeck-dkms)
-the driver sources (Valve's, unmodified) were taken from.
+and tested all of this on a real Steam Machine, and contributed it (#140, #141).
 
 ### Provider handling
 

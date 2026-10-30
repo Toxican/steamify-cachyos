@@ -102,10 +102,7 @@ What Steamify can do on a Valve Steam Machine:
     meaningful, while fan RPM and control still work
     ([details](FREMONT-FANCONTROL.md)). Special thanks to
     [@Toxican](https://github.com/Toxican), who built and tested this on a real
-    Steam Machine and contributed it (#140, #141), and to
-    [firlin123](https://github.com/firlin123), whose
-    [steamdeck-dkms](https://github.com/firlin123/steamdeck-dkms) the driver
-    sources were taken from.
+    Steam Machine and contributed it (#140, #141).
   - **Power-off fix** - on by default: shutting down really turns the Steam
     Machine off, also with the newest CachyOS kernel
     ([details](TECHNICAL.md#power-off-fix-steam-machine)).
@@ -217,7 +214,7 @@ Some files in `patches/` are not MIT. They keep their own license, and each file
 | File | What | License and source |
 |---|---|---|
 | `steamify-fremont-poweroff.c` | Kernel module for the Steam Machine's power-off fix. It does what Valve's Steam Machine kernel does for this (clears the S4 wake bit of GPIO pin 18 at probe), but at power-off, for kernels without Valve's change. Valve's kernel: [evlaV/linux-integration](https://github.com/evlaV/linux-integration). | GPL-2.0, like the Linux kernel it is built into |
-| `steamdeck.c`, `steamdeck_hwmon.c` | Valve's MFD and hwmon drivers (the embedded controller and its fan sensors), used for optional Fremont fan monitoring and control, from Valve's integration tree ([evlaV/linux-integration](https://github.com/evlaV/linux-integration)). Steamify carries the tested snapshot of [firlin123/steamdeck-dkms](https://github.com/firlin123/steamdeck-dkms) commit `99737c4`, where the sources were taken from (the files are byte-identical to Valve's). Steamify's own Makefile, `dkms.conf` and the whole fan control module around the drivers were contributed by [@Toxican](https://github.com/Toxican) (#140, #141). | GPL-2.0+ (Valve), unmodified and SHA-256 pinned; also the `steamify-fancontrol-dkms` package of Steamify's repository, which is used first |
+| `steamdeck.c`, `steamdeck_hwmon.c` | Valve's MFD and hwmon drivers (the embedded controller and its fan sensors), used for optional Fremont fan monitoring and control, from Valve's integration tree ([evlaV/linux-integration](https://github.com/evlaV/linux-integration)). Steamify carries the tested snapshot of [firlin123/steamdeck-dkms](https://github.com/firlin123/steamdeck-dkms) commit `99737c4`, documented through the `evlaV/linux-integration` mirror of Valve's integration tree. The fan control module around the drivers was contributed by [@Toxican](https://github.com/Toxican) (#140, #141). | GPL-2.0+ (Valve), unmodified and SHA-256 pinned; also the `steamify-fancontrol-dkms` package of Steamify's repository, which is used first |
 | `cros-ec-cec.c` | Valve's Steam Machine HDMI-CEC driver (ChromeOS EC CEC, Copyright BayLibre; Valve's version of it), at a pinned commit of [evlaV/linux-integration](https://github.com/evlaV/linux-integration). Used when it can't be downloaded. | GPL-2.0+, unmodified (Steamify's `cros-ec-cec-single-port.patch` is applied when it is built) |
 | `gamescope-gbm-scanout.patch` | GBM scan-out for gamescope on NVIDIA: nine commits of [farnoy/gamescope](https://github.com/farnoy/gamescope) on [ValveSoftware/gamescope](https://github.com/ValveSoftware/gamescope). | gamescope's license (BSD-2-Clause) |
 | `gamescope-ui-native.patch` | Keeps Steam's interface at the display's size in gamescope on NVIDIA (a small patch after the one above). | gamescope's license (BSD-2-Clause) |
@@ -233,8 +230,6 @@ contain or redistribute them; each package carries its own license (the Wi-Fi fi
 
 - **[@Toxican](https://github.com/Toxican)** - the Steam Machine's **fan monitoring and control** module (#140, #141): the research on a real
   Fremont, the provider handling for CachyOS standard, LTS and Deckify kernels, the reboot-safe install and removal, and the tests behind it.
-- **[firlin123](https://github.com/firlin123)** - [steamdeck-dkms](https://github.com/firlin123/steamdeck-dkms), where the sources of Valve's two Steam Deck
-  drivers for the fan modules were taken from (the snapshot at commit `99737c4`).
 
 ## Disclaimer
 
