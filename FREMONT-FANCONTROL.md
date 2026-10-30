@@ -54,7 +54,7 @@ The per-kernel provider rules below apply to both.
 Special thanks to [@Toxican](https://github.com/Toxican), who found out what Fremont needs, built
 and tested all of this on a real Steam Machine, and contributed it (#140, #141), and to
 [firlin123](https://github.com/firlin123), whose [steamdeck-dkms](https://github.com/firlin123/steamdeck-dkms)
-is the DKMS package of Valve's drivers that the two modules come from.
+the driver sources (Valve's, unmodified) were taken from.
 
 ### Provider handling
 
