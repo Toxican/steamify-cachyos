@@ -5,6 +5,19 @@ All notable changes, per version and per commit. Versions follow
 `steamify.sh`. Versions before 0.7.0 were numbered afterwards,
 one per merged pull request.
 
+## 2.15.0 - 2026-10-30
+
+Special thanks to [@Toxican](https://github.com/Toxican) for the fan control module (#140, #141), and to Valve for the `steamdeck` and `steamdeck_hwmon` drivers it uses.
+
+- `7ba623a` **chore: bump VERSION to 2.15.0** (the GNOME release that was 2.15.0 is 2.16.0 now)
+- **docs: new README screenshot: the 2.15.0 menu with the Fan control / monitoring row, every option switched on and "Boot into" on Gaming (the app from the release branch on a faked Steam Machine, taken in the Steam Machine's QEMU VM with `scripts/vmsuite.sh shot` of steamify-cachyos-dev) (`2a56732`, `cb8eb58`)**
+- **feat: Fremont fan control / monitoring, an optional child of Steam Machine support: Valve's `steamdeck` and `steamdeck_hwmon` modules for the kernels that lack them (CachyOS standard and LTS; Valve's `linux-neptune` and Deckify kernels have them), and `jupiter-fan-control` from the CachyOS repository for the OS fan curve; Steam's own switch chooses between the OS curve and the firmware. Providers are detected per kernel and per module (native ones are reused, foreign ones kept, conflicting or partial states fail closed), nothing is loaded or unloaded live (a restart applies a change), and removal only touches what Steamify installed. By @Toxican, tested on a real Steam Machine (CachyOS 7.3.0-5 and LTS 6.18.55-2) (`825a37e`, `ebc3ff1`, `ffdb0a4`, `76bed40`, `ff9a8f2`, `bed37c4`, `22c71ba`)**
+- **feat: the fan modules come as the package `steamify-fancontrol-dkms` of Steamify's signed pacman repository, like the other Steam Machine drivers (updates with `pacman -Syu`, removed with `pacman -Rns`); the sources Steamify carries are the fallback when the repository can't be used. `steamify_dkms_package_install` is the package half of `steamify_dkms_install`, which the fan code uses so it can handle DKMS skipping kernels that already have both modules (`7ba623a`, `7ea3a7a`, `3bb3fa3`)**
+- **ui: the fan item is called "Fan control / monitoring" (no DKMS in the title: most users don't know what that is): in the app, the terminal menu, the messages and the docs** (`1b49374`)
+- **docs: thanks to @Toxican and Valve (README, the fan control notes, this changelog), and the source reference of the driver snapshot** (`aadbb09`, `53f02e0`, `161c1bf`, `007874b`, `6f567c3`)
+- **docs: the fan control notes (`FREMONT-FANCONTROL.md`: why it exists, how it works, how it is tested) moved to steamify-cachyos-dev (`fan-control/`); this repository keeps the technical details in `TECHNICAL.md` (its own section, with the package and the per-kernel rules) and a troubleshooting section in `TROUBLESHOOTING.md`; the README links to both, and its fan entry is in plain words**
+- **chore: 2.15.0 is ready to release: `.no-release-yet` removed (the VM suites passed on the final code and the fan feature on the real Steam Machine), the changelog hashes filled in**
+
 ## 2.14.3 - 2026-10-28
 
 **Heads-up:** this update adds Steamify's own signed pacman repository to `/etc/pacman.conf` (below CachyOS's) and trusts its signing key, for the patched gamescope on NVIDIA and the Steam Machine's drivers. It happens on the first run of 2.14.3 over a setup that has those parts; nothing else about the menu changes. HDMI-CEC, Steam Machine support and the power-off fix show as an update once, to move their drivers to packages.
