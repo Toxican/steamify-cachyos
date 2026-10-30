@@ -52,7 +52,8 @@ same bytes, pinned by SHA-256 either way). Installation never downloads or clone
 The per-kernel provider rules below apply to both.
 
 Special thanks to [@Toxican](https://github.com/Toxican), who found out what Fremont needs, built
-and tested all of this on a real Steam Machine, and contributed it (#140, #141).
+and tested all of this on a real Steam Machine, and contributed it (#140, #141), and to Valve, whose
+`steamdeck` and `steamdeck_hwmon` drivers (GPL-2.0+) these modules are.
 
 ### Provider handling
 

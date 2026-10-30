@@ -102,7 +102,8 @@ What Steamify can do on a Valve Steam Machine:
     meaningful, while fan RPM and control still work
     ([details](FREMONT-FANCONTROL.md)). Special thanks to
     [@Toxican](https://github.com/Toxican), who built and tested this on a real
-    Steam Machine and contributed it (#140, #141).
+    Steam Machine and contributed it (#140, #141), and to Valve for the
+    `steamdeck` and `steamdeck_hwmon` drivers it uses.
   - **Power-off fix** - on by default: shutting down really turns the Steam
     Machine off, also with the newest CachyOS kernel
     ([details](TECHNICAL.md#power-off-fix-steam-machine)).
@@ -230,6 +231,8 @@ contain or redistribute them; each package carries its own license (the Wi-Fi fi
 
 - **[@Toxican](https://github.com/Toxican)** - the Steam Machine's **fan monitoring and control** module (#140, #141): the research on a real
   Fremont, the provider handling for CachyOS standard, LTS and Deckify kernels, the reboot-safe install and removal, and the tests behind it.
+- **Valve** - the `steamdeck` and `steamdeck_hwmon` drivers (GPL-2.0+, Copyright Valve Corporation) that make the Steam Machine's fan readable and
+  controllable on Linux, and the Steam Machine's other kernel drivers Steamify uses, published in [evlaV/linux-integration](https://github.com/evlaV/linux-integration).
 
 ## Disclaimer
 
