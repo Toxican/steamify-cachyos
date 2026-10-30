@@ -63,12 +63,16 @@ steamdeck_autoload_matches() {
 }
 
 steamdeck_install_has_unknown_artifacts() {
-    if [[ "$(state_get "$STEAMDECK_OWNERSHIP_COMPONENT" dkms_owned)" == 0 ]] &&
+    # The repository's package installed (by an earlier run whose state is gone, or by hand) is no unknown artifact: pacman owns
+    # the tree and its DKMS records, and this run takes them over.
+    local package_tree=0
+    pacman -Q "$STEAMDECK_REPO_PACKAGE" >/dev/null 2>&1 && steamdeck_package_owns_source && package_tree=1
+    if [[ "$(state_get "$STEAMDECK_OWNERSHIP_COMPONENT" dkms_owned)" == 0 && $package_tree -eq 0 ]] &&
         [[ -e "$STEAMDECK_DKMS_SOURCE" || -L "$STEAMDECK_DKMS_SOURCE" ||
            -L "$STEAMDECK_DKMS_ROOT/$STEAMDECK_OWN_DKMS_PACKAGE" ]]; then
         return 0
     fi
-    if [[ "$(state_get "$STEAMDECK_OWNERSHIP_COMPONENT" dkms_owned)" == 0 ]] &&
+    if [[ "$(state_get "$STEAMDECK_OWNERSHIP_COMPONENT" dkms_owned)" == 0 && $package_tree -eq 0 ]] &&
         steamdeck_ownership_dkms_records_exist; then
         return 0
     fi

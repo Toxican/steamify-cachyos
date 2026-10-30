@@ -55,8 +55,10 @@ steamdeck_ownership_dkms_records_exist() {
 }
 
 steamdeck_ownership_system_markers_exist() {
-    [[ -e "$STEAMDECK_DKMS_SOURCE" || -L "$STEAMDECK_DKMS_SOURCE" ||
-       -e "$STEAMDECK_AUTOLOAD_FILE" || -L "$STEAMDECK_AUTOLOAD_FILE" ]] ||
+    [[ -e "$STEAMDECK_AUTOLOAD_FILE" || -L "$STEAMDECK_AUTOLOAD_FILE" ]] && return 0
+    # The repository's package, with the DKMS records pacman's hook made, is pacman's, not a trace of lost state.
+    pacman -Q "$STEAMDECK_REPO_PACKAGE" >/dev/null 2>&1 && steamdeck_package_owns_source && return 1
+    [[ -e "$STEAMDECK_DKMS_SOURCE" || -L "$STEAMDECK_DKMS_SOURCE" ]] ||
         steamdeck_ownership_dkms_records_exist
 }
 
