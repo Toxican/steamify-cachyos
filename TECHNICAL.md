@@ -257,7 +257,7 @@ ensures headers for every installed kernel, then runs the provider plan
 independently for each target kernel. Only kernels with missing safe providers
 are passed to DKMS; blocked or partially foreign providers stop the whole operation before
 the DKMS source is installed. The source is registered under
-`steamify-steamdeck/1`, and every successful build is re-checked through the
+`steamify-fancontrol/1`, and every successful build is re-checked through the
 same provider plan. Missing `jupiter-fan-control` is installed by addressing
 the verified `cachyos*` repository explicitly. A fresh package must expose
 its vendor-enabled unit, but Steamify never calls `systemctl enable`, `start`
@@ -285,7 +285,7 @@ is persistently masked before Steamify removes a provider on which its
 vendor-enabled unit could depend. Mask ownership and the previously observed
 enabled state are recorded so a later enable can restore only Steamify's own
 change. Only the exact owned modules-load file and the verified
-`steamify-steamdeck/1` DKMS tree are removed. Loaded modules are deliberately
+`steamify-fancontrol/1` DKMS tree are removed. Loaded modules are deliberately
 left alone until reboot: removal never calls `modprobe -r` or unbinds devices.
 
 Installation and removal checkpoints include the current kernel boot ID from

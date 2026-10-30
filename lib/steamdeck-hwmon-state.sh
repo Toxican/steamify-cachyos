@@ -8,10 +8,10 @@ STEAMDECK_OWNERSHIP_COMPONENT=steamdeck_hwmon
 STEAMDECK_OWNERSHIP_SCHEMA=5
 STEAMDECK_BOOT_ID_FILE="${STEAMDECK_BOOT_ID_FILE:-/proc/sys/kernel/random/boot_id}"
 STEAMDECK_DKMS_SOURCE="${STEAMDECK_DKMS_SOURCE:-/usr/src/$STEAMDECK_OWN_DKMS_PACKAGE-$STEAMDECK_DKMS_VERSION}"
-STEAMDECK_AUTOLOAD_FILE="${STEAMDECK_AUTOLOAD_FILE:-/etc/modules-load.d/steamify-steamdeck.conf}"
+STEAMDECK_AUTOLOAD_FILE="${STEAMDECK_AUTOLOAD_FILE:-/etc/modules-load.d/steamify-fancontrol.conf}"
 STEAMDECK_JUPITER_PACKAGE=jupiter-fan-control
 # Steamify's pacman repository carries the DKMS sources as this package; the files below /usr/src are then pacman's.
-STEAMDECK_REPO_PACKAGE=steamify-steamdeck-dkms
+STEAMDECK_REPO_PACKAGE=steamify-fancontrol-dkms
 # Used by the install/remove modules sourced after this state module.
 # shellcheck disable=SC2034
 STEAMDECK_JUPITER_UNIT=jupiter-fan-control.service

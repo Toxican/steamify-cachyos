@@ -27,7 +27,7 @@ the existing `steamos-manager` integration remain responsible for that choice;
 
 ### Drivers and DKMS
 
-Both modules are built as one DKMS package, `steamify-steamdeck/1`:
+Both modules are built as one DKMS package, `steamify-fancontrol/1`:
 
 - `steamdeck` is the MFD/EC-facing parent driver that binds the Fremont ACPI
   device and creates its child devices.
@@ -40,9 +40,9 @@ mirror; Steamify carries the tested snapshot from
 before staging the sources for DKMS. See [`patches/README.md`](patches/README.md)
 for the source inventory and hashes in `lib/steamdeck-hwmon.sh`.
 
-The sources come as the package `steamify-steamdeck-dkms` of Steamify's signed
+The sources come as the package `steamify-fancontrol-dkms` of Steamify's signed
 pacman repository ([steamify-pacman-repo](https://github.com/theupriser/steamify-pacman-repo)):
-pacman owns `/usr/src/steamify-steamdeck-1`, registers it with DKMS and builds it for the
+pacman owns `/usr/src/steamify-fancontrol-1`, registers it with DKMS and builds it for the
 kernels with headers, and it updates with `pacman -Syu`. Removing the feature removes the
 package (`pacman -Rns`), and pacman's DKMS hook removes the registration and the built modules.
 Only when the repository can't be used does Steamify fall back to what it did before: the two
@@ -116,8 +116,8 @@ separate states:
 Useful read-only checks after the restart include:
 
 ```bash
-dkms status | grep steamify-steamdeck
-readlink /sys/bus/acpi/devices/VLV0100:00/driver
+dkms status | grep steamify-fancontrol
+readlink /sys/bus/acpi/devices/VLV0100:00/physical_node/driver
 ls /sys/class/hwmon/hwmon*/fan1_{input,target,fault}
 systemctl status jupiter-fan-control.service
 ```

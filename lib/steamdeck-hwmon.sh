@@ -6,7 +6,7 @@
 
 STEAMDECK_MODULES_ROOT="${STEAMDECK_MODULES_ROOT:-/usr/lib/modules}"
 STEAMDECK_DKMS_ROOT="${STEAMDECK_DKMS_ROOT:-/var/lib/dkms}"
-STEAMDECK_OWN_DKMS_PACKAGE="${STEAMDECK_OWN_DKMS_PACKAGE:-steamify-steamdeck}"
+STEAMDECK_OWN_DKMS_PACKAGE="${STEAMDECK_OWN_DKMS_PACKAGE:-steamify-fancontrol}"
 STEAMDECK_DKMS_VERSION=1
 STEAMDECK_MFD_SOURCE_SHA256=c5bd4be144bbfc8833384eae795178cd308c8dcba0e593b387100361cba9c86c
 STEAMDECK_HWMON_SOURCE_SHA256=54dbd7673f8b48b7f8737d5f1213e4863dc7a2a3b94de9b60ab4bb4a7b15290c
@@ -283,8 +283,8 @@ steamdeck_dkms_stage_sources() {
     mkdir -p "$destination" || return 1
     patch_file steamdeck.c > "$destination/steamdeck.c" || return 1
     patch_file steamdeck_hwmon.c > "$destination/steamdeck_hwmon.c" || return 1
-    patch_file steamify-steamdeck.Makefile > "$destination/Makefile" || return 1
-    patch_file steamify-steamdeck.dkms.conf |
+    patch_file steamify-fancontrol.Makefile > "$destination/Makefile" || return 1
+    patch_file steamify-fancontrol.dkms.conf |
         fill NAME="$STEAMDECK_OWN_DKMS_PACKAGE" VERSION="$STEAMDECK_DKMS_VERSION" > "$destination/dkms.conf" || return 1
 
     echo "$STEAMDECK_MFD_SOURCE_SHA256  $destination/steamdeck.c" | sha256sum -c --quiet - || return 1

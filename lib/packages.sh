@@ -66,7 +66,7 @@ STEAMIFY_REPO_KEY=767F317AC4F06C54700EC832854F60918B8BC40C
 STEAMIFY_PACMAN_CONF="${STEAMIFY_PACMAN_CONF:-/etc/pacman.conf}"
 STEAMIFY_REPO_MARKER='# Steamify: packages from steamify-pacman-repo, updated by pacman -Syu'
 # What the repository carries and Steamify installs (it stays while one of them is installed).
-STEAMIFY_REPO_PKGS=(steamify-gamescope-nvidia steamify-python-hid-shim steamify-cros-ec-cec-dkms steamify-fremont-poweroff-dkms steamify-leds-valve-dkms steamify-steamdeck-dkms)
+STEAMIFY_REPO_PKGS=(steamify-gamescope-nvidia steamify-python-hid-shim steamify-cros-ec-cec-dkms steamify-fremont-poweroff-dkms steamify-leds-valve-dkms steamify-fancontrol-dkms)
 
 steamify_repo_key_ensure() {
     # pacman trusts the repository's key (added and signed locally); nothing changes when it already does.
