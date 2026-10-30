@@ -7,7 +7,7 @@ one per merged pull request.
 
 ## 2.15.0 - 2026-10-30
 
-Special thanks to [@Toxican](https://github.com/Toxican) for the fan control module (#140, #141).
+Special thanks to [@Toxican](https://github.com/Toxican) for the fan control module (#140, #141), and to [firlin123](https://github.com/firlin123) for [steamdeck-dkms](https://github.com/firlin123/steamdeck-dkms), the DKMS package of Valve's drivers it is built from.
 
 - **chore: bump VERSION to 2.15.0** (the GNOME release that was 2.15.0 is 2.16.0 now)
 - **feat: Fremont fan monitoring / control (DKMS), an optional child of Steam Machine support: Valve's `steamdeck` and `steamdeck_hwmon` modules for the kernels that lack them (CachyOS standard and LTS; Valve's `linux-neptune` and Deckify kernels have them), and `jupiter-fan-control` from the CachyOS repository for the OS fan curve; Steam's own switch chooses between the OS curve and the firmware. Providers are detected per kernel and per module (native ones are reused, foreign ones kept, conflicting or partial states fail closed), nothing is loaded or unloaded live (a restart applies a change), and removal only touches what Steamify installed. By @Toxican, tested on a real Steam Machine (CachyOS 7.3.0-5 and LTS 6.18.55-2)**
