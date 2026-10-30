@@ -5,6 +5,14 @@ All notable changes, per version and per commit. Versions follow
 `steamify.sh`. Versions before 0.7.0 were numbered afterwards,
 one per merged pull request.
 
+## 2.15.0 - 2026-10-30
+
+Special thanks to [@Toxican](https://github.com/Toxican) for the fan control module (#140, #141), and to Valve for the `steamdeck` and `steamdeck_hwmon` drivers it uses.
+
+- **chore: bump VERSION to 2.15.0** (the GNOME release that was 2.15.0 is 2.16.0 now)
+- **feat: Fremont fan monitoring / control (DKMS), an optional child of Steam Machine support: Valve's `steamdeck` and `steamdeck_hwmon` modules for the kernels that lack them (CachyOS standard and LTS; Valve's `linux-neptune` and Deckify kernels have them), and `jupiter-fan-control` from the CachyOS repository for the OS fan curve; Steam's own switch chooses between the OS curve and the firmware. Providers are detected per kernel and per module (native ones are reused, foreign ones kept, conflicting or partial states fail closed), nothing is loaded or unloaded live (a restart applies a change), and removal only touches what Steamify installed. By @Toxican, tested on a real Steam Machine (CachyOS 7.3.0-5 and LTS 6.18.55-2)**
+- **feat: the fan modules come as the package `steamify-fancontrol-dkms` of Steamify's signed pacman repository, like the other Steam Machine drivers (updates with `pacman -Syu`, removed with `pacman -Rns`); the sources Steamify carries are the fallback when the repository can't be used. `steamify_dkms_package_install` is the package half of `steamify_dkms_install`, which the fan code uses so it can handle DKMS skipping kernels that already have both modules**
+
 ## 2.14.3 - 2026-10-28
 
 **Heads-up:** this update adds Steamify's own signed pacman repository to `/etc/pacman.conf` (below CachyOS's) and trusts its signing key, for the patched gamescope on NVIDIA and the Steam Machine's drivers. It happens on the first run of 2.14.3 over a setup that has those parts; nothing else about the menu changes. HDMI-CEC, Steam Machine support and the power-off fix show as an update once, to move their drivers to packages.
