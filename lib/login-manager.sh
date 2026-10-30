@@ -24,16 +24,14 @@ gaming_status() {
     # Autologin into gamescope is configured for this user. The layouts of
     # versions before 2.12.1 count as on too: the update (feature_outdated)
     # moves them to the current one.
-    case "$(current_display_manager)" in
-        plasmalogin)
-            [[ -f "$TEMP_LOGIN_DROPIN" ]] && return 0
-            grep -qx "User=$USER" "$AUTOLOGIN_CONF" 2>/dev/null && return 0
-            # Autologin in the base config, plus the sync bridge.
-            sed -n '/^\[Autologin\]/,/^\[/p' "$BASE_CONF" 2>/dev/null | grep -qx "User=$USER" &&
-                [[ -f /etc/systemd/system/sync-steamos-session.path ]] ;;
-        sddm) [[ -f /etc/sddm.conf.d/10-gamescope-autologin.conf ]] ;;
-        *) return 1 ;;
-    esac
+    # The plasma-login-manager layout counts whichever login manager is active: a PC that fell back to SDDM
+    # (another package or tool re-enabled it) still has the conversion's files, and shows as on, so that
+    # feature_outdated (lib/menu.sh) offers the repair instead of a conversion that reads as never made.
+    [[ -f "$TEMP_LOGIN_DROPIN" || -f /etc/sddm.conf.d/10-gamescope-autologin.conf ]] && return 0
+    grep -qx "User=$USER" "$AUTOLOGIN_CONF" 2>/dev/null && return 0
+    # Autologin in the base config, plus the sync bridge.
+    sed -n '/^\[Autologin\]/,/^\[/p' "$BASE_CONF" 2>/dev/null | grep -qx "User=$USER" &&
+        [[ -f /etc/systemd/system/sync-steamos-session.path ]]
 }
 
 # What Steam shows in its System settings besides the OS name (which stays
