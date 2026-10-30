@@ -100,7 +100,7 @@ What Steamify can do on a Valve Steam Machine:
     control. Module changes take effect after a restart. On Fremont,
     `fan1_fault=1` and some Steam-Deck-specific sensor attributes are not
     meaningful, while fan RPM and control still work
-    ([details](FREMONT-FANCONTROL.md)). Special thanks to
+    ([details](https://github.com/theupriser/steamify-cachyos-dev/blob/main/fan-control/FREMONT-FANCONTROL.md)). Special thanks to
     [@Toxican](https://github.com/Toxican), who built and tested this on a real
     Steam Machine and contributed it (#140, #141), and to Valve for the
     `steamdeck` and `steamdeck_hwmon` drivers it uses.
