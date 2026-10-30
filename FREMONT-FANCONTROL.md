@@ -13,7 +13,7 @@ modules, while Deckify kernels may already provide them natively. Without the
 complete provider pair, Steam's existing hardware-management stack cannot use
 the fan interface.
 
-Steamify adds an opt-in **Fan monitoring / control (DKMS)** child below
+Steamify adds an opt-in **Fan control / monitoring** child below
 **Steam Machine support**. It supplies only missing safe module providers,
 installs CachyOS's `jupiter-fan-control` package when needed, and prepares both
 modules for the next boot.
@@ -97,7 +97,7 @@ More implementation detail is available in
 ## Installation and use
 
 On a detected Valve Fremont system, open the Steamify app, enable **Steam
-Machine support**, then enable its optional **Fan monitoring / control (DKMS)**
+Machine support**, then enable its optional **Fan control / monitoring**
 child and review the plan before applying it. The same component is available
 in the regular terminal menu. Enabling the child also keeps its parent selected;
 enabling the parent alone does not opt in to fan control.
@@ -127,7 +127,7 @@ The hwmon directory number is assigned dynamically. Read `name` in the same
 directory to identify `steamdeck_hwmon`, then inspect `fan1_input` and
 `fan1_target` there.
 
-To remove the support, untick **Fan monitoring / control (DKMS)** in the app or
+To remove the support, untick **Fan control / monitoring** in the app or
 terminal menu and apply the reviewed plan while leaving **Steam Machine
 support** selected if its other functions should remain. Steamify hands active
 OS control back to firmware, removes only resources it owns, and requests a

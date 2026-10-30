@@ -92,7 +92,7 @@ What Steamify can do on a Valve Steam Machine:
   **hardware settings** (fan, performance) work, and the power button puts
   it to sleep like a console. Steam's System settings show the serial
   number, and Steam's **Wi-Fi backend** setting works.
-  - **Fan monitoring / control (DKMS)** - optional: adds missing
+  - **Fan control / monitoring** - optional: adds missing
     `steamdeck` and `steamdeck_hwmon` module providers for installed standard
     and LTS kernels, while reusing native providers such as Deckify's. It
     installs `jupiter-fan-control` from the official CachyOS repository;

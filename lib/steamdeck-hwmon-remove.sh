@@ -306,5 +306,5 @@ steamdeck_fancontrol_remove() {
 fancontrol_disable() {
     info "Removing Fremont fan monitoring and control..."
     steamdeck_fancontrol_remove || return 1
-    ok "Fan monitoring and control removed."
+    ok "Fan control / monitoring removed."
 }
