@@ -5,6 +5,10 @@ All notable changes, per version and per commit. Versions follow
 `steamify.sh`. Versions before 0.7.0 were numbered afterwards,
 one per merged pull request.
 
+## 2.15.1 - 2026-10-30
+
+- `TBD` **chore: bump VERSION to 2.15.1**
+
 ## 2.15.0 - 2026-10-30
 
 Special thanks to [@Toxican](https://github.com/Toxican) for the fan control module (#140, #141), and to Valve for the `steamdeck` and `steamdeck_hwmon` drivers it uses.
